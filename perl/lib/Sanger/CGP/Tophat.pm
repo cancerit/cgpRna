@@ -1,11 +1,11 @@
 package Sanger::CGP::Tophat;
 
 ##########LICENCE ##########
-#Copyright (c) s2015 Genome Research Ltd.
+#Copyright (c) 2015 Genome Research Ltd.
 ###
 #Author: Cancer Genome Project <cgpit@sanger.ac.uk>
 ###
-#This file is part of TopHatFusion.
+#This file is part of cgpRna.
 ###
 #TopHatFusion is free software: you can redistribute it and/or modify it under
 #the terms of the GNU Affero General Public License as published by the
