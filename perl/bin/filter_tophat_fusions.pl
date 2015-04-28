@@ -44,8 +44,6 @@ use Pod::Usage qw(pod2usage);
 use Const::Fast qw(const);
 use PCAP::Cli;
 
-use Data::Dumper;
-
 # Position of the columns in the tophat-post output file used to format fusion breakpoint references.
 const my $CHR1 => 3;
 const my $POS1 => 4;
@@ -56,8 +54,6 @@ const my @OUT_HEADER => qw(breakpoint_ref sample_name gene_1 chr_1 pos_1 gene_2 
 
 {
 	my $options = setup();
-
-print Dumper(\$options);
 
 	reformat($options);
 	normals_filter($options);

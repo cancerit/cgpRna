@@ -54,9 +54,6 @@ use Cwd;
 use PCAP::Cli;
 use Sanger::CGP::Tophat::Implement;
 
-###### TEMP FOR TESTING ########
-use Data::Dumper;
-
 my $ini_file = '/nfs/users/nfs_a/am26/git/rnaseqEvaluation/perl/config/tophat.ini'; # default config.ini file path
 const my @REQUIRED_PARAMS => qw(outdir sample);
 const my @VALID_PROCESS => qw(bamtofastq tophatfusion split tophatpost filter);
@@ -69,7 +66,6 @@ const my %INDEX_FACTOR => (
 
 {
 	my $options = setup();
-print Dumper $options;
 
 	# bam_to_fastq will only be called if bam input is detected in the setup subroutine. The process is nulti-threaded so that multiple BAMs can be converted to fastq in parallel.
 	if(exists $options->{'bam'} && (!exists $options->{'process'} || $options->{'process'} eq 'bamtofastq')){
