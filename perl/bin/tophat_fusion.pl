@@ -57,12 +57,11 @@ use Sanger::CGP::Tophat::Implement;
 my $ini_file = '/nfs/users/nfs_a/am26/git/rnaseqEvaluation/perl/config/tophat.ini'; # default config.ini file path
 const my @REQUIRED_PARAMS => qw(outdir sample);
 const my @VALID_PROCESS => qw(bamtofastq tophatfusion split tophatpost filter);
-const my %INDEX_FACTOR => (
-														'bamtofastq' => -1,
-														'tophatfusion' => 1,
-														'split' => 1,
-														'tophatpost' => 1,
-														'filter' => 1);
+const my %INDEX_FACTOR => (	'bamtofastq' => -1,
+				'tophatfusion' => 1,
+				'split' => 1,
+				'tophatpost' => 1,
+				'filter' => 1);
 
 {
 	my $options = setup();
@@ -104,26 +103,26 @@ sub setup {
 	pod2usage(-msg => "\nERROR: Options must be defined.\n", -verbose => 1, -output => \*STDERR) if(scalar @ARGV == 0);
 	$opts{'cmd'} = join " ", $0, @ARGV;
 	
-	GetOptions( 'h|help' => \$opts{'h'},
-							'm|man' => \$opts{'m'},
-							'v|version' => \$opts{'version'},
-							'o|outdir=s' => \$opts{'outdir'},
-							's|sample=s' => \$opts{'sample'},
-							'sp|species=s' => \$opts{'species'},
-							'l|librarytype=s' => \$opts{'librarytype'},
-							'rb|refbuild=s' => \$opts{'referencebuild'},
-							'gb|genebuild=i' => \$opts{'genebuild'},
-							'b|bowtie=i' => \$opts{'bowtieversion'},
-							'r|refdataloc=s' => \$opts{'refdataloc'},
-							'ri|refindex=s' => \$opts{'referenceindex'},
-							'ti|transindex=s' => \$opts{'transcriptomeindex'},
-							'ub|ucscbuild=s' => \$opts{'tophatpostbuild'},
-							'ui|ucscindex=s' => \$opts{'tophatpostindex'},
-							'n|normals=s' => \$opts{'normalfusionslist'},
-							't|threads=i' => \$opts{'threads'},
-							'p|process=s' => \$opts{'process'},
-							'i|index=i' => \$opts{'index'},							
-							'c|config=s' => \$opts{'config'},
+	GetOptions( 	'h|help' => \$opts{'h'},
+			'm|man' => \$opts{'m'},
+			'v|version' => \$opts{'version'},
+			'o|outdir=s' => \$opts{'outdir'},
+			's|sample=s' => \$opts{'sample'},
+			'sp|species=s' => \$opts{'species'},
+			'l|librarytype=s' => \$opts{'librarytype'},
+			'rb|refbuild=s' => \$opts{'referencebuild'},
+			'gb|genebuild=i' => \$opts{'genebuild'},
+			'b|bowtie=i' => \$opts{'bowtieversion'},
+			'r|refdataloc=s' => \$opts{'refdataloc'},
+			'ri|refindex=s' => \$opts{'referenceindex'},
+			'ti|transindex=s' => \$opts{'transcriptomeindex'},
+			'ub|ucscbuild=s' => \$opts{'tophatpostbuild'},
+			'ui|ucscindex=s' => \$opts{'tophatpostindex'},
+			'n|normals=s' => \$opts{'normalfusionslist'},
+			't|threads=i' => \$opts{'threads'},
+			'p|process=s' => \$opts{'process'},
+			'i|index=i' => \$opts{'index'},							
+			'c|config=s' => \$opts{'config'},
 	) or pod2usage(1);
 
 	pod2usage(-verbose => 1) if(defined $opts{'h'});
