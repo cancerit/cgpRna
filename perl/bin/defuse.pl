@@ -54,22 +54,17 @@ use Cwd;
 use PCAP::Cli;
 use Sanger::CGP::Defuse::Implement;
 
-use Data::Dumper;
-
 my $ini_file = "$FindBin::Bin/../config/defuse.ini"; # default config.ini file path
 const my @REQUIRED_PARAMS => qw(outdir sample);
-const my @VALID_PROCESS => qw(prepare merge defuse filter samtobam);
+const my @VALID_PROCESS => qw(prepare merge defuse filter);
 const my %INDEX_FACTOR => (	'prepare' => -1,
 				'merge' => 1,
 				'defuse' => 1,
-				'filter' => 1,
-				'samtobam' => 1);
+				'filter' => 1);
 
 {
 	my $options = setup();
 	
-print Dumper(\$options);	
-
 	if(!exists $options->{'process'} || $options->{'process'} eq 'prepare'){
 		# Process the input files.
 		my $threads = PCAP::Threaded->new($options->{'threads'});
@@ -78,34 +73,24 @@ print Dumper(\$options);
 		$threads->run($options->{'max_split'}, 'prepare', $options);
 	}
 	
-	print "IT'S NOW AFTER PREPARE\n";
-print Dumper(\$options);
-	
 	# If multiple BAMs or pairs of fastq files have been input, merge into one pair of fastqs
 	if($options->{'max_split'} > 1){
 		Sanger::CGP::Defuse::Implement::merge($options) if(!exists $options->{'process'} || $options->{'process'} eq 'merge');
 	}
 	
 	Sanger::CGP::Defuse::Implement::defuse($options) if(!exists $options->{'process'} || $options->{'process'} eq 'defuse');
-	Sanger::CGP::Defuse::Implement::filter_fusions($options)if(!exists $options->{'process'} || $options->{'process'} eq 'filter');
 	
-	if(!exists $options->{'process'} || $options->{'process'} eq 'samtobam') {
-		Sanger::CGP::Defuse::Implement::sam_to_bam($options);
-		#cleanup($options);
+	if(!exists $options->{'process'} || $options->{'process'} eq 'filter'){
+		Sanger::CGP::Defuse::Implement::filter_fusions($options);
+		cleanup($options);
 	}
 }
 
 sub cleanup {
 	my $options = shift;
 	my $tmpdir = $options->{'tmp'};
-	my $sample = $options->{'sample'};
-	my $fusion_outdir = File::Spec->catdir($tmpdir, "tophat_$sample");
-	my $post_outdir = File::Spec->catdir($options->{'tmp'}, 'tophatpostrun/tophatfusion_'.$sample);
-	system("cp $post_outdir/result.html $options->{outdir}/$sample.tophatfusion.html");
-	move(File::Spec->catfile($fusion_outdir, 'accepted_hits.bam'), $options->{outdir}) || die $!;
-	move(File::Spec->catfile($fusion_outdir, 'unmapped.bam'), $options->{outdir}) || die $!;
 	move(File::Spec->catdir($tmpdir, 'logs'), File::Spec->catdir($options->{'outdir'}, 'logs')) || die $!;
-	#remove_tree $tmpdir if(-e $tmpdir);
+	remove_tree $tmpdir if(-e $tmpdir);
 	return 0;
 }
 
@@ -174,7 +159,7 @@ sub setup {
 	my $input = File::Spec->catdir($tmpdir, 'input');
 	make_path($input) unless(-d $input);
 	
-	# Check the input is fastq (paired or interleaved) or BAM and that a mixture of these file types hasn't been entered
+	# Check the input is fastq (paired only) or BAM and that a mixture of these file types hasn't been entered
 	$opts{'raw_files'} = \@ARGV;
 	Sanger::CGP::Defuse::Implement::check_input(\%opts);
 
@@ -204,35 +189,32 @@ sub setup {
 
 __END__
 
-=head1 tophat_fusion.pl
+=head1 defuse.pl
 
 Cancer Genome Project implementation of the deFuse RNA-Seq algorithm
 https://bitbucket.org/dranew/defuse
 
 =head1 SYNOPSIS
 
-tophat_fusion.pl [options] [file(s)...]
+defuse.pl [options] [file(s)...]
 
   Required parameters:
     -outdir    		-o   	Folder to output result to.
     -sample   		-s   	Sample name
 
   Optional
-    -bowtie   		-b  	1 or 2. Whether to use bowtie1 or bowtie2 for the fusion search [1]
-    -librarytype	-l  	Library type for the sample. Options for tophat are fr-unstranded, fr-firststrand or fr-secondstrand. [fr-unstranded]
+    -defuseconfig -d  	1 or 2. Whether to use bowtie1 or bowtie2 for the fusion search [1]
+    -normals  	  -n  	File containing list of gene fusions detected in normal samples using deFuse
     -threads   		-t  	Number of cores to use. [1]
     -config   		-c  	Path to config.ini file. Defaults for the reference and transcriptome related parameters are provided in the config.ini file.
     -refbuild 		-rb 	Reference assembly version. Can be UCSC or Ensembl format e.g. GRCh38 or hg38 [GRCh38] 
     -genebuild 		-gb 	Gene build version. This needs to be consistent with the reference build in terms of the version and chromosome name style [77]
-    -refindex   	-ri 	Stem name of the bowtie index files for the reference which need to be compatible with the bowtie version [GRCh38.genome]
-    -transindex		-ti 	Stem name of the bowtie index files for the transcriptome which need to be compatible with the bowtie version [GRCh38.77]
-    -ucscbuild   	-ub 	Tophat fusion post requires a reference build in UCSC format which must be equivalent to the refbuild version specified e.g. if refbuild = GRCh37 ucscbuild should be hg19 [hg38]
-    -ucscindex		-ui 	Stem name of the bowtie index files for the transcriptome in ucsc format which should be compatible with the bowtie version and ucsc build [hg38.genome]
+    -refdataloc  	-r  	Parent directory of the reference data
     -species  		-sp 	Species [human]
 
   Targeted processing (further detail under OPTIONS):
     -process   		-p   	Only process this step then exit
-    -index    		-i   	Only valid for process bamtofastq - 1..<num_input_bams>
+    -index    		-i   	Only valid for process prepare - 1..<num_input_files>
 
   Other:
     -help      		-h   	Brief help message.
@@ -240,7 +222,7 @@ tophat_fusion.pl [options] [file(s)...]
     -version   		-v   	Version
 
   File list can be full file names or wildcard, e.g.
-    tophat_fusion.pl -t 16 -o myout -refbuild GRCh38 -genebuild 77 -s sample input/*.bam
+    defuse.pl -t 16 -o myout -refbuild GRCh38 -genebuild 77 -s sample input/*.bam
 
   Run with '-m' for possible input file types and details on bowtie versions/index files.
 
@@ -252,10 +234,9 @@ tophat_fusion.pl [options] [file(s)...]
 
 Available processes for this tool are:
 
-  bamtofastq
-  tophatfusion
-  split
-  tophatpost
+  prepare
+  merge
+  defuse
   filter
 
 =back
@@ -269,8 +250,7 @@ There are several types of file that the script is able to process.
 =item f[ast]q
 
 A standard uncompressed fastq file. Requires a pair of inputs with standard suffix of '_1' and '_2'
-immediately prior to '.f[ast]q' or an interleaved f[ast]q file where read 1 and 2 are adjacent
-in the file.
+immediately prior to '.f[ast]q'.
 
 =item f[ast]q.gz
 

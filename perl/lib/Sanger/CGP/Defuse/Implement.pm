@@ -273,48 +273,6 @@ sub prepare {
 	return 1;
 }
 
-sub process_rg_tags {
-	my $options = shift;
-	
-	my $rg_line = $options->{'rgline'};
-	$rg_line =~ s/'//g;
-	my @rg_fields = split(/\\t/, $rg_line);
-
-	for(my $i=1 ; $i < scalar @rg_fields ; $i++){
-		my @tag = split(/:/, $rg_fields[$i]);
-		$options->{"$tag[0]"} = $tag[1];
-	}
-	return 1;
-}
-
-sub sam_to_bam {
-	my $options = shift;
-	
-	my $tmp = $options->{'tmp'};
-	#return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
-	
-	my $sample = $options->{'sample'};
-	my $sam_file = File::Spec->catdir($options->{'tmp'}, "defuse_$sample",'cdna.pair.sam');
-	
-	# Get the RG header information to format parameters --rg-id and --rg-sample
-	my $input_meta = $options->{'meta_set'};
-	my $first_file = $input_meta->[0];
-	my $rg_line;
-
-	if($first_file->fastq) {
-		$rg_line = q{'}.$first_file->rg_header(q{\t}).q{'};
-	}
-	else {
-		($rg_line, undef) = PCAP::Bam::rg_line_for_output($first_file->in, $sample);
-		$rg_line = q{'}.$rg_line.q{'};
-	}
-	$options->{'rgline'} = $rg_line;
-	
-	print Dumper(\$options);
-	
-	return 1;
-}
-
 sub _which {
 	my $prog = shift;
 	my $l_bin = $Bin;
