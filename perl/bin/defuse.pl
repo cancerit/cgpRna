@@ -89,6 +89,7 @@ const my %INDEX_FACTOR => (	'prepare' => -1,
 sub cleanup {
 	my $options = shift;
 	my $tmpdir = $options->{'tmp'};
+	Sanger::CGP::Defuse::Implement::compress_sam($options);
 	move(File::Spec->catdir($tmpdir, 'logs'), File::Spec->catdir($options->{'outdir'}, 'logs')) || die $!;
 	remove_tree $tmpdir if(-e $tmpdir);
 	return 0;

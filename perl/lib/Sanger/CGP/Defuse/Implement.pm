@@ -81,12 +81,30 @@ sub check_input {
 	
 	# If an interleaved fastq has been entered, stop the script as this is not valid input for deFuse which only takes paired fastq files
 	die "Interleaved or single-end fastqs are not valid for deFuse, please re-try with BAM or paired fastq input" if($input->fastq && !$input->paired_fq);
-	
-	
+		
 	# If the input includes BAM files update flag in options to trigger the bamtofastq subroutine
 	$options->{'bam'} = 1 unless($input->fastq);
 	$options->{'max_split'} = scalar @{$options->{'meta_set'}};
 		
+	return 1;
+}
+
+sub compress_sam {
+	my $options = shift;
+	
+	my $tmp = $options->{'tmp'};
+	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
+
+	my $sample = $options->{'sample'};
+	my $defuse_outdir = File::Spec->catdir($options->{'tmp'}, "defuse_$sample");
+	my $in_sam = File::Spec->catfile($defuse_outdir, 'cdna.pair.sam');
+	my $sam_gz = File::Spec->catfile($options->{'outdir'}, 'cdna.pair.sam.gz');	
+	
+	my $command = _which('gzip');
+	$command .= sprintf ' -c %s > %s', $in_sam, $sam_gz;
+	
+	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
+	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);	
 	return 1;
 }
 
