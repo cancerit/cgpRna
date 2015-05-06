@@ -113,16 +113,10 @@ sub setup {
 							'o|outdir=s' => \$opts{'outdir'},
 							'n|normals=s' => \$opts{'normals'},
 							's|sample=s' => \$opts{'sample'},
-							'v|version' => \$opts{'version'},
 	) or pod2usage(2);
 
 	pod2usage(-verbose => 1) if(defined $opts{'h'});
 	pod2usage(-verbose => 2) if(defined $opts{'m'});
-
-	if($opts{'version'}) {
-		print 'CGP tophat_fusion.pl version: TBD',"\n";
-		exit 0;
-	}
 	
 	PCAP::Cli::file_for_reading('input', $opts{'input'});
 	PCAP::Cli::file_for_reading('normals', $opts{'normals'});
