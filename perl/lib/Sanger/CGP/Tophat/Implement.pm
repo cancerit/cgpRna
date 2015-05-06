@@ -252,7 +252,7 @@ sub process_tophat_params {
 	$cfg->setval($TOPHAT_DEFAULTS_SECTION, 'rg-id', $options->{'ID'}) if(defined $options->{'ID'});
 	$cfg->setval($TOPHAT_DEFAULTS_SECTION, 'rg-sample', $options->{'SM'}) if(defined $options->{'SM'});
 	$cfg->setval($TOPHAT_DEFAULTS_SECTION, 'rg-library', $options->{'LB'}) if(defined $options->{'LB'});
-	$cfg->setval($TOPHAT_DEFAULTS_SECTION, 'rg-description', $options->{'DS'}) if(defined $options->{'DS'});
+	$cfg->setval($TOPHAT_DEFAULTS_SECTION, 'rg-description', '"'.$options->{'DS'}.'"') if(defined $options->{'DS'});
 	$cfg->setval($TOPHAT_DEFAULTS_SECTION, 'rg-platform-unit', $options->{'PU'}) if(defined $options->{'PU'});
 	$cfg->setval($TOPHAT_DEFAULTS_SECTION, 'rg-center', $options->{'CN'}) if(defined $options->{'CN'});
 	$cfg->setval($TOPHAT_DEFAULTS_SECTION, 'rg-date', $options->{'DT'}) if(defined $options->{'DT'});
