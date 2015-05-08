@@ -210,8 +210,6 @@ sub merge {
 	else {
 
 		my $raw_files = $options->{'raw_files'};
-		my $input_meta = $options->{'meta_set'};
-		my $input = @{$input_meta}[0];
 		
 		for my $file(@{$raw_files}) {
 			push @files1, $file if($file =~ m/_1.f/);

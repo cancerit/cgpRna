@@ -44,13 +44,11 @@ use Pod::Usage qw(pod2usage);
 use Const::Fast qw(const);
 use PCAP::Cli;
 
-# Position of the columns in the tophat-post output file used to format fusion breakpoint references.
-const my $CHR1 => 25;
-const my $POS1 => 38;
-const my $CHR2 => 26;
-const my $POS2 => 39;
+# Position of the columns in the star-fusion output file used to format fusion breakpoint references.
+const my $FUS1 => 5;
+const my $FUS2 => 8;
 
-const my @OUT_HEADER => qw(breakpoint_ref sample_name gene_1 chr_1 pos_1 gene_2 chr_2 pos_2 num_spanning_reads num_spanning_mate_pairs num_spanning_mates_2 score);
+const my @OUT_HEADER => qw(breakpoint_ref fusion_name	JunctionReads	SpanningFrags	LeftGene	LeftBreakpoint	LeftDistFromRefExonSplice	RightGene	RightBreakpoint	RightDistFromRefExonSplice);
 
 {
 	my $options = setup();
@@ -91,12 +89,14 @@ sub reformat {
 	while (<$ifh>) {
 		chomp;
 		my $line = $_;
-		if($line =~ m/^cluster_id/){
+		if($line =~ m/^#fusion_name/){
 			$options->{'header'} = "breakpoint_ref\t".$line;
 		}
 		else{
 			my @fields = split '\t', $line;
-			my $fusion = $fields[$CHR1-1].":".$fields[$POS1-1]."-".$fields[$CHR2-1].":".$fields[$POS2-1];
+			my @break1 = split ':', $fields[$FUS1-1];
+			my @break2 = split ':', $fields[$FUS2-1];
+			my $fusion = $break1[0].":".$break1[1]."-".$break2[0].":".$break2[1];
 			print $ofh "$fusion\t$line\n";
 		}
 	}	
@@ -129,7 +129,7 @@ sub setup {
 	PCAP::Cli::out_dir_check('outdir', $opts{'outdir'});
 	
 	# Create working directory for storing intermediate files
-	my $tmpdir = File::Spec->catdir($opts{'outdir'}, 'tmpDefuseFilter');
+	my $tmpdir = File::Spec->catdir($opts{'outdir'}, 'tmpStarFilter');
 	make_path($tmpdir) unless(-d $tmpdir);
 	$opts{'tmp'} = $tmpdir;
 
@@ -143,7 +143,7 @@ sub write_output {
 	my $sample = $options-> {'sample'};
 	my $outdir = $options->{'outdir'};
 	my $fusions_file = File::Spec->catfile($tmp,"$sample.fusions.filtered");
-	my $output_file = File::Spec->catfile($outdir,"$sample.defuse.normals.filtered.txt");
+	my $output_file = File::Spec->catfile($outdir,"$sample.star.normals.filtered.txt");
 	PCAP::Cli::file_for_reading('filtered.fusions', $fusions_file);
 	
 	open (my $ifh, $fusions_file) or die "Could not open file $fusions_file $!";
@@ -163,19 +163,19 @@ sub write_output {
 
 __END__
 
-=head1 filter_defuse_fusions.pl
+=head1 filter_star_fusions.pl
 
-Reformats and filters the output file from deFuse against a file containing gene fusions called in normal samples.
+Reformats and filters the output file from star-fusion against a file containing gene fusions called in normal samples.
 
 =head1 SYNOPSIS
 
-filter_defuse_fusions.pl [options]
+filter_star_fusions.pl [options]
 
   Required parameters:
     -outdir    		-o   	Folder to output result to.
     -sample   		-s   	Sample name
-    -input    		-s   	File produced from deFuse (default name is results.filtered.tsv).
-    -normals   		-n   	File containing list of gene fusions detected in normal samples using deFuse
+    -input    		-i   	File produced from star-fusion (default name is star-fusion.fusion_candidates.txt).
+    -normals   		-n   	File containing list of gene fusions detected in normal samples using STAR
                     		 Expected format is one column pre-sorted using the Unix sort command <chr1:pos1-chr2:pos2> e.g.
                     		  10:100000026-12:93371978
                     		  10:100000026-X:84180396
