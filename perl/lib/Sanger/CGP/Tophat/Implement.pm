@@ -80,14 +80,14 @@ sub bam_to_fastq {
 		next if($iter++ != $index); # skip to the relevant element in the list
 		$bam2fq = _which('bamtofastq') || die "Unable to find 'bamtofastq' in path";
 		$rg = $input->rg;
-		$bam2fq .= sprintf $BAMFASTQ, File::Spec->catfile($tmp, "bamtofastq.$sample.$rg"),
-																	File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.s"),
-																	File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.o1"),
-																	File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.o2"),
-																	File::Spec->catfile($inputdir, $sample.'.'.$rg.'_1.fastq.gz'),
-																	File::Spec->catfile($inputdir, $sample.'.'.$rg.'_2.fastq.gz'),
-																	$input->in;
-			push @commands, $bam2fq;
+		$bam2fq .= sprintf $BAMFASTQ, 	File::Spec->catfile($tmp, "bamtofastq.$sample.$rg"),
+						File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.s"),
+						File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.o1"),
+						File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.o2"),
+						File::Spec->catfile($inputdir, $sample.'.'.$rg.'_1.fastq.gz'),
+						File::Spec->catfile($inputdir, $sample.'.'.$rg.'_2.fastq.gz'),
+						$input->in;
+		push @commands, $bam2fq;
 	}
 	
  	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), \@commands, $index);
@@ -210,9 +210,9 @@ sub filter_fusions {
 	my $command = "$^X ";
 	$command .= _which('filter_tophat_fusions.pl');
 	$command .= sprintf $FUSIONS_FILTER, 	$fusions_file,
-																				$sample,
-																				$normals_file,
-																				$options->{'outdir'};
+						$sample,
+						$normals_file,
+						$options->{'outdir'};
 
 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
