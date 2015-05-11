@@ -199,17 +199,17 @@ https://bitbucket.org/dranew/defuse
 
 =head1 SYNOPSIS
 
-defuse.pl [options] [file(s)...]
+star_fusion.pl [options] [file(s)...]
 
   Required parameters:
     -outdir    		-o   	Folder to output result to.
     -sample   		-s   	Sample name
 
   Optional
-    -defuseconfig -d  	1 or 2. Whether to use bowtie1 or bowtie2 for the fusion search [1]
-    -normals  	  -n  	File containing list of gene fusions detected in normal samples using deFuse
+    -gtffile 		-g  	GTF annotation file name which should be compatible with the refbuild and gene build versions. It should reside under /refdataloc/species/refbuild/genebuild/ [Homo_sapiens.GRCh38.77.gtf]
+    -normals  	  	-n  	File containing list of gene fusions detected in normal samples using STAR
     -threads   		-t  	Number of cores to use. [1]
-    -config   		-c  	Path to config.ini file. Defaults for the reference and transcriptome related parameters are provided in the config.ini file.
+    -config   		-c  	Path to config.ini file. Defaults for; the reference and gene build versions, star software and default star and star-fusion parameters [<cgpRna-install-location>/perl/config/star.ini]
     -refbuild 		-rb 	Reference assembly version. Can be UCSC or Ensembl format e.g. GRCh38 or hg38 [GRCh38] 
     -genebuild 		-gb 	Gene build version. This needs to be consistent with the reference build in terms of the version and chromosome name style [77]
     -refdataloc  	-r  	Parent directory of the reference data
@@ -225,9 +225,9 @@ defuse.pl [options] [file(s)...]
     -version   		-v   	Version
 
   File list can be full file names or wildcard, e.g.
-    defuse.pl -t 16 -o myout -refbuild GRCh38 -genebuild 77 -s sample input/*.bam
+    star_fusion.pl -t 16 -o myout -refbuild GRCh38 -genebuild 77 -s sample input/*.bam
 
-  Run with '-m' for possible input file types and details on bowtie versions/index files.
+  Run with '-m' for possible input file types.
 
 =head1 OPTIONS
 
