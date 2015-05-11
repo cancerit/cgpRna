@@ -225,7 +225,7 @@ defuse.pl [options] [file(s)...]
   File list can be full file names or wildcard, e.g.
     defuse.pl -t 16 -o myout -refbuild GRCh38 -genebuild 77 -s sample input/*.bam
 
-  Run with '-m' for possible input file types and details on bowtie versions/index files.
+  Run with '-m' for possible input file types.
 
 =head1 OPTIONS
 
