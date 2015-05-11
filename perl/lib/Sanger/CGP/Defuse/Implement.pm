@@ -6,7 +6,7 @@ package Sanger::CGP::Defuse::Implement;
 ###
 #This file is part of cgpRna.
 ###
-#TopHatFusion is free software: you can redistribute it and/or modify it under
+#cgpRna is free software: you can redistribute it and/or modify it under
 #the terms of the GNU Affero General Public License as published by the
 #Free Software Foundation; either version 3 of the License, or (at your
 #option) any later version.
@@ -137,13 +137,13 @@ sub defuse {
 	# Get the relevant defuse config file for the reference and gene builds
 	my $defuse_config = File::Spec->catfile($options->{'refdataloc'}, $options->{'species'}, $options->{'referencebuild'}, $options->{'genebuild'}, $options->{'defuseconfig'} );
 	my $command = sprintf $DEFUSE,	$defuse,
-																	$defuse_config,
-																	$threads,
-																	$outdir,
-																	$sample,
-																	$outdir,
-																	$fastq1,
-																	$fastq2;
+					$defuse_config,
+					$threads,
+					$outdir,
+					$sample,
+					$outdir,
+					$fastq1,
+					$fastq2;
 																	
 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
@@ -168,9 +168,9 @@ sub filter_fusions {
 	my $command = "$^X ";
 	$command .= _which('filter_defuse_fusions.pl');
 	$command .= sprintf $FUSIONS_FILTER, 	$fusions_file,
-																				$sample,
-																				$normals_file,
-																				$options->{'outdir'};
+						$sample,
+						$normals_file,
+						$options->{'outdir'};
 
 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
@@ -272,13 +272,13 @@ sub prepare {
 			my $sample = $options->{'sample'};
 			my $rg = $input->{'rg'};
 			my $command = _which('bamtofastq') || die "Unable to find 'bamtofastq' in path";
-			$command .= sprintf $BAMFASTQ, File::Spec->catfile($tmp, "bamtofastq.$sample.$rg"),
-																	File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.s"),
-																	File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.o1"),
-																	File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.o2"),
-																	File::Spec->catfile($inputdir, $sample.'.'.$rg.'_1.fastq'),
-																	File::Spec->catfile($inputdir, $sample.'.'.$rg.'_2.fastq'),
-																	$input->in;
+			$command .= sprintf $BAMFASTQ, 	File::Spec->catfile($tmp, "bamtofastq.$sample.$rg"),
+							File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.s"),
+							File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.o1"),
+							File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.o2"),
+							File::Spec->catfile($inputdir, $sample.'.'.$rg.'_1.fastq'),
+							File::Spec->catfile($inputdir, $sample.'.'.$rg.'_2.fastq'),
+							$input->in;
 																	
 			PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, $index);
 		}
