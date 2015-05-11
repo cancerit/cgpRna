@@ -131,9 +131,9 @@ sub filter_fusions {
 	my $command = "$^X ";
 	$command .= _which('filter_star_fusions.pl');
 	$command .= sprintf $FUSIONS_FILTER, 	$fusions_file,
-																				$sample,
-																				$normals_file,
-																				$options->{'outdir'};
+						$sample,
+						$normals_file,
+						$options->{'outdir'};
 
 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
@@ -197,13 +197,13 @@ sub prepare {
 				my $rg = $input->{'rg'};
 				
 				my $command = _which('bamtofastq') || die "Unable to find 'bamtofastq' in path";
-				$command .= sprintf $BAMFASTQ, File::Spec->catfile($tmp, "bamtofastq.$sample.$rg"),
-																	File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.s"),
-																	File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.o1"),
-																	File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.o2"),
-																	File::Spec->catfile($inputdir, $sample.'.'.$rg.'_1.fastq.gz'),
-																	File::Spec->catfile($inputdir, $sample.'.'.$rg.'_2.fastq.gz'),
-																	$input->in;
+				$command .= sprintf $BAMFASTQ, 	File::Spec->catfile($tmp, "bamtofastq.$sample.$rg"),
+								File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.s"),
+								File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.o1"),
+								File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.o2"),
+								File::Spec->catfile($inputdir, $sample.'.'.$rg.'_1.fastq.gz'),
+								File::Spec->catfile($inputdir, $sample.'.'.$rg.'_2.fastq.gz'),
+								$input->in;
 																	
 					PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, $index);
 			
@@ -346,8 +346,8 @@ sub star_chimeric {
 	my $infiles2 = join(',', sort @files2);
 	
 	my $command = sprintf $STAR,	$options->{'starpath'},
-																$star_params,
-																$infiles1." ".$infiles2;
+					$star_params,
+					$infiles1." ".$infiles2;
 																
 	$command .= "--readFilesCommand zcat" if($infiles1 =~ m/\.gz$/);
 
@@ -372,10 +372,10 @@ sub star_fusion {
 	my $gtf = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'}, $options->{'genebuild'}, $options->{'gtffilename'});
 	
 	my $command = sprintf $STAR_FUSION,	$options->{'starfusionpath'},
-																			$chimeric_sam,
-																			$chimeric_junction,
-																			$gtf,
-																			$star_dir."/$sample";
+						$chimeric_sam,
+						$chimeric_junction,
+						$gtf,
+						$star_dir."/$sample";
 																			
 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
