@@ -54,7 +54,7 @@ use Sanger::CGP::Tophat;
 const my @BOWTIE1_SUFFIXES => qw(.1.ebwt .2.ebwt .3.ebwt .4.ebwt .rev.1.ebwt .rev.2.ebwt .fa .fa.fai);
 const my @BOWTIE2_SUFFIXES => qw(.1.bt2 .2.bt2 .3.bt2 .4.bt2 .rev.1.bt2 .rev.2.bt2 .fa .fa.fai);
 const my $BAMFASTQ => q{ exclude=QCFAIL,SECONDARY,SUPPLEMENTARY T=%s S=%s O=%s O2=%s gz=1 level=1 F=%s F2=%s filename=%s};
-const my $FUSIONS_FILTER => q{ -i %s -s %s -n %s -o %s};
+const my $FUSIONS_FILTER => q{ -i %s -s %s -n %s -o %s -p tophat};
 const my $FUSIONS_SPLIT => 50000;
 const my $TOPHAT_MAX_CORES => 16;
 const my $TOPHAT_DEFAULTS_SECTION => 'tophat-parameters';
@@ -208,7 +208,7 @@ sub filter_fusions {
 	my $normals_file = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'normal-fusions',$options->{'normalfusionslist'});
 	
 	my $command = "$^X ";
-	$command .= _which('filter_tophat_fusions.pl');
+	$command .= _which('filter_fusions.pl');
 	$command .= sprintf $FUSIONS_FILTER, 	$fusions_file,
 						$sample,
 						$normals_file,
