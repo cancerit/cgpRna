@@ -6,7 +6,7 @@
 ###
 #This file is part of cgpRna.
 ###
-#TopHatFusion is free software: you can redistribute it and/or modify it under
+#cgpRna is free software: you can redistribute it and/or modify it under
 #the terms of the GNU Affero General Public License as published by the
 #Free Software Foundation; either version 3 of the License, or (at your
 #option) any later version.
@@ -204,10 +204,10 @@ defuse.pl [options] [file(s)...]
     -sample   		-s   	Sample name
 
   Optional
-    -defuseconfig -d  	1 or 2. Whether to use bowtie1 or bowtie2 for the fusion search [1]
-    -normals  	  -n  	File containing list of gene fusions detected in normal samples using deFuse
+    -defuseconfig 	-d  	Name of the defuse config file. It should reside under /refdataloc/species/refbuild/genebuild/
+    -normals  	  	-n  	File containing list of gene fusions detected in normal samples using deFuse
     -threads   		-t  	Number of cores to use. [1]
-    -config   		-c  	Path to config.ini file. Defaults for the reference and transcriptome related parameters are provided in the config.ini file.
+    -config   		-c  	Path to config.ini file. Defaults for the reference data and deFuse software installation details are provided in the config.ini file.
     -refbuild 		-rb 	Reference assembly version. Can be UCSC or Ensembl format e.g. GRCh38 or hg38 [GRCh38] 
     -genebuild 		-gb 	Gene build version. This needs to be consistent with the reference build in terms of the version and chromosome name style [77]
     -refdataloc  	-r  	Parent directory of the reference data
