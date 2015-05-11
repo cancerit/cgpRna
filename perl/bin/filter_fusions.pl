@@ -75,7 +75,7 @@ const my $STAR_HEADER_PATTERN => '^#fusion_name';
 	reformat($options);
 	normals_filter($options);
 	write_output($options);
-	#remove_tree $options->{'tmp'} if(-e $options->{'tmp'});
+	remove_tree $options->{'tmp'} if(-e $options->{'tmp'});
 }
 
 sub normals_filter {
@@ -177,13 +177,13 @@ sub setup {
 	pod2usage(-msg => "\nERROR: Options must be defined.\n", -verbose => 1, -output => \*STDERR) if(scalar @ARGV == 0);
 	$opts{'cmd'} = join " ", $0, @ARGV;
 	
-	GetOptions( 'h|help' => \$opts{'h'},
-							'm|man' => \$opts{'m'},
-							'i|input=s' => \$opts{'input'},
-							'o|outdir=s' => \$opts{'outdir'},
-							'n|normals=s' => \$opts{'normals'},
-							's|sample=s' => \$opts{'sample'},
-							'p|program=s' => \$opts{'program'},						
+	GetOptions( 	'h|help' => \$opts{'h'},
+			'm|man' => \$opts{'m'},
+			'i|input=s' => \$opts{'input'},
+			'o|outdir=s' => \$opts{'outdir'},
+			'n|normals=s' => \$opts{'normals'},
+			's|sample=s' => \$opts{'sample'},
+			'p|program=s' => \$opts{'program'},						
 	) or pod2usage(2);
 
 	pod2usage(-verbose => 1) if(defined $opts{'h'});
