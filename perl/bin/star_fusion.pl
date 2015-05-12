@@ -52,36 +52,36 @@ use version;
 use Cwd;
 
 use PCAP::Cli;
-use Sanger::CGP::Defuse::Implement;
+use Sanger::CGP::Star::Implement;
 
-my $ini_file = "$FindBin::Bin/../config/defuse.ini"; # default config.ini file path
+use Data::Dumper;
+
+my $ini_file = "$FindBin::Bin/../config/star.ini"; # default config.ini file path
 const my @REQUIRED_PARAMS => qw(outdir sample);
-const my @VALID_PROCESS => qw(prepare merge defuse filter);
+const my @VALID_PROCESS => qw(prepare star starfusion filter);
 const my %INDEX_FACTOR => (	'prepare' => -1,
-				'merge' => 1,
-				'defuse' => 1,
+				'star' => 1,
+				'starfusion' => 1,
 				'filter' => 1);
 
 {
 	my $options = setup();
 	
+print Dumper(\$options);
+	
 	if(!exists $options->{'process'} || $options->{'process'} eq 'prepare'){
 		# Process the input files.
 		my $threads = PCAP::Threaded->new($options->{'threads'});
 		&PCAP::Threaded::disable_out_err if(exists $options->{'index'});
-		$threads->add_function('prepare', \&Sanger::CGP::Defuse::Implement::prepare);
+		$threads->add_function('prepare', \&Sanger::CGP::Star::Implement::prepare);
 		$threads->run($options->{'max_split'}, 'prepare', $options);
 	}
-	
-	# If multiple BAMs or pairs of fastq files have been input, merge into one pair of fastqs
-	if($options->{'max_split'} > 1){
-		Sanger::CGP::Defuse::Implement::merge($options) if(!exists $options->{'process'} || $options->{'process'} eq 'merge');
-	}
-	
-	Sanger::CGP::Defuse::Implement::defuse($options) if(!exists $options->{'process'} || $options->{'process'} eq 'defuse');
+
+	Sanger::CGP::Star::Implement::star_chimeric($options) if(!exists $options->{'process'} || $options->{'process'} eq 'star');
+	Sanger::CGP::Star::Implement::star_fusion($options) if(!exists $options->{'process'} || $options->{'process'} eq 'starfusion');
 	
 	if(!exists $options->{'process'} || $options->{'process'} eq 'filter'){
-		Sanger::CGP::Defuse::Implement::filter_fusions($options);
+		Sanger::CGP::Star::Implement::filter_fusions($options);
 		cleanup($options);
 	}
 }
@@ -89,7 +89,6 @@ const my %INDEX_FACTOR => (	'prepare' => -1,
 sub cleanup {
 	my $options = shift;
 	my $tmpdir = $options->{'tmp'};
-	Sanger::CGP::Defuse::Implement::compress_sam($options);
 	move(File::Spec->catdir($tmpdir, 'logs'), File::Spec->catdir($options->{'outdir'}, 'logs')) || die $!;
 	remove_tree $tmpdir if(-e $tmpdir);
 	return 0;
@@ -109,8 +108,8 @@ sub setup {
 			'rb|refbuild=s' => \$opts{'referencebuild'},
 			'gb|genebuild=i' => \$opts{'genebuild'},
 			'r|refdataloc=s' => \$opts{'refdataloc'},
+			'g|gtffile=s' => \$opts{'gtffilename'},
 			'n|normals=s' => \$opts{'normalfusionslist'},
-			'd|defuseconfig=s' => \$opts{'defuseconfig'},
 			't|threads=i' => \$opts{'threads'},
 			'p|process=s' => \$opts{'process'},
 			'i|index=i' => \$opts{'index'},
@@ -127,19 +126,20 @@ sub setup {
 	$opts{'config'} = $ini_file;
 	
 	# Populate the options hash with values from the config file
-	$opts{'refdataloc'} = $cfg->val('defuse-config','referenceloc') unless(defined $opts{'refdataloc'});
-	$opts{'referencebuild'} = $cfg->val('defuse-config','referencebuild') unless(defined $opts{'referencebuild'});
-	$opts{'genebuild'} = $cfg->val('defuse-config','genebuild') unless(defined $opts{'genebuild'});
-	$opts{'normalfusionslist'} = $cfg->val('defuse-config','normalfusionslist') unless(defined $opts{'normalfusionslist'});
-	$opts{'species'} = $cfg->val('defuse-config','species') unless(defined $opts{'species'});
-	$opts{'defusepath'} = $cfg->val('defuse-config','defusepath');
-	$opts{'defuseversion'} = $cfg->val('defuse-config','defuseversion');
-	$opts{'defuseconfig'} = $cfg->val('defuse-config','defuseconfig');
+	$opts{'refdataloc'} = $cfg->val('star-config','referenceloc') unless(defined $opts{'refdataloc'});
+	$opts{'referencebuild'} = $cfg->val('star-config','referencebuild') unless(defined $opts{'referencebuild'});
+	$opts{'genebuild'} = $cfg->val('star-config','genebuild') unless(defined $opts{'genebuild'});
+	$opts{'normalfusionslist'} = $cfg->val('star-config','normalfusionslist') unless(defined $opts{'normalfusionslist'});
+	$opts{'gtffilename'} = $cfg->val('star-config','gtffilename') unless(defined $opts{'gtffilename'});
+	$opts{'species'} = $cfg->val('star-config','species') unless(defined $opts{'species'});
+	$opts{'starpath'} = $cfg->val('star-config','starpath');
+	$opts{'starfusionpath'} = $cfg->val('star-config','starfusionpath');
 
-	# Print version information for this program (deFuse itself does not have a -v or --version option)
+	# Print version information for this program
 	if($opts{'version'}) {
-		print 'CGP defuse.pl version: ',Sanger::CGP::Defuse::Implement->VERSION,"\n";
-		print 'deFuse version: ',$opts{'defuseversion'},"\n" if(defined $opts{'defuseversion'});
+		print 'CGP star_fusion.pl version: ',Sanger::CGP::Star::Implement->VERSION,"\n";
+		my $star_version = Sanger::CGP::Star::Implement::prog_version(\%opts);
+		print "Star version: $star_version\n";
 		exit 0;
 	}
 		
@@ -150,19 +150,21 @@ sub setup {
 	# Check the output directory exists and is writeable, create if not
 	PCAP::Cli::out_dir_check('outdir', $opts{'outdir'});
 	
-	my $tmpdir = File::Spec->catdir($opts{'outdir'}, 'tmpDefuse');
+	my $tmpdir = File::Spec->catdir($opts{'outdir'}, 'tmpStar');
 	make_path($tmpdir) unless(-d $tmpdir);
 	$opts{'tmp'} = $tmpdir;
 	my $progress = File::Spec->catdir($tmpdir, 'progress');
 	make_path($progress) unless(-d $progress);
 	my $logs = File::Spec->catdir($tmpdir, 'logs');
 	make_path($logs) unless(-d $logs);
-	my $input = File::Spec->catdir($tmpdir, 'input');
-	make_path($input) unless(-d $input);
+	my $inputdir = File::Spec->catdir($tmpdir, 'input');
+	make_path($inputdir) unless(-d $inputdir);
+	my $stardir = File::Spec->catdir($tmpdir, 'star');
+	make_path($stardir) unless(-d $stardir);
 	
 	# Check the input is fastq (paired only) or BAM and that a mixture of these file types hasn't been entered
 	$opts{'raw_files'} = \@ARGV;
-	Sanger::CGP::Defuse::Implement::check_input(\%opts);
+	Sanger::CGP::Star::Implement::check_input(\%opts);
 
 	delete $opts{'process'} unless(defined $opts{'process'});
 	delete $opts{'index'} unless(defined $opts{'index'});
@@ -190,27 +192,27 @@ sub setup {
 
 __END__
 
-=head1 defuse.pl
+=head1 star_fusion.pl
 
-Cancer Genome Project implementation of the deFuse RNA-Seq algorithm
+Cancer Genome Project implementation of the STAR RNA-Seq algorithm
 https://bitbucket.org/dranew/defuse
 
 =head1 SYNOPSIS
 
-defuse.pl [options] [file(s)...]
+star_fusion.pl [options] [file(s)...]
 
   Required parameters:
     -outdir    		-o   	Folder to output result to.
     -sample   		-s   	Sample name
 
   Optional
-    -defuseconfig 	-d  	Name of the defuse config file. It should reside under /refdataloc/species/refbuild/genebuild/ [defuse-config-GRCh38-77.txt]
-    -normals  	  	-n  	File containing list of gene fusions detected in normal samples using deFuse. It should reside under /refdataloc/species/refbuild/normal-fusions/ [defuse-normal-fusions-b38]
+    -gtffile 		-g  	GTF annotation file name which should be compatible with the refbuild and gene build versions. It should reside under /refdataloc/species/refbuild/genebuild/ [Homo_sapiens.GRCh38.77.gtf]
+    -normals  	  	-n  	File containing list of gene fusions detected in normal samples using STAR
     -threads   		-t  	Number of cores to use. [1]
-    -config   		-c  	Path to config.ini file. Defaults for the reference data and deFuse software installation details are provided in the config.ini file.
+    -config   		-c  	Path to config.ini file. Defaults for; the reference and gene build versions, star software and default star and star-fusion parameters [<cgpRna-install-location>/perl/config/star.ini]
     -refbuild 		-rb 	Reference assembly version. Can be UCSC or Ensembl format e.g. GRCh38 or hg38 [GRCh38] 
     -genebuild 		-gb 	Gene build version. This needs to be consistent with the reference build in terms of the version and chromosome name style [77]
-    -refdataloc  	-r  	Parent directory of the reference data.
+    -refdataloc  	-r  	Parent directory of the reference data
     -species  		-sp 	Species [human]
 
   Targeted processing (further detail under OPTIONS):
@@ -223,7 +225,7 @@ defuse.pl [options] [file(s)...]
     -version   		-v   	Version
 
   File list can be full file names or wildcard, e.g.
-    defuse.pl -t 16 -o myout -refbuild GRCh38 -genebuild 77 -s sample input/*.bam
+    star_fusion.pl -t 16 -o myout -refbuild GRCh38 -genebuild 77 -s sample input/*.bam
 
   Run with '-m' for possible input file types.
 
@@ -236,8 +238,8 @@ defuse.pl [options] [file(s)...]
 Available processes for this tool are:
 
   prepare
-  merge
-  defuse
+  star
+  starfusion
   filter
 
 =back
