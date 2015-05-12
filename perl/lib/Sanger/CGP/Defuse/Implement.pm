@@ -124,8 +124,12 @@ sub defuse {
 	
 	# If the input was BAM or multiple files then the paired fastqs will reside in the /tmp/input folder, otherwise grab the pair from the raw_files array on the options hash
 	if($options->{'bam'} || $options->{'max_split'} > 1){
-		$fastq1 = File::Spec->catfile($tmp,'input', $sample."_1.fastq");
-		$fastq2 = File::Spec->catfile($tmp,'input', $sample."_2.fastq");
+		my $inputdir = File::Spec->catdir($tmp,'input');
+		opendir(my $dh, $inputdir);
+		while(my $file = readdir $dh) {
+			$fastq1 = File::Spec->catfile($inputdir, $file) if($file =~ m/_1.fastq$/);
+			$fastq2 = File::Spec->catfile($inputdir, $file) if($file =~ m/_2.fastq$/);
+		}
 	}
 	else {
 		my $raw_files = $options->{'raw_files'};
