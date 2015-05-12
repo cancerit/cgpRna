@@ -6,7 +6,7 @@ package Sanger::CGP::Tophat::Implement;
 ###
 #This file is part of cgpRna.
 ###
-#TopHatFusion is free software: you can redistribute it and/or modify it under
+#cgpRna is free software: you can redistribute it and/or modify it under
 #the terms of the GNU Affero General Public License as published by the
 #Free Software Foundation; either version 3 of the License, or (at your
 #option) any later version.
@@ -54,7 +54,7 @@ use Sanger::CGP::Tophat;
 const my @BOWTIE1_SUFFIXES => qw(.1.ebwt .2.ebwt .3.ebwt .4.ebwt .rev.1.ebwt .rev.2.ebwt .fa .fa.fai);
 const my @BOWTIE2_SUFFIXES => qw(.1.bt2 .2.bt2 .3.bt2 .4.bt2 .rev.1.bt2 .rev.2.bt2 .fa .fa.fai);
 const my $BAMFASTQ => q{ exclude=QCFAIL,SECONDARY,SUPPLEMENTARY T=%s S=%s O=%s O2=%s gz=1 level=1 F=%s F2=%s filename=%s};
-const my $FUSIONS_FILTER => q{ -i %s -s %s -n %s -o %s};
+const my $FUSIONS_FILTER => q{ -i %s -s %s -n %s -o %s -p tophat};
 const my $FUSIONS_SPLIT => 50000;
 const my $TOPHAT_MAX_CORES => 16;
 const my $TOPHAT_DEFAULTS_SECTION => 'tophat-parameters';
@@ -80,14 +80,14 @@ sub bam_to_fastq {
 		next if($iter++ != $index); # skip to the relevant element in the list
 		$bam2fq = _which('bamtofastq') || die "Unable to find 'bamtofastq' in path";
 		$rg = $input->rg;
-		$bam2fq .= sprintf $BAMFASTQ, File::Spec->catfile($tmp, "bamtofastq.$sample.$rg"),
-																	File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.s"),
-																	File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.o1"),
-																	File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.o2"),
-																	File::Spec->catfile($inputdir, $sample.'.'.$rg.'_1.fastq.gz'),
-																	File::Spec->catfile($inputdir, $sample.'.'.$rg.'_2.fastq.gz'),
-																	$input->in;
-			push @commands, $bam2fq;
+		$bam2fq .= sprintf $BAMFASTQ, 	File::Spec->catfile($tmp, "bamtofastq.$sample.$rg"),
+						File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.s"),
+						File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.o1"),
+						File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.o2"),
+						File::Spec->catfile($inputdir, $sample.'.'.$rg.'_1.fastq.gz'),
+						File::Spec->catfile($inputdir, $sample.'.'.$rg.'_2.fastq.gz'),
+						$input->in;
+		push @commands, $bam2fq;
 	}
 	
  	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), \@commands, $index);
@@ -208,11 +208,11 @@ sub filter_fusions {
 	my $normals_file = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'normal-fusions',$options->{'normalfusionslist'});
 	
 	my $command = "$^X ";
-	$command .= _which('filter_tophat_fusions.pl');
+	$command .= _which('filter_fusions.pl');
 	$command .= sprintf $FUSIONS_FILTER, 	$fusions_file,
-																				$sample,
-																				$normals_file,
-																				$options->{'outdir'};
+						$sample,
+						$normals_file,
+						$options->{'outdir'};
 
 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
@@ -252,7 +252,7 @@ sub process_tophat_params {
 	$cfg->setval($TOPHAT_DEFAULTS_SECTION, 'rg-id', $options->{'ID'}) if(defined $options->{'ID'});
 	$cfg->setval($TOPHAT_DEFAULTS_SECTION, 'rg-sample', $options->{'SM'}) if(defined $options->{'SM'});
 	$cfg->setval($TOPHAT_DEFAULTS_SECTION, 'rg-library', $options->{'LB'}) if(defined $options->{'LB'});
-	$cfg->setval($TOPHAT_DEFAULTS_SECTION, 'rg-description', $options->{'DS'}) if(defined $options->{'DS'});
+	$cfg->setval($TOPHAT_DEFAULTS_SECTION, 'rg-description', '"'.$options->{'DS'}.'"') if(defined $options->{'DS'});
 	$cfg->setval($TOPHAT_DEFAULTS_SECTION, 'rg-platform-unit', $options->{'PU'}) if(defined $options->{'PU'});
 	$cfg->setval($TOPHAT_DEFAULTS_SECTION, 'rg-center', $options->{'CN'}) if(defined $options->{'CN'});
 	$cfg->setval($TOPHAT_DEFAULTS_SECTION, 'rg-date', $options->{'DT'}) if(defined $options->{'DT'});
@@ -407,17 +407,7 @@ sub tophat_fusion {
 	my $tmp = $options->{'tmp'};
 	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
 	
-	# Get the TopHat fusion sample specific parameters from the options hash
-	my $threads = $TOPHAT_MAX_CORES;
-	$threads = $options->{'threads'} if($options->{'threads'} < $TOPHAT_MAX_CORES);
 	my $sample = $options->{'sample'};
-	my $library_type = $options->{'librarytype'};
-	my $ref_index_stem = $options->{'referencepath'};
-	my $trans_index_stem = $options->{'transcriptomepath'};
-	my $exclude_chr = $options->{'exclude'};
-	my $tophat_path = $options->{'tophatpath'};
-	my $bowtie_version = '';
-	$bowtie_version = '--bowtie1' if($options->{'bowtieversion'} != 2);
 	
 	# Check the input data
 	my $input_meta = $options->{'meta_set'};
@@ -466,6 +456,9 @@ sub tophat_fusion {
 	# Update the environment to use the correct version of bowtie
 	my $bwtpath = dirname($options->{'bowtiepath'} );
 	$ENV{PATH} = "$bwtpath:$ENV{PATH}" if($ENV{'PATH'} !~ /$bwtpath/);
+	
+	my $ref_index_stem = $options->{'referencepath'};
+	my $tophat_path = $options->{'tophatpath'};
 	
 	my $command = $tophat_path." ".$tophat_params." ".$ref_index_stem." ".join(",",@input1)." ".join(",",@input2);
 	
