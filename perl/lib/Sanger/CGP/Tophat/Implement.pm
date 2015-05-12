@@ -407,17 +407,7 @@ sub tophat_fusion {
 	my $tmp = $options->{'tmp'};
 	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
 	
-	# Get the TopHat fusion sample specific parameters from the options hash
-	my $threads = $TOPHAT_MAX_CORES;
-	$threads = $options->{'threads'} if($options->{'threads'} < $TOPHAT_MAX_CORES);
 	my $sample = $options->{'sample'};
-	my $library_type = $options->{'librarytype'};
-	my $ref_index_stem = $options->{'referencepath'};
-	my $trans_index_stem = $options->{'transcriptomepath'};
-	my $exclude_chr = $options->{'exclude'};
-	my $tophat_path = $options->{'tophatpath'};
-	my $bowtie_version = '';
-	$bowtie_version = '--bowtie1' if($options->{'bowtieversion'} != 2);
 	
 	# Check the input data
 	my $input_meta = $options->{'meta_set'};
@@ -466,6 +456,9 @@ sub tophat_fusion {
 	# Update the environment to use the correct version of bowtie
 	my $bwtpath = dirname($options->{'bowtiepath'} );
 	$ENV{PATH} = "$bwtpath:$ENV{PATH}" if($ENV{'PATH'} !~ /$bwtpath/);
+	
+	my $ref_index_stem = $options->{'referencepath'};
+	my $tophat_path = $options->{'tophatpath'};
 	
 	my $command = $tophat_path." ".$tophat_params." ".$ref_index_stem." ".join(",",@input1)." ".join(",",@input2);
 	
