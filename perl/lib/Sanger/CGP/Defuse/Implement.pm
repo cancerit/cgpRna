@@ -170,7 +170,7 @@ sub filter_fusions {
 	my $normals_file = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'normal-fusions',$options->{'normalfusionslist'});
 
 	my $command = "$^X ";
-	$command .= _which('filter_defuse_fusions.pl');
+	$command .= _which('filter_fusions.pl');
 	$command .= sprintf $FUSIONS_FILTER, 	$fusions_file,
 						$sample,
 						$normals_file,
