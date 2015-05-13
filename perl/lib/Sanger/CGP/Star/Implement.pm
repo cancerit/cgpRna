@@ -72,7 +72,8 @@ sub check_input {
 	my $gene_build = $options->{'genebuild'};
 	my $ref_build_loc = File::Spec->catdir($ref_data, $species, $ref_build);
 
-	# Check the normal fusions file exists for the filtering step
+	# Check the gtf and normal fusions files exist
+	PCAP::Cli::file_for_reading('gtf-file', File::Spec->catfile($ref_build_loc, $gene_build, $options->{'gtffilename'}));
 	PCAP::Cli::file_for_reading('normals-list',File::Spec->catfile($ref_build_loc,'normal-fusions',$options->{'normalfusionslist'}));
 	
 	my $input_meta = PCAP::Bwa::Meta::files_to_meta($options->{'tmp'}, $options->{'raw_files'}, $options->{'sample'});
