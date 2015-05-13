@@ -262,7 +262,7 @@ immediately prior to '.f[ast]q'.
 
 As *.f[ast]q but compressed with gzip.
 
-N.B. Interleaved fastq files are not valid for deFuse
+=item N.B. Interleaved fastq files are not valid for deFuse
 
 =item bam
 
