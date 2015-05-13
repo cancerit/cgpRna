@@ -60,6 +60,7 @@ const my $STAR_DEFAULTS_SECTION => 'star-parameters';
 const my $STAR_FUSION_SECTION => 'star-fusion-parameters';
 const my $STAR => q{ %s %s --readFilesIn %s };
 const my $STAR_FUSION => q{ %s --chimeric_out_sam %s --chimeric_junction %s --ref_GTF %s --min_novel_junction_support 10 --min_alt_pct_junction 10.0 --out_prefix %s };
+const my $SAMTOBAM => q{ view -bS %s > %s };
 
 
 sub check_input {
@@ -276,6 +277,25 @@ sub prog_version {
 		($star_version) = $stdout =~ /STAR_([[:digit:]\.]+.*)/m;
 	}
 	return $star_version;
+}
+
+sub sam_to_bam {
+	my $options = shift;
+	
+	my $tmp = $options->{'tmp'};
+	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
+	
+	my $sample = $options->{'sample'};
+	my $outdir = $options->{'outdir'};
+	my $star_outdir = File::Spec->catdir($options->{'tmp'}, 'star');
+	my $command .= _which('samtools');
+	$command .= sprintf $SAMTOBAM,	File::Spec->catfile($star_outdir, 'Chimeric.out.sam'),
+																	File::Spec->catfile($outdir, $sample.'.Chimeric.out.bam');
+
+	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
+	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
+	
+	return 1;
 }
 
 sub star_chimeric {
