@@ -210,9 +210,9 @@ star_fusion.pl [options] [file(s)...]
 
   Optional
     -gtffile 		-g  	GTF annotation file name which should be compatible with the refbuild and gene build versions. It should reside under /refdataloc/species/refbuild/genebuild/ [Homo_sapiens.GRCh38.77.gtf]
-    -normals  	  	-n  	File containing list of gene fusions detected in normal samples using STAR
+    -normals  	  	-n  	File containing list of gene fusions detected in normal samples using STAR. It should reside under /refdataloc/species/refbuild/normal-fusions/ [star-normal-fusions-b38]
     -threads   		-t  	Number of cores to use. [1]
-    -config   		-c  	Path to config.ini file. Defaults for; the reference and gene build versions, star software and default star and star-fusion parameters [<cgpRna-install-location>/perl/config/star.ini]
+    -config   		-c  	Path to config.ini file. It contains defaults for; the reference and gene build versions, star software and default star and star-fusion parameters [<cgpRna-install-location>/perl/config/star.ini]
     -refbuild 		-rb 	Reference assembly version. Can be UCSC or Ensembl format e.g. GRCh38 or hg38 [GRCh38] 
     -genebuild 		-gb 	Gene build version. This needs to be consistent with the reference build in terms of the version and chromosome name style [77]
     -refdataloc  	-r  	Parent directory of the reference data
