@@ -139,7 +139,7 @@ sub setup {
 	$opts{'species'} = $cfg->val('defuse-config','species') unless(defined $opts{'species'});
 	$opts{'defusepath'} = $cfg->val('defuse-config','defusepath');
 	$opts{'defuseversion'} = $cfg->val('defuse-config','defuseversion');
-	$opts{'defuseconfig'} = $cfg->val('defuse-config','defuseconfig');
+	$opts{'defuseconfig'} = $cfg->val('defuse-config','defuseconfig') unless(defined $opts{'defuseconfig'});
 
 	# Print version information for this program (deFuse itself does not have a -v or --version option)
 	if($opts{'version'}) {
@@ -180,6 +180,8 @@ sub setup {
 		PCAP::Cli::valid_process('process', $opts{'process'}, \@VALID_PROCESS);
 		my $max_index = $INDEX_FACTOR{$opts{'process'}};
 		
+		$max_index = $opts{'max_split'} if($opts{'process'} eq 'prepare');
+		
 		if(exists $opts{'index'}) {
 			PCAP::Cli::opt_requires_opts('index', \%opts, ['process']);
 			PCAP::Cli::valid_index_by_factor('index', $opts{'index'}, $max_index, 1);
@@ -214,7 +216,7 @@ defuse.pl [options] [file(s)...]
     -threads   		-t  	Number of cores to use. [1]
     -config   		-c  	Path to config.ini file. The file contains defaults for the reference data and deFuse software installation details [<cgpRna-install-location>/perl/config/defuse.ini]
     -refbuild 		-rb 	Reference assembly version. Can be UCSC or Ensembl format e.g. GRCh38 or hg38 [GRCh38] 
-    -genebuild 		-gb 	Gene build version. This needs to be consistent with the reference build in terms of the version and chromosome name style [77]
+    -genebuild 		-gb 	Gene build version. This needs to be consistent with the reference build in terms of the version and chromosome name style. Please use the build number only minus any prefixes such as e/ensembl [77]
     -refdataloc  	-r  	Parent directory of the reference data.
     -species  		-sp 	Species [human]
 
@@ -262,10 +264,10 @@ immediately prior to '.f[ast]q'.
 
 As *.f[ast]q but compressed with gzip.
 
-=item N.B. Interleaved fastq files are not valid for deFuse
-
 =item bam
 
 A list of single lane BAM files, RG line is transfered to aligned files.
 
 =back
+
+N.B. Interleaved fastq files are not valid for deFuse.

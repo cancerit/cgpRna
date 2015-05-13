@@ -130,6 +130,8 @@ sub defuse {
 			$fastq1 = File::Spec->catfile($inputdir, $file) if($file =~ m/_1.fastq$/);
 			$fastq2 = File::Spec->catfile($inputdir, $file) if($file =~ m/_2.fastq$/);
 		}
+		closedir($dh);
+		die "ERROR: No input fastq files could be found in the input folder. Please check the prepare and (if multiple input BAMs have been entered) merge steps have been run.\n" if(!defined $fastq1 );
 	}
 	else {
 		my $raw_files = $options->{'raw_files'};
@@ -137,6 +139,8 @@ sub defuse {
 		$fastq1 = $sorted_files[0];
 		$fastq2 = $sorted_files[1];
 	}
+	
+	die "ERROR: the input files appear to be gzipped, please check the prepare and merge steps have been run prior to defuse\n" if($fastq1 =~ m/.gz$/ );
 	
 	# Get the relevant defuse config file for the reference and gene builds
 	my $defuse_config = File::Spec->catfile($options->{'refdataloc'}, $options->{'species'}, $options->{'referencebuild'}, $options->{'genebuild'}, $options->{'defuseconfig'} );
@@ -202,13 +206,18 @@ sub merge {
 		}
 		closedir($dh);
 		
-		my $infiles1 = join(' ', sort @files1);
-		my $infiles2 = join(' ', sort @files2);
-		my $outfile1 = File::Spec->catfile($inputdir,$sample."_1.fastq");
-		my $outfile2 = File::Spec->catfile($inputdir,$sample."_2.fastq");
+		if(@files1){
+			my $infiles1 = join(' ', sort @files1);
+			my $infiles2 = join(' ', sort @files2);
+			my $outfile1 = File::Spec->catfile($inputdir,$sample."_1.fastq");
+			my $outfile2 = File::Spec->catfile($inputdir,$sample."_2.fastq");
 		
-		push @commands, "cat $infiles1 > $outfile1";
-		push @commands, "cat $infiles2 > $outfile2";
+			push @commands, "cat $infiles1 > $outfile1";
+			push @commands, "cat $infiles2 > $outfile2";
+		}
+		else{
+			die "ERROR: No fastq input files could be found in the input directory. Please check and re-run the prepare step if necessary.";
+		}
 
 	}
 	else {
