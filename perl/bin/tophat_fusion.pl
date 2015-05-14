@@ -98,7 +98,7 @@ sub cleanup {
 	move(File::Spec->catfile($fusion_outdir, 'accepted_hits.bam'), $options->{outdir}) || die $!;
 	move(File::Spec->catfile($fusion_outdir, 'unmapped.bam'), $options->{outdir}) || die $!;
 	move(File::Spec->catdir($tmpdir, 'logs'), File::Spec->catdir($options->{'outdir'}, 'logs')) || die $!;
-	#remove_tree $tmpdir if(-e $tmpdir);
+	remove_tree $tmpdir if(-e $tmpdir);
 	return 0;
 }
 
