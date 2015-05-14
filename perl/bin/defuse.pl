@@ -183,9 +183,14 @@ sub setup {
 		$max_index = $opts{'max_split'} if($opts{'process'} eq 'prepare');
 		
 		if(exists $opts{'index'}) {
+			if($opts{'process'} eq 'prepare'){
 			PCAP::Cli::opt_requires_opts('index', \%opts, ['process']);
 			PCAP::Cli::valid_index_by_factor('index', $opts{'index'}, $max_index, 1);
 			$opts{'max_split'} = $opts{'index'};
+			}
+			else{
+				die "Index is not a valid for process $opts{'process'}, please re-run without the -i parameter.\n";
+			}
 		}
 	}
 	elsif(exists $opts{'index'}) {
