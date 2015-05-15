@@ -128,8 +128,14 @@ sub defuse {
 		opendir(my $dh, $inputdir);
 		while(my $file = readdir $dh) {
 			if($options->{'bam'}){
-				$fastq1 = File::Spec->catfile($inputdir, $file) if($file =~ m/_1.fastq$/);
-				$fastq2 = File::Spec->catfile($inputdir, $file) if($file =~ m/_2.fastq$/);
+				if($options->{'max_split'} > 1){
+					$fastq1 = File::Spec->catfile($inputdir, $file) if($file =~ m/^$sample\_1.fastq$/);
+					$fastq2 = File::Spec->catfile($inputdir, $file) if($file =~ m/^$sample\_2.fastq$/);
+				}
+				else{
+					$fastq1 = File::Spec->catfile($inputdir, $file) if($file =~ m/_1.fastq$/);
+					$fastq2 = File::Spec->catfile($inputdir, $file) if($file =~ m/_2.fastq$/);					
+				}
 			}
 			else{
 				$fastq1 = File::Spec->catfile($inputdir, $file) if($file =~ m/^$sample.*_1.fastq$/);
