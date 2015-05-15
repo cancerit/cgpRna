@@ -140,8 +140,18 @@ sub defuse {
 		$fastq2 = $sorted_files[1];
 	}
 	
-	die "ERROR: the input files appear to be gzipped, please check the prepare and merge steps have been run prior to defuse\n" if($fastq1 =~ m/.gz$/ );
-	
+	if($fastq1 =~ m/.gz$/ ){
+		# Check the input directory to see if the decompressed fastq files are present
+		my $inputdir = File::Spec->catdir($tmp,'input');
+		opendir(my $dh, $inputdir);
+		while(my $file = readdir $dh) {
+			$fastq1 = File::Spec->catfile($inputdir, $file) if($file =~ m/_1.fastq$/);
+			$fastq2 = File::Spec->catfile($inputdir, $file) if($file =~ m/_2.fastq$/);
+		}
+		closedir($dh);
+		die "ERROR: No input fastq files could be found in the input folder. Please check the prepare and (if multiple input BAMs have been entered) merge steps have been run.\n" if(!defined $fastq1 );
+	}
+
 	# Get the relevant defuse config file for the reference and gene builds
 	my $defuse_config = File::Spec->catfile($options->{'refdataloc'}, $options->{'species'}, $options->{'referencebuild'}, $options->{'genebuild'}, $options->{'defuseconfig'} );
 	my $command = sprintf $DEFUSE,	$defuse,
