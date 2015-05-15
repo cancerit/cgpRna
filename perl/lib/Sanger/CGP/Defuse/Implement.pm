@@ -127,8 +127,15 @@ sub defuse {
 		my $inputdir = File::Spec->catdir($tmp,'input');
 		opendir(my $dh, $inputdir);
 		while(my $file = readdir $dh) {
-			$fastq1 = File::Spec->catfile($inputdir, $file) if($file =~ m/_1.fastq$/);
-			$fastq2 = File::Spec->catfile($inputdir, $file) if($file =~ m/_2.fastq$/);
+			if($options->{'bam'}){
+				$fastq1 = File::Spec->catfile($inputdir, $file) if($file =~ m/_1.fastq$/);
+				$fastq2 = File::Spec->catfile($inputdir, $file) if($file =~ m/_2.fastq$/);
+			}
+			else{
+				$fastq1 = File::Spec->catfile($inputdir, $file) if($file =~ m/^$sample.*_1.fastq$/);
+				$fastq2 = File::Spec->catfile($inputdir, $file) if($file =~ m/^$sample.*_2.fastq$/);
+				
+			}
 		}
 		closedir($dh);
 		die "ERROR: No input fastq files could be found in the input folder. Please check the prepare and (if multiple input BAMs have been entered) merge steps have been run.\n" if(!defined $fastq1 );
@@ -197,7 +204,7 @@ sub filter_fusions {
 
 sub merge {
 	my $options = shift;
-	
+
 	my $tmp = $options->{'tmp'};
 	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
 	
@@ -235,9 +242,16 @@ sub merge {
 		my $raw_files = $options->{'raw_files'};
 		
 		for my $file(@{$raw_files}) {
-			push @files1, $file if($file =~ m/_1.f/);
-			push @files2, $file if($file =~ m/_2.f/);
+			push @files1, $file if($file =~ m/_1.f.*q$/);
+			push @files2, $file if($file =~ m/_2.f.*q$/);
 		}
+		
+		opendir(my $dh, $inputdir);
+		while(my $file = readdir $dh) {
+			push @files1, File::Spec->catfile($inputdir, $file) if($file =~ m/_1.f.*q$/);
+			push @files2, File::Spec->catfile($inputdir, $file) if($file =~ m/_2.f.*q$/);
+		}
+		closedir($dh);
 			
 		my $infiles1 = join(' ', sort @files1);
 		my $infiles2 = join(' ', sort @files2);
@@ -283,11 +297,6 @@ sub prepare {
 				system([0,2], "(gunzip -c $infile1 > $outfile1.$suffix) >& /dev/null") unless(-e "$outfile1.$suffix");
 				system([0,2], "(gunzip -c $infile2 > $outfile2.$suffix) >& /dev/null") unless(-e "$outfile2.$suffix");
 						
-				my $raw_files = $options->{'raw_files'};
-				for(my $i=0; $i<@$raw_files; $i++){
-					@$raw_files[$i] = $outfile1.".".$suffix if(@$raw_files[$i] =~ $infile1);
-					@$raw_files[$i] = $outfile2.".".$suffix if(@$raw_files[$i] =~ $infile2);
-				}
 			}
 		}
 		else{
