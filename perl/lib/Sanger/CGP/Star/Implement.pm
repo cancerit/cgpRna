@@ -334,6 +334,8 @@ sub star_chimeric {
 	
 	my @files1;
 	my @files2;
+	my $infiles1;
+	my $infiles2;
 
 	# If the input is BAM then all input fastqs will reside in the ../tmp/input directory so can search for _1 and _2 to find the files
 	if($options->{'bam'}){
@@ -344,27 +346,70 @@ sub star_chimeric {
 			push @files2, File::Spec->catfile($inputdir, $file) if($file =~ m/_2.f/);
 		}
 		closedir($dh);
+		
+		$infiles1 = join(',', sort @files1);
+		$infiles2 = join(',', sort @files2);
 	}
 	else{
-		my $input_meta = $options->{'meta_set'};
-		my $input = @{$input_meta}[0];
 		my $raw_files = $options->{'raw_files'};
 		
-		if($input->paired_fq){
-			for my $file(@{$raw_files}) {
-				push @files1, $file if($file =~ m/_1.f/);
-				push @files2, $file if($file =~ m/_2.f/);
+		# If there are multiple input fastqs, some gzipped and some not, need to check both the input directory and raw_files array for the locations of the input files
+		if($options->{'mixedfq'}){
+			my $inputdir = File::Spec->catdir($tmp, 'input');
+			if($first_file->paired_fq){
+				for my $file(@{$raw_files}) {
+					push @files1, $file if($file =~ m/_1.f.*q.gz$/);
+					push @files2, $file if($file =~ m/_2.f.*q.gz$/);
+				}
+				opendir(my $dh, $inputdir);
+				while(my $file = readdir $dh) {
+					push @files1, File::Spec->catfile($inputdir, $file) if($file =~ m/_1.f.*q.gz$/);
+					push @files2, File::Spec->catfile($inputdir, $file) if($file =~ m/_2.f.*q.gz$/);
+				}
+				closedir($dh);
+				
+				$infiles1 = join(',', sort @files1);
+				$infiles2 = join(',', sort @files2);
+			
 			}
+			else{
+				for my $file(@{$raw_files}) {
+					push @files1, $file if($file =~ m/.f.*q.gz$/);
+				}
+				opendir(my $dh, $inputdir);
+				while(my $file = readdir $dh) {
+					push @files1, File::Spec->catfile($inputdir, $file) if($file =~ m/.f.*q.gz$/);
+				}
+				closedir($dh);
+				
+				$infiles1 = join(',', sort @files1);
+				$infiles2 = '';
+			}
+
 		}
+		# Otherwise there should be just one pair of fastq files or an interleaved/single ended fastq file so only need to check the raw_files array
 		else{
-			for my $file(@{$raw_files}) {
-				push @files1, $file;
+			if($first_file->paired_fq){
+				for my $file(@{$raw_files}) {
+					push @files1, $file if($file =~ m/_1.f/);
+					push @files2, $file if($file =~ m/_2.f/);
+				}
+				
+				$infiles1 = join(',', sort @files1);
+				$infiles2 = join(',', sort @files2);
+				
+			}
+			else{
+				for my $file(@{$raw_files}) {
+					push @files1, $file;
+				}
+				
+				$infiles1 = join(',', sort @files1);
+				$infiles2 = '';
+				
 			}
 		}
 	}
-		
-	my $infiles1 = join(',', sort @files1);
-	my $infiles2 = join(',', sort @files2);
 	
 	my $command = sprintf $STAR,	$options->{'starpath'},
 					$star_params,
