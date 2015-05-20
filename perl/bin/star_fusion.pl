@@ -89,7 +89,10 @@ print Dumper(\$options);
 sub cleanup {
 	my $options = shift;
 	my $tmpdir = $options->{'tmp'};
+	my $star_outdir = File::Spec->catdir($options->{'tmp'}, 'star');
+	Sanger::CGP::Star::Implement::sam_to_bam($options);
 	move(File::Spec->catdir($tmpdir, 'logs'), File::Spec->catdir($options->{'outdir'}, 'logs')) || die $!;
+	move(File::Spec->catfile($star_outdir, 'Aligned.sortedByCoord.out.bam'), $options->{'outdir'}) || die $!;
 	remove_tree $tmpdir if(-e $tmpdir);
 	return 0;
 }
@@ -177,10 +180,17 @@ sub setup {
 		PCAP::Cli::valid_process('process', $opts{'process'}, \@VALID_PROCESS);
 		my $max_index = $INDEX_FACTOR{$opts{'process'}};
 		
+		$max_index = $opts{'max_split'} if($opts{'process'} eq 'prepare');
+		
 		if(exists $opts{'index'}) {
 			PCAP::Cli::opt_requires_opts('index', \%opts, ['process']);
-			PCAP::Cli::valid_index_by_factor('index', $opts{'index'}, $max_index, 1);
-			$opts{'max_split'} = $opts{'index'};
+			if($opts{'process'} eq 'prepare'){
+				PCAP::Cli::valid_index_by_factor('index', $opts{'index'}, $max_index, 1);
+				$opts{'max_split'} = $opts{'index'};
+			}
+			else{
+				die "ERROR: -index is not a valid parameter for process $opts{'process'}, please re-run excluding the -index parameter.\n";
+			}
 		}
 	}
 	elsif(exists $opts{'index'}) {
@@ -207,11 +217,11 @@ star_fusion.pl [options] [file(s)...]
 
   Optional
     -gtffile 		-g  	GTF annotation file name which should be compatible with the refbuild and gene build versions. It should reside under /refdataloc/species/refbuild/genebuild/ [Homo_sapiens.GRCh38.77.gtf]
-    -normals  	  	-n  	File containing list of gene fusions detected in normal samples using STAR
+    -normals  	  	-n  	File containing list of gene fusions detected in normal samples using STAR. It should reside under /refdataloc/species/refbuild/normal-fusions/ [star-normal-fusions-b38]
     -threads   		-t  	Number of cores to use. [1]
-    -config   		-c  	Path to config.ini file. Defaults for; the reference and gene build versions, star software and default star and star-fusion parameters [<cgpRna-install-location>/perl/config/star.ini]
+    -config   		-c  	Path to config.ini file. It contains defaults for; the reference and gene build versions, star software and default star and star-fusion parameters [<cgpRna-install-location>/perl/config/star.ini]
     -refbuild 		-rb 	Reference assembly version. Can be UCSC or Ensembl format e.g. GRCh38 or hg38 [GRCh38] 
-    -genebuild 		-gb 	Gene build version. This needs to be consistent with the reference build in terms of the version and chromosome name style [77]
+    -genebuild 		-gb 	Gene build version. This needs to be consistent with the reference build in terms of the version and chromosome name style. Please use the build number only minus any prefixes such as e/ensembl [77]
     -refdataloc  	-r  	Parent directory of the reference data
     -species  		-sp 	Species [human]
 

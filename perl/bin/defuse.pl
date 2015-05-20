@@ -54,6 +54,8 @@ use Cwd;
 use PCAP::Cli;
 use Sanger::CGP::Defuse::Implement;
 
+use Data::Dumper;
+
 my $ini_file = "$FindBin::Bin/../config/defuse.ini"; # default config.ini file path
 const my @REQUIRED_PARAMS => qw(outdir sample);
 const my @VALID_PROCESS => qw(prepare merge defuse filter);
@@ -64,6 +66,9 @@ const my %INDEX_FACTOR => (	'prepare' => -1,
 
 {
 	my $options = setup();
+	
+##### TESTING ONLY
+print Dumper(\$options);
 	
 	if(!exists $options->{'process'} || $options->{'process'} eq 'prepare'){
 		# Process the input files.
@@ -134,7 +139,7 @@ sub setup {
 	$opts{'species'} = $cfg->val('defuse-config','species') unless(defined $opts{'species'});
 	$opts{'defusepath'} = $cfg->val('defuse-config','defusepath');
 	$opts{'defuseversion'} = $cfg->val('defuse-config','defuseversion');
-	$opts{'defuseconfig'} = $cfg->val('defuse-config','defuseconfig');
+	$opts{'defuseconfig'} = $cfg->val('defuse-config','defuseconfig') unless(defined $opts{'defuseconfig'});
 
 	# Print version information for this program (deFuse itself does not have a -v or --version option)
 	if($opts{'version'}) {
@@ -175,10 +180,17 @@ sub setup {
 		PCAP::Cli::valid_process('process', $opts{'process'}, \@VALID_PROCESS);
 		my $max_index = $INDEX_FACTOR{$opts{'process'}};
 		
+		$max_index = $opts{'max_split'} if($opts{'process'} eq 'prepare');
+		
 		if(exists $opts{'index'}) {
+			if($opts{'process'} eq 'prepare'){
 			PCAP::Cli::opt_requires_opts('index', \%opts, ['process']);
 			PCAP::Cli::valid_index_by_factor('index', $opts{'index'}, $max_index, 1);
 			$opts{'max_split'} = $opts{'index'};
+			}
+			else{
+				die "Index is not a valid for process $opts{'process'}, please re-run without the -i parameter.\n";
+			}
 		}
 	}
 	elsif(exists $opts{'index'}) {
@@ -207,9 +219,9 @@ defuse.pl [options] [file(s)...]
     -defuseconfig 	-d  	Name of the defuse config file. It should reside under /refdataloc/species/refbuild/genebuild/ [defuse-config-GRCh38-77.txt]
     -normals  	  	-n  	File containing list of gene fusions detected in normal samples using deFuse. It should reside under /refdataloc/species/refbuild/normal-fusions/ [defuse-normal-fusions-b38]
     -threads   		-t  	Number of cores to use. [1]
-    -config   		-c  	Path to config.ini file. Defaults for the reference data and deFuse software installation details are provided in the config.ini file.
+    -config   		-c  	Path to config.ini file. The file contains defaults for the reference data and deFuse software installation details [<cgpRna-install-location>/perl/config/defuse.ini]
     -refbuild 		-rb 	Reference assembly version. Can be UCSC or Ensembl format e.g. GRCh38 or hg38 [GRCh38] 
-    -genebuild 		-gb 	Gene build version. This needs to be consistent with the reference build in terms of the version and chromosome name style [77]
+    -genebuild 		-gb 	Gene build version. This needs to be consistent with the reference build in terms of the version and chromosome name style. Please use the build number only minus any prefixes such as e/ensembl [77]
     -refdataloc  	-r  	Parent directory of the reference data.
     -species  		-sp 	Species [human]
 
@@ -262,3 +274,5 @@ As *.f[ast]q but compressed with gzip.
 A list of single lane BAM files, RG line is transfered to aligned files.
 
 =back
+
+N.B. Interleaved fastq files are not valid for deFuse.

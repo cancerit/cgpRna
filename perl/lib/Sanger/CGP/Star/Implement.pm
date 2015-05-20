@@ -60,6 +60,7 @@ const my $STAR_DEFAULTS_SECTION => 'star-parameters';
 const my $STAR_FUSION_SECTION => 'star-fusion-parameters';
 const my $STAR => q{ %s %s --readFilesIn %s };
 const my $STAR_FUSION => q{ %s --chimeric_out_sam %s --chimeric_junction %s --ref_GTF %s --min_novel_junction_support 10 --min_alt_pct_junction 10.0 --out_prefix %s };
+const my $SAMTOBAM => q{ view -bS %s > %s };
 
 
 sub check_input {
@@ -71,7 +72,8 @@ sub check_input {
 	my $gene_build = $options->{'genebuild'};
 	my $ref_build_loc = File::Spec->catdir($ref_data, $species, $ref_build);
 
-	# Check the normal fusions file exists for the filtering step
+	# Check the gtf and normal fusions files exist
+	PCAP::Cli::file_for_reading('gtf-file', File::Spec->catfile($ref_build_loc, $gene_build, $options->{'gtffilename'}));
 	PCAP::Cli::file_for_reading('normals-list',File::Spec->catfile($ref_build_loc,'normal-fusions',$options->{'normalfusionslist'}));
 	
 	my $input_meta = PCAP::Bwa::Meta::files_to_meta($options->{'tmp'}, $options->{'raw_files'}, $options->{'sample'});
@@ -278,6 +280,25 @@ sub prog_version {
 	return $star_version;
 }
 
+sub sam_to_bam {
+	my $options = shift;
+	
+	my $tmp = $options->{'tmp'};
+	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
+	
+	my $sample = $options->{'sample'};
+	my $outdir = $options->{'outdir'};
+	my $star_outdir = File::Spec->catdir($options->{'tmp'}, 'star');
+	my $command .= _which('samtools');
+	$command .= sprintf $SAMTOBAM,	File::Spec->catfile($star_outdir, 'Chimeric.out.sam'),
+																	File::Spec->catfile($outdir, $sample.'.Chimeric.out.bam');
+
+	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
+	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
+	
+	return 1;
+}
+
 sub star_chimeric {
 	my $options = shift;
 	
@@ -313,6 +334,8 @@ sub star_chimeric {
 	
 	my @files1;
 	my @files2;
+	my $infiles1;
+	my $infiles2;
 
 	# If the input is BAM then all input fastqs will reside in the ../tmp/input directory so can search for _1 and _2 to find the files
 	if($options->{'bam'}){
@@ -323,27 +346,70 @@ sub star_chimeric {
 			push @files2, File::Spec->catfile($inputdir, $file) if($file =~ m/_2.f/);
 		}
 		closedir($dh);
+		
+		$infiles1 = join(',', sort @files1);
+		$infiles2 = join(',', sort @files2);
 	}
 	else{
-		my $input_meta = $options->{'meta_set'};
-		my $input = @{$input_meta}[0];
 		my $raw_files = $options->{'raw_files'};
 		
-		if($input->paired_fq){
-			for my $file(@{$raw_files}) {
-				push @files1, $file if($file =~ m/_1.f/);
-				push @files2, $file if($file =~ m/_2.f/);
+		# If there are multiple input fastqs, some gzipped and some not, need to check both the input directory and raw_files array for the locations of the input files
+		if($options->{'mixedfq'}){
+			my $inputdir = File::Spec->catdir($tmp, 'input');
+			if($first_file->paired_fq){
+				for my $file(@{$raw_files}) {
+					push @files1, $file if($file =~ m/_1.f.*q.gz$/);
+					push @files2, $file if($file =~ m/_2.f.*q.gz$/);
+				}
+				opendir(my $dh, $inputdir);
+				while(my $file = readdir $dh) {
+					push @files1, File::Spec->catfile($inputdir, $file) if($file =~ m/_1.f.*q.gz$/);
+					push @files2, File::Spec->catfile($inputdir, $file) if($file =~ m/_2.f.*q.gz$/);
+				}
+				closedir($dh);
+				
+				$infiles1 = join(',', sort @files1);
+				$infiles2 = join(',', sort @files2);
+			
 			}
+			else{
+				for my $file(@{$raw_files}) {
+					push @files1, $file if($file =~ m/.f.*q.gz$/);
+				}
+				opendir(my $dh, $inputdir);
+				while(my $file = readdir $dh) {
+					push @files1, File::Spec->catfile($inputdir, $file) if($file =~ m/.f.*q.gz$/);
+				}
+				closedir($dh);
+				
+				$infiles1 = join(',', sort @files1);
+				$infiles2 = '';
+			}
+
 		}
+		# Otherwise there should be just one pair of fastq files or an interleaved/single ended fastq file so only need to check the raw_files array
 		else{
-			for my $file(@{$raw_files}) {
-				push @files1, $file;
+			if($first_file->paired_fq){
+				for my $file(@{$raw_files}) {
+					push @files1, $file if($file =~ m/_1.f/);
+					push @files2, $file if($file =~ m/_2.f/);
+				}
+				
+				$infiles1 = join(',', sort @files1);
+				$infiles2 = join(',', sort @files2);
+				
+			}
+			else{
+				for my $file(@{$raw_files}) {
+					push @files1, $file;
+				}
+				
+				$infiles1 = join(',', sort @files1);
+				$infiles2 = '';
+				
 			}
 		}
 	}
-		
-	my $infiles1 = join(',', sort @files1);
-	my $infiles2 = join(',', sort @files2);
 	
 	my $command = sprintf $STAR,	$options->{'starpath'},
 					$star_params,
