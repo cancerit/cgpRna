@@ -1,4 +1,4 @@
-package Sanger::CGP::Tophat;
+package Sanger::CGP::Defuse;
 
 ##########LICENCE ##########
 #Copyright (c) 2015 Genome Research Ltd.
@@ -7,7 +7,7 @@ package Sanger::CGP::Tophat;
 ###
 #This file is part of cgpRna.
 ###
-#cgpRna is free software: you can redistribute it and/or modify it under
+#TopHatFusion is free software: you can redistribute it and/or modify it under
 #the terms of the GNU Affero General Public License as published by the
 #Free Software Foundation; either version 3 of the License, or (at your
 #option) any later version.
