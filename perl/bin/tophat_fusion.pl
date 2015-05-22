@@ -97,7 +97,7 @@ sub cleanup {
 	system("cp $post_outdir/result.html $options->{outdir}/$sample.tophatfusion.html");
 	move(File::Spec->catfile($fusion_outdir, 'accepted_hits.bam'), $options->{outdir}) || die $!;
 	move(File::Spec->catfile($fusion_outdir, 'unmapped.bam'), $options->{outdir}) || die $!;
-	move(File::Spec->catdir($tmpdir, 'logs'), File::Spec->catdir($options->{'outdir'}, 'logs')) || die $!;
+	move(File::Spec->catdir($tmpdir, 'logs'), File::Spec->catdir($options->{'outdir'}, 'logs_tophat')) || die $!;
 	remove_tree $tmpdir if(-e $tmpdir);
 	return 0;
 }
@@ -226,7 +226,6 @@ sub setup {
 		my $max_index = $INDEX_FACTOR{$opts{'process'}};
 		
 		if($opts{'process'} eq 'bamtofastq'){
-			die "Process bamtofastq is only valid for BAM input files\n" if(!exists $opts{'bam'});
 			$max_index = $opts{'max_split'};
 		}
 		
