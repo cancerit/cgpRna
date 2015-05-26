@@ -95,8 +95,8 @@ sub cleanup {
 	my $fusion_outdir = File::Spec->catdir($tmpdir, "tophat_$sample");
 	my $post_outdir = File::Spec->catdir($options->{'tmp'}, 'tophatpostrun/tophatfusion_'.$sample);
 	system("cp $post_outdir/result.html $options->{outdir}/$sample.tophatfusion.html");
-	move(File::Spec->catfile($fusion_outdir, 'accepted_hits.bam'), $options->{outdir}) || die $!;
-	move(File::Spec->catfile($fusion_outdir, 'unmapped.bam'), $options->{outdir}) || die $!;
+	move(File::Spec->catfile($fusion_outdir, 'accepted_hits.bam'), File::Spec->catfile($options->{'outdir'}, $sample.'.tophat.accepted_hits.bam')) || die $!;
+	move(File::Spec->catfile($fusion_outdir, 'unmapped.bam'), File::Spec->catfile($options->{'outdir'}, $sample.'.tophat.unmapped.bam')) || die $!;
 	move(File::Spec->catdir($tmpdir, 'logs'), File::Spec->catdir($options->{'outdir'}, 'logs_tophat')) || die $!;
 	remove_tree $tmpdir if(-e $tmpdir);
 	return 0;

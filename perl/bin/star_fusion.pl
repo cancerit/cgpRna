@@ -92,7 +92,7 @@ sub cleanup {
 	my $star_outdir = File::Spec->catdir($options->{'tmp'}, 'star');
 	Sanger::CGP::Star::Implement::sam_to_bam($options);
 	move(File::Spec->catdir($tmpdir, 'logs'), File::Spec->catdir($options->{'outdir'}, 'logs_star')) || die $!;
-	move(File::Spec->catfile($star_outdir, 'Aligned.sortedByCoord.out.bam'), $options->{'outdir'}) || die $!;
+	move(File::Spec->catfile($star_outdir, 'Aligned.sortedByCoord.out.bam'), File::Spec->catfile($options->{'outdir'}, $options->{'sample'}.'.star.Aligned.out.bam')) || die $!;
 	remove_tree $tmpdir if(-e $tmpdir);
 	return 0;
 }

@@ -98,7 +98,7 @@ sub compress_sam {
 	my $sample = $options->{'sample'};
 	my $defuse_outdir = File::Spec->catdir($options->{'tmp'}, "defuse_$sample");
 	my $in_sam = File::Spec->catfile($defuse_outdir, 'cdna.pair.sam');
-	my $sam_gz = File::Spec->catfile($options->{'outdir'}, 'cdna.pair.sam.gz');	
+	my $sam_gz = File::Spec->catfile($options->{'outdir'}, $sample.'.defuse.cdna.pair.sam.gz');
 	
 	my $command = _which('gzip');
 	$command .= sprintf ' -c %s > %s', $in_sam, $sam_gz;

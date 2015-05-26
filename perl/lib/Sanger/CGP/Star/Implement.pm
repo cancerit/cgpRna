@@ -291,7 +291,7 @@ sub sam_to_bam {
 	my $star_outdir = File::Spec->catdir($options->{'tmp'}, 'star');
 	my $command .= _which('samtools');
 	$command .= sprintf $SAMTOBAM,	File::Spec->catfile($star_outdir, 'Chimeric.out.sam'),
-																	File::Spec->catfile($outdir, $sample.'.Chimeric.out.bam');
+																	File::Spec->catfile($outdir, $sample.'.star.Chimeric.out.bam');
 
 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
