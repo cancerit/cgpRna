@@ -70,7 +70,6 @@ sub bam_to_fastq {
 	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), $index);
 	
 	my $command;
-	my $bam2fq;
 	my $rg;
 	my $sample = $options->{'sample'};
 	my $inputdir = File::Spec->catdir($tmp, 'input');
