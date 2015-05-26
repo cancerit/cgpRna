@@ -58,12 +58,13 @@ use Data::Dumper;
 
 my $ini_file = "$FindBin::Bin/../config/tophat.ini"; # default config.ini file path
 const my @REQUIRED_PARAMS => qw(outdir sample);
-const my @VALID_PROCESS => qw(bamtofastq tophatfusion split tophatpost filter);
+const my @VALID_PROCESS => qw(bamtofastq tophatfusion split tophatpost filter strand);
 const my %INDEX_FACTOR => (	'bamtofastq' => -1,
 				'tophatfusion' => 1,
 				'split' => 1,
 				'tophatpost' => 1,
-				'filter' => 1);
+				'filter' => 1,
+				'strand' => 1);
 
 {
 	my $options = setup();
@@ -81,9 +82,10 @@ print Dumper(\$options);
 	Sanger::CGP::Tophat::Implement::tophat_fusion($options) if(!exists $options->{'process'} || $options->{'process'} eq 'tophatfusion');
 	Sanger::CGP::Tophat::Implement::split_setup($options) if(!exists $options->{'process'} || $options->{'process'} eq 'split');
 	Sanger::CGP::Tophat::Implement::tophatfusion_post($options)if(!exists $options->{'process'} || $options->{'process'} eq 'tophatpost');
+	Sanger::CGP::Tophat::Implement::filter_fusions($options)if(!exists $options->{'process'} || $options->{'process'} eq 'filter');
 	
-	if(!exists $options->{'process'} || $options->{'process'} eq 'filter') {
-		Sanger::CGP::Tophat::Implement::filter_fusions($options);
+	if(!exists $options->{'process'} || $options->{'process'} eq 'strand') {
+		Sanger::CGP::Tophat::Implement::add_strand($options);
 		cleanup($options);
 	}
 }
@@ -95,6 +97,7 @@ sub cleanup {
 	my $fusion_outdir = File::Spec->catdir($tmpdir, "tophat_$sample");
 	my $post_outdir = File::Spec->catdir($options->{'tmp'}, 'tophatpostrun/tophatfusion_'.$sample);
 	system("cp $post_outdir/result.html $options->{outdir}/$sample.tophatfusion.html");
+	system("cp $post_outdir/$sample.tophat-fusion.normals.filtered.strand.txt $options->{outdir}");
 	move(File::Spec->catfile($fusion_outdir, 'accepted_hits.bam'), File::Spec->catfile($options->{'outdir'}, $sample.'.tophat.accepted_hits.bam')) || die $!;
 	move(File::Spec->catfile($fusion_outdir, 'unmapped.bam'), File::Spec->catfile($options->{'outdir'}, $sample.'.tophat.unmapped.bam')) || die $!;
 	move(File::Spec->catdir($tmpdir, 'logs'), File::Spec->catdir($options->{'outdir'}, 'logs_tophat')) || die $!;
@@ -297,6 +300,7 @@ Available processes for this tool are:
   split
   tophatpost
   filter
+  strand
 
 =back
 

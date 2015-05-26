@@ -55,11 +55,37 @@ const my @BOWTIE1_SUFFIXES => qw(.1.ebwt .2.ebwt .3.ebwt .4.ebwt .rev.1.ebwt .re
 const my @BOWTIE2_SUFFIXES => qw(.1.bt2 .2.bt2 .3.bt2 .4.bt2 .rev.1.bt2 .rev.2.bt2 .fa .fa.fai);
 const my $BAMFASTQ => q{ exclude=QCFAIL,SECONDARY,SUPPLEMENTARY T=%s S=%s O=%s O2=%s gz=1 level=1 F=%s F2=%s filename=%s};
 const my $FUSIONS_FILTER => q{ -i %s -s %s -n %s -o %s -p tophat};
+const my $ADD_STRAND => q{ -i %s -s %s -p %s -o %s};
 const my $FUSIONS_SPLIT => 50000;
 const my $TOPHAT_MAX_CORES => 16;
 const my $TOPHAT_DEFAULTS_SECTION => 'tophat-parameters';
 const my $TOPHAT_FUSION_SECTION => 'tophat-fusion-parameters';
 const my $TOPHAT_POST_SECTION => 'tophat-post-parameters';
+
+sub add_strand {
+	my $options = shift;
+	
+	my $tmp = $options->{'tmp'};
+	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);	
+
+	my $sample = $options->{'sample'};
+	my $post_outdir = File::Spec->catdir($options->{'tmp'}, 'tophatpostrun/tophatfusion_'.$sample);	
+	my $fusions_file = File::Spec->catfile($post_outdir, "$sample.tophat-fusion.normals.filtered.txt");
+	my $potential_fusions = File::Spec->catfile($post_outdir, 'potential_fusion.txt');
+	die "Please run the filter_fusions step prior to filter\n" unless(-e $fusions_file && -e $potential_fusions);
+	
+	my $command = "$^X ";
+	$command .= _which('tophat_add_strand.pl');
+	$command .= sprintf $ADD_STRAND, 	$fusions_file,
+						$sample,
+						$potential_fusions,
+						$post_outdir;
+						
+	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
+	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);	
+	
+	return 1;
+}
 
 sub bam_to_fastq {
 
@@ -210,7 +236,7 @@ sub filter_fusions {
 	$command .= sprintf $FUSIONS_FILTER, 	$fusions_file,
 						$sample,
 						$normals_file,
-						$options->{'outdir'};
+						$post_outdir;
 
 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
