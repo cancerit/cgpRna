@@ -69,7 +69,7 @@ sub bam_to_fastq {
 	my $tmp = $options->{'tmp'};
 	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), $index);
 	
-	my @commands;
+	my $command;
 	my $bam2fq;
 	my $rg;
 	my $sample = $options->{'sample'};
@@ -78,19 +78,18 @@ sub bam_to_fastq {
 	my $iter = 1;
 	for my $input(@{$input_meta}) {
 		next if($iter++ != $index); # skip to the relevant element in the list
-		$bam2fq = _which('bamtofastq') || die "Unable to find 'bamtofastq' in path";
+		$command = _which('bamtofastq') || die "Unable to find 'bamtofastq' in path";
 		$rg = $input->rg;
-		$bam2fq .= sprintf $BAMFASTQ, 	File::Spec->catfile($tmp, "bamtofastq.$sample.$rg"),
+		$command .= sprintf $BAMFASTQ, 	File::Spec->catfile($tmp, "bamtofastq.$sample.$rg"),
 						File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.s"),
 						File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.o1"),
 						File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.o2"),
 						File::Spec->catfile($inputdir, $sample.'.'.$rg.'_1.fastq.gz'),
 						File::Spec->catfile($inputdir, $sample.'.'.$rg.'_2.fastq.gz'),
 						$input->in;
-		push @commands, $bam2fq;
 	}
 	
- 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), \@commands, $index);
+ 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, $index);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), $index);
 	
 	return 1;

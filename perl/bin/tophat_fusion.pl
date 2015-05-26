@@ -73,7 +73,7 @@ print Dumper(\$options);
 	# bam_to_fastq will only be called if bam input is detected in the setup subroutine. The process is nulti-threaded so that multiple BAMs can be converted to fastq in parallel.
 	if(exists $options->{'bam'} && (!exists $options->{'process'} || $options->{'process'} eq 'bamtofastq')){
 		my $threads = PCAP::Threaded->new($options->{'threads'});
-		&PCAP::Threaded::disable_out_err if(exists $options->{'index'});
+		#&PCAP::Threaded::disable_out_err if(exists $options->{'index'});
 		$threads->add_function('bamtofastq', \&Sanger::CGP::Tophat::Implement::bam_to_fastq);
 		$threads->run($options->{'max_split'}, 'bamtofastq', $options);
 	}

@@ -73,7 +73,7 @@ print Dumper(\$options);
 	if(!exists $options->{'process'} || $options->{'process'} eq 'prepare'){
 		# Process the input files.
 		my $threads = PCAP::Threaded->new($options->{'threads'});
-		&PCAP::Threaded::disable_out_err if(exists $options->{'index'});
+		#&PCAP::Threaded::disable_out_err if(exists $options->{'index'});
 		$threads->add_function('prepare', \&Sanger::CGP::Defuse::Implement::prepare);
 		$threads->run($options->{'max_split'}, 'prepare', $options);
 	}
