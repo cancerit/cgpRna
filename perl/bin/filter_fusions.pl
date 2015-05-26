@@ -159,6 +159,19 @@ sub reformat {
 				my @break2 = split ':', $fields[$options->{'chr2'} - 1];
 				$fusion = $break1[0].":".$break1[1]."-".$break2[0].":".$break2[1];
 			}
+			elsif($program eq 'tophat'){
+			
+				# Fusion positions for TopHat need adjusting by +1 so that they are directly comparable to Star and deFuse
+				my $orig_pos1 = $fields[$options->{'pos1'}-1];
+				my $orig_pos2 = $fields[$options->{'pos2'}-1];
+				my $adj_pos1 = $orig_pos1 + 1;
+				my $adj_pos2 = $orig_pos2 + 1;
+				$fusion = $fields[$options->{'chr1'}-1].":".$adj_pos1."-".$fields[$options->{'chr2'}-1].":".$adj_pos2;
+				$fields[$options->{'pos1'}-1] = $adj_pos1;
+				$fields[$options->{'pos2'}-1] = $adj_pos2;
+				$line = join("\t",@fields);
+				
+			}
 			else{
 				$fusion = $fields[$options->{'chr1'}-1].":".$fields[$options->{'pos1'}-1]."-".$fields[$options->{'chr2'}-1].":".$fields[$options->{'pos2'}-1];
 			}
