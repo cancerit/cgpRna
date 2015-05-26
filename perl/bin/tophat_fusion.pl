@@ -267,6 +267,7 @@ tophat_fusion.pl [options] [file(s)...]
     -transindex		-ti 	Stem name of the bowtie index files for the transcriptome which need to be compatible with the bowtie version [GRCh38.77]
     -ucscbuild   	-ub 	Tophat fusion post requires a reference build in UCSC format which must be equivalent to the refbuild version specified e.g. if refbuild = GRCh37 ucscbuild should be hg19 [hg38]
     -ucscindex		-ui 	Stem name of the bowtie index files for the transcriptome in ucsc format which should be compatible with the bowtie version and ucsc build [hg38.genome]
+    -normals  	  	-n  	File containing list of gene fusions detected in normal samples. It should reside under /refdataloc/species/refbuild/ [normal-fusions-b38]    
     -species  		-sp 	Species [human]
 
   Targeted processing (further detail under OPTIONS):
