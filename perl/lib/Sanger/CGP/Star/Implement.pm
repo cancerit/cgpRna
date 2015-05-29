@@ -61,6 +61,7 @@ const my $STAR_FUSION_SECTION => 'star-fusion-parameters';
 const my $STAR => q{ %s %s --readFilesIn %s };
 const my $STAR_FUSION => q{ %s --chimeric_out_sam %s --chimeric_junction %s --ref_GTF %s --min_novel_junction_support 10 --min_alt_pct_junction 10.0 --out_prefix %s };
 const my $SAMTOBAM => q{ view -bS %s > %s };
+const my $BAMSORT => q{ I=%s/Aligned.out.bam fixmate=1 inputformat=bam level=1 tmpfile=%s/tmp O=%s/Aligned.sortedByCoord.out.bam inputthreads=%s outputthreads=%s};
 
 
 sub check_input {
@@ -411,13 +412,27 @@ sub star_chimeric {
 		}
 	}
 	
-	my $command = sprintf $STAR,	$options->{'starpath'},
+	my $star_command = sprintf $STAR,	$options->{'starpath'},
 					$star_params,
 					$infiles1." ".$infiles2;
 																
-	$command .= "--readFilesCommand zcat" if($infiles1 =~ m/\.gz$/);
+	$star_command .= "--readFilesCommand zcat" if($infiles1 =~ m/\.gz$/);
+	
+	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $star_command, 1);
+	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 1);
+	
+	
 
-	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
+	my $stardir = File::Spec->catdir($options->{'tmp'},'star');
+	my $bamsort_command = which('bamsort') || die "Unable to find 'bamsort' in path\n";
+	
+	$bamsort_command .= sprintf $BAMSORT, 	$stardir,
+														$stardir,
+														$stardir,
+														$threads,
+														$threads;
+
+	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $bamsort_command, 0);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
 	
 	return 1;
