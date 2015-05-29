@@ -72,7 +72,7 @@ print Dumper(\$options);
 	if(!exists $options->{'process'} || $options->{'process'} eq 'prepare'){
 		# Process the input files.
 		my $threads = PCAP::Threaded->new($options->{'threads'});
-		&PCAP::Threaded::disable_out_err if(exists $options->{'index'});
+		#&PCAP::Threaded::disable_out_err if(exists $options->{'index'});
 		$threads->add_function('prepare', \&Sanger::CGP::Star::Implement::prepare);
 		$threads->run($options->{'max_split'}, 'prepare', $options);
 	}
@@ -92,7 +92,7 @@ sub cleanup {
 	my $star_outdir = File::Spec->catdir($options->{'tmp'}, 'star');
 	Sanger::CGP::Star::Implement::sam_to_bam($options);
 	move(File::Spec->catdir($tmpdir, 'logs'), File::Spec->catdir($options->{'outdir'}, 'logs_star')) || die $!;
-	move(File::Spec->catfile($star_outdir, 'Aligned.sortedByCoord.out.bam'), $options->{'outdir'}) || die $!;
+	move(File::Spec->catfile($star_outdir, 'Aligned.sortedByCoord.out.bam'), File::Spec->catfile($options->{'outdir'}, $options->{'sample'}.'.star.Aligned.out.bam')) || die $!;
 	remove_tree $tmpdir if(-e $tmpdir);
 	return 0;
 }
@@ -217,7 +217,7 @@ star_fusion.pl [options] [file(s)...]
 
   Optional
     -gtffile 		-g  	GTF annotation file name which should be compatible with the refbuild and gene build versions. It should reside under /refdataloc/species/refbuild/genebuild/ [Homo_sapiens.GRCh38.77.gtf]
-    -normals  	  	-n  	File containing list of gene fusions detected in normal samples using STAR. It should reside under /refdataloc/species/refbuild/normal-fusions/ [star-normal-fusions-b38]
+    -normals  	  	-n  	File containing list of gene fusions detected in normal samples. It should reside under /refdataloc/species/refbuild/ [normal-fusions-b38]
     -threads   		-t  	Number of cores to use. [1]
     -config   		-c  	Path to config.ini file. It contains defaults for; the reference and gene build versions, star software and default star and star-fusion parameters [<cgpRna-install-location>/perl/config/star.ini]
     -refbuild 		-rb 	Reference assembly version. Can be UCSC or Ensembl format e.g. GRCh38 or hg38 [GRCh38] 
