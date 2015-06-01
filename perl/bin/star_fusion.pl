@@ -54,8 +54,6 @@ use Cwd;
 use PCAP::Cli;
 use Sanger::CGP::Star::Implement;
 
-use Data::Dumper;
-
 my $ini_file = "$FindBin::Bin/../config/star.ini"; # default config.ini file path
 const my @REQUIRED_PARAMS => qw(outdir sample);
 const my @VALID_PROCESS => qw(prepare star starfusion filter);
@@ -66,8 +64,6 @@ const my %INDEX_FACTOR => (	'prepare' => -1,
 
 {
 	my $options = setup();
-	
-print Dumper(\$options);
 	
 	if(!exists $options->{'process'} || $options->{'process'} eq 'prepare'){
 		# Process the input files.

@@ -44,8 +44,6 @@ use Pod::Usage qw(pod2usage);
 use Const::Fast qw(const);
 use PCAP::Cli;
 
-use Data::Dumper;
-
 # Position of the columns in the tophat-fusion-post output file used to format fusion breakpoint references.
 const my $TOPHAT_SPLIT_CHAR => '\t';
 const my $TOPHAT_CHR1 => 3;
