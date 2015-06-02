@@ -51,8 +51,6 @@ use PCAP::Bwa::Meta;
 use PCAP::Bam;
 use Sanger::CGP::Defuse;
 
-use Data::Dumper;
-
 const my $DEFUSE => q{ %s -c %s -p %d -o %s -n %s -l %s -s direct -1 %s -2 %s};
 const my $BAMFASTQ => q{ exclude=QCFAIL,SECONDARY,SUPPLEMENTARY T=%s S=%s O=%s O2=%s level=1 F=%s F2=%s filename=%s};
 const my $FUSIONS_FILTER => q{ -i %s -s %s -n %s -o %s -p defuse};
@@ -68,7 +66,7 @@ sub check_input {
 	my $ref_build_loc = File::Spec->catdir($ref_data, $species, $ref_build);
 
 	# Check the normal fusions file exists for the filtering step
-	PCAP::Cli::file_for_reading('normals-list',File::Spec->catfile($ref_build_loc,'normal-fusions',$options->{'normalfusionslist'}));
+	PCAP::Cli::file_for_reading('normals-list',File::Spec->catfile($ref_build_loc,$options->{'normalfusionslist'}));
 	
 	# Check the defuse config file exists for the ref-gene build
 	PCAP::Cli::file_for_reading('defuse-config',File::Spec->catfile($ref_build_loc,$gene_build,$options->{'defuseconfig'}));
@@ -98,7 +96,7 @@ sub compress_sam {
 	my $sample = $options->{'sample'};
 	my $defuse_outdir = File::Spec->catdir($options->{'tmp'}, "defuse_$sample");
 	my $in_sam = File::Spec->catfile($defuse_outdir, 'cdna.pair.sam');
-	my $sam_gz = File::Spec->catfile($options->{'outdir'}, 'cdna.pair.sam.gz');	
+	my $sam_gz = File::Spec->catfile($options->{'outdir'}, $sample.'.defuse.cdna.pair.sam.gz');
 	
 	my $command = _which('gzip');
 	$command .= sprintf ' -c %s > %s', $in_sam, $sam_gz;
@@ -194,7 +192,7 @@ sub filter_fusions {
 	die "Please run the defuse step prior to filter\n" unless(-d $defuse_outdir);
 	die "One of the deFuse output files is missing, please run the defuse step prior to filter.\n" unless(-e $fusions_file && -e File::Spec->catfile($defuse_outdir, 'cdna.pair.sam'));
 
-	my $normals_file = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'normal-fusions',$options->{'normalfusionslist'});
+	my $normals_file = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},$options->{'normalfusionslist'});
 
 	my $command = "$^X ";
 	$command .= _which('filter_fusions.pl');

@@ -51,8 +51,6 @@ use PCAP::Bwa::Meta;
 use PCAP::Bam;
 use Sanger::CGP::Star;
 
-use Data::Dumper;
-
 const my $BAMFASTQ => q{ exclude=QCFAIL,SECONDARY,SUPPLEMENTARY T=%s S=%s O=%s O2=%s gz=1 level=1 F=%s F2=%s filename=%s};
 const my $FUSIONS_FILTER => q{ -i %s -s %s -n %s -o %s -p star};
 const my $STAR_MAX_CORES => 16;
@@ -61,6 +59,7 @@ const my $STAR_FUSION_SECTION => 'star-fusion-parameters';
 const my $STAR => q{ %s %s --readFilesIn %s };
 const my $STAR_FUSION => q{ %s --chimeric_out_sam %s --chimeric_junction %s --ref_GTF %s --min_novel_junction_support 10 --min_alt_pct_junction 10.0 --out_prefix %s };
 const my $SAMTOBAM => q{ view -bS %s > %s };
+const my $BAMSORT => q{ I=%s/Aligned.out.bam fixmate=1 inputformat=bam level=1 tmpfile=%s/tmp O=%s/Aligned.sortedByCoord.out.bam inputthreads=%s outputthreads=%s};
 
 
 sub check_input {
@@ -74,7 +73,7 @@ sub check_input {
 
 	# Check the gtf and normal fusions files exist
 	PCAP::Cli::file_for_reading('gtf-file', File::Spec->catfile($ref_build_loc, $gene_build, $options->{'gtffilename'}));
-	PCAP::Cli::file_for_reading('normals-list',File::Spec->catfile($ref_build_loc,'normal-fusions',$options->{'normalfusionslist'}));
+	PCAP::Cli::file_for_reading('normals-list',File::Spec->catfile($ref_build_loc,$options->{'normalfusionslist'}));
 	
 	my $input_meta = PCAP::Bwa::Meta::files_to_meta($options->{'tmp'}, $options->{'raw_files'}, $options->{'sample'});
 	
@@ -128,7 +127,7 @@ sub filter_fusions {
 	my $fusions_file = File::Spec->catfile($star_outdir, "$sample.fusion_candidates.txt");
 	die "The star fusion output files are missing, please run the starfusion step prior to filter.\n" unless(-e $fusions_file);
 
-	my $normals_file = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'normal-fusions',$options->{'normalfusionslist'});
+	my $normals_file = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},$options->{'normalfusionslist'});
 
 	my $command = "$^X ";
 	$command .= _which('filter_fusions.pl');
@@ -291,7 +290,7 @@ sub sam_to_bam {
 	my $star_outdir = File::Spec->catdir($options->{'tmp'}, 'star');
 	my $command .= _which('samtools');
 	$command .= sprintf $SAMTOBAM,	File::Spec->catfile($star_outdir, 'Chimeric.out.sam'),
-																	File::Spec->catfile($outdir, $sample.'.Chimeric.out.bam');
+																	File::Spec->catfile($outdir, $sample.'.star.Chimeric.out.bam');
 
 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
@@ -411,13 +410,27 @@ sub star_chimeric {
 		}
 	}
 	
-	my $command = sprintf $STAR,	$options->{'starpath'},
+	my $star_command = sprintf $STAR,	$options->{'starpath'},
 					$star_params,
 					$infiles1." ".$infiles2;
 																
-	$command .= "--readFilesCommand zcat" if($infiles1 =~ m/\.gz$/);
+	$star_command .= "--readFilesCommand zcat" if($infiles1 =~ m/\.gz$/);
+	
+	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $star_command, 1);
+	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 1);
+	
+	
 
-	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
+	my $stardir = File::Spec->catdir($options->{'tmp'},'star');
+	my $bamsort_command = which('bamsort') || die "Unable to find 'bamsort' in path\n";
+	
+	$bamsort_command .= sprintf $BAMSORT, 	$stardir,
+														$stardir,
+														$stardir,
+														$threads,
+														$threads;
+
+	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $bamsort_command, 0);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
 	
 	return 1;

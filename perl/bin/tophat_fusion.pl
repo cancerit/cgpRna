@@ -54,26 +54,23 @@ use Cwd;
 use PCAP::Cli;
 use Sanger::CGP::Tophat::Implement;
 
-use Data::Dumper;
-
 my $ini_file = "$FindBin::Bin/../config/tophat.ini"; # default config.ini file path
 const my @REQUIRED_PARAMS => qw(outdir sample);
-const my @VALID_PROCESS => qw(bamtofastq tophatfusion split tophatpost filter);
+const my @VALID_PROCESS => qw(bamtofastq tophatfusion split tophatpost filter strand);
 const my %INDEX_FACTOR => (	'bamtofastq' => -1,
 				'tophatfusion' => 1,
 				'split' => 1,
 				'tophatpost' => 1,
-				'filter' => 1);
+				'filter' => 1,
+				'strand' => 1);
 
 {
 	my $options = setup();
-	
-print Dumper(\$options);
 
 	# bam_to_fastq will only be called if bam input is detected in the setup subroutine. The process is nulti-threaded so that multiple BAMs can be converted to fastq in parallel.
 	if(exists $options->{'bam'} && (!exists $options->{'process'} || $options->{'process'} eq 'bamtofastq')){
 		my $threads = PCAP::Threaded->new($options->{'threads'});
-		&PCAP::Threaded::disable_out_err if(exists $options->{'index'});
+		#&PCAP::Threaded::disable_out_err if(exists $options->{'index'});
 		$threads->add_function('bamtofastq', \&Sanger::CGP::Tophat::Implement::bam_to_fastq);
 		$threads->run($options->{'max_split'}, 'bamtofastq', $options);
 	}
@@ -81,9 +78,10 @@ print Dumper(\$options);
 	Sanger::CGP::Tophat::Implement::tophat_fusion($options) if(!exists $options->{'process'} || $options->{'process'} eq 'tophatfusion');
 	Sanger::CGP::Tophat::Implement::split_setup($options) if(!exists $options->{'process'} || $options->{'process'} eq 'split');
 	Sanger::CGP::Tophat::Implement::tophatfusion_post($options)if(!exists $options->{'process'} || $options->{'process'} eq 'tophatpost');
+	Sanger::CGP::Tophat::Implement::filter_fusions($options)if(!exists $options->{'process'} || $options->{'process'} eq 'filter');
 	
-	if(!exists $options->{'process'} || $options->{'process'} eq 'filter') {
-		Sanger::CGP::Tophat::Implement::filter_fusions($options);
+	if(!exists $options->{'process'} || $options->{'process'} eq 'strand') {
+		Sanger::CGP::Tophat::Implement::add_strand($options);
 		cleanup($options);
 	}
 }
@@ -95,9 +93,10 @@ sub cleanup {
 	my $fusion_outdir = File::Spec->catdir($tmpdir, "tophat_$sample");
 	my $post_outdir = File::Spec->catdir($options->{'tmp'}, 'tophatpostrun/tophatfusion_'.$sample);
 	system("cp $post_outdir/result.html $options->{outdir}/$sample.tophatfusion.html");
-	move(File::Spec->catfile($fusion_outdir, 'accepted_hits.bam'), $options->{outdir}) || die $!;
-	move(File::Spec->catfile($fusion_outdir, 'unmapped.bam'), $options->{outdir}) || die $!;
-	move(File::Spec->catdir($tmpdir, 'logs'), File::Spec->catdir($options->{'outdir'}, 'logs')) || die $!;
+	system("cp $post_outdir/$sample.tophat-fusion.normals.filtered.strand.txt $options->{outdir}");
+	move(File::Spec->catfile($fusion_outdir, 'accepted_hits.bam'), File::Spec->catfile($options->{'outdir'}, $sample.'.tophat.accepted_hits.bam')) || die $!;
+	move(File::Spec->catfile($fusion_outdir, 'unmapped.bam'), File::Spec->catfile($options->{'outdir'}, $sample.'.tophat.unmapped.bam')) || die $!;
+	move(File::Spec->catdir($tmpdir, 'logs'), File::Spec->catdir($options->{'outdir'}, 'logs_tophat')) || die $!;
 	remove_tree $tmpdir if(-e $tmpdir);
 	return 0;
 }
@@ -226,7 +225,6 @@ sub setup {
 		my $max_index = $INDEX_FACTOR{$opts{'process'}};
 		
 		if($opts{'process'} eq 'bamtofastq'){
-			die "Process bamtofastq is only valid for BAM input files\n" if(!exists $opts{'bam'});
 			$max_index = $opts{'max_split'};
 		}
 		
@@ -268,6 +266,7 @@ tophat_fusion.pl [options] [file(s)...]
     -transindex		-ti 	Stem name of the bowtie index files for the transcriptome which need to be compatible with the bowtie version [GRCh38.77]
     -ucscbuild   	-ub 	Tophat fusion post requires a reference build in UCSC format which must be equivalent to the refbuild version specified e.g. if refbuild = GRCh37 ucscbuild should be hg19 [hg38]
     -ucscindex		-ui 	Stem name of the bowtie index files for the transcriptome in ucsc format which should be compatible with the bowtie version and ucsc build [hg38.genome]
+    -normals  	  	-n  	File containing list of gene fusions detected in normal samples. It should reside under /refdataloc/species/refbuild/ [normal-fusions-b38]    
     -species  		-sp 	Species [human]
 
   Targeted processing (further detail under OPTIONS):
@@ -297,6 +296,7 @@ Available processes for this tool are:
   split
   tophatpost
   filter
+  strand
 
 =back
 

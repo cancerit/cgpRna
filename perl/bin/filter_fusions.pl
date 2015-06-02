@@ -44,8 +44,6 @@ use Pod::Usage qw(pod2usage);
 use Const::Fast qw(const);
 use PCAP::Cli;
 
-use Data::Dumper;
-
 # Position of the columns in the tophat-fusion-post output file used to format fusion breakpoint references.
 const my $TOPHAT_SPLIT_CHAR => '\t';
 const my $TOPHAT_CHR1 => 3;
@@ -65,8 +63,11 @@ const my $DEFUSE_HEADER_PATTERN => '^cluster_id';
 # Position of the columns in the star-fusion output file used to format fusion breakpoint references.
 const my $STAR_SPLIT_CHAR => '\t';
 const my $STAR_SPLIT_CHAR2 => ':';
+const my $STAR_SPLIT_CHAR3 => '\^';
 const my $STAR_CHR1 => 5;
 const my $STAR_CHR2 => 8;
+const my $STAR_GENE1 => 4;
+const my $STAR_GENE2 => 7;
 const my $STAR_HEADER_PATTERN => '^#fusion_name';
 
 {
@@ -118,8 +119,11 @@ sub process_program_params {
 	elsif($program eq 'star'){
 		$options->{'split-char'} = $STAR_SPLIT_CHAR;
 		$options->{'split-char2'} = $STAR_SPLIT_CHAR2;
+		$options->{'split-char3'} = $STAR_SPLIT_CHAR3;
 		$options->{'chr1'} = $STAR_CHR1;
 		$options->{'chr2'} = $STAR_CHR2;
+		$options->{'gene1'} = $STAR_GENE1;
+		$options->{'gene2'} = $STAR_GENE2;
 		$options->{'header-pattern'} = $STAR_HEADER_PATTERN;
 	}
 	else{
@@ -147,17 +151,46 @@ sub reformat {
 		
 		$header_pattern = $options->{'header-pattern'} if(exists $options->{'header-pattern'});
 		if($line =~ m/$header_pattern/){
+		
+			if($program eq 'star'){
+				$line =~ s/([Left|Right]+)Gene/$1Gene\t$1GeneId/g;
+				$line =~ s/([Left|Right]+)Breakpoint/$1Chr\t$1Pos\t$1Strand/g;
+				$line =~ s/#//;
+			}
+		
 			$options->{'header'} = "breakpoint_ref\t".$line;
 		}
 		else{
 			$line =~ s/\tchr/\t/g;
-			my @fields = split '\t', $line;
+			my @fields = split $options->{'split-char'}, $line;
 			my $fusion;
 			
 			if($program eq 'star'){
-				my @break1 = split ':', $fields[$options->{'chr1'} - 1];
-				my @break2 = split ':', $fields[$options->{'chr2'} - 1];
+			
+				my @break1 = split $options->{'split-char2'}, $fields[$options->{'chr1'} - 1];
+				my @break2 = split $options->{'split-char2'}, $fields[$options->{'chr2'} - 1];
+				$fields[$options->{'chr1'} - 1] = join("\t",@break1);
+				$fields[$options->{'chr2'} - 1] = join("\t",@break2);
+				my @gene1 = split $options->{'split-char3'}, $fields[$options->{'gene1'} - 1];
+				my @gene2 = split $options->{'split-char3'}, $fields[$options->{'gene2'} - 1];
+				$fields[$options->{'gene1'} - 1] = join("\t",@gene1);
+				$fields[$options->{'gene2'} - 1] = join("\t",@gene2);
 				$fusion = $break1[0].":".$break1[1]."-".$break2[0].":".$break2[1];
+				$line = join("\t",@fields);
+				
+			}
+			elsif($program eq 'tophat'){
+			
+				# Fusion positions for TopHat need adjusting by +1 so that they are directly comparable to Star and deFuse
+				my $orig_pos1 = $fields[$options->{'pos1'}-1];
+				my $orig_pos2 = $fields[$options->{'pos2'}-1];
+				my $adj_pos1 = $orig_pos1 + 1;
+				my $adj_pos2 = $orig_pos2 + 1;
+				$fusion = $fields[$options->{'chr1'}-1].":".$adj_pos1."-".$fields[$options->{'chr2'}-1].":".$adj_pos2;
+				$fields[$options->{'pos1'}-1] = $adj_pos1;
+				$fields[$options->{'pos2'}-1] = $adj_pos2;
+				$line = join("\t",@fields);
+				
 			}
 			else{
 				$fusion = $fields[$options->{'chr1'}-1].":".$fields[$options->{'pos1'}-1]."-".$fields[$options->{'chr2'}-1].":".$fields[$options->{'pos2'}-1];
@@ -212,6 +245,7 @@ sub write_output {
 	my $tmp = $options->{'tmp'};
 	my $sample = $options-> {'sample'};
 	my $program = $options-> {'program'};
+	my $header = $options->{'header'};
 	my $outdir = $options->{'outdir'};
 	my $fusions_file = File::Spec->catfile($tmp,"$sample.fusions.filtered");
 	my $output_file = File::Spec->catfile($outdir,"$sample.$program-fusion.normals.filtered.txt");
@@ -219,7 +253,7 @@ sub write_output {
 	
 	open (my $ifh, $fusions_file) or die "Could not open file $fusions_file $!";
 	open(my $ofh, '>', $output_file) or die "Could not open file $output_file $!";
-	print $ofh $options->{'header'}."\n";
+	print $ofh $header."\n";
 	while (<$ifh>) {
 		chomp;
 		my $line = $_;

@@ -55,11 +55,37 @@ const my @BOWTIE1_SUFFIXES => qw(.1.ebwt .2.ebwt .3.ebwt .4.ebwt .rev.1.ebwt .re
 const my @BOWTIE2_SUFFIXES => qw(.1.bt2 .2.bt2 .3.bt2 .4.bt2 .rev.1.bt2 .rev.2.bt2 .fa .fa.fai);
 const my $BAMFASTQ => q{ exclude=QCFAIL,SECONDARY,SUPPLEMENTARY T=%s S=%s O=%s O2=%s gz=1 level=1 F=%s F2=%s filename=%s};
 const my $FUSIONS_FILTER => q{ -i %s -s %s -n %s -o %s -p tophat};
+const my $ADD_STRAND => q{ -i %s -s %s -p %s -o %s};
 const my $FUSIONS_SPLIT => 50000;
 const my $TOPHAT_MAX_CORES => 16;
 const my $TOPHAT_DEFAULTS_SECTION => 'tophat-parameters';
 const my $TOPHAT_FUSION_SECTION => 'tophat-fusion-parameters';
 const my $TOPHAT_POST_SECTION => 'tophat-post-parameters';
+
+sub add_strand {
+	my $options = shift;
+	
+	my $tmp = $options->{'tmp'};
+	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);	
+
+	my $sample = $options->{'sample'};
+	my $post_outdir = File::Spec->catdir($options->{'tmp'}, 'tophatpostrun/tophatfusion_'.$sample);	
+	my $fusions_file = File::Spec->catfile($post_outdir, "$sample.tophat-fusion.normals.filtered.txt");
+	my $potential_fusions = File::Spec->catfile($post_outdir, 'potential_fusion.txt');
+	die "Please run the filter_fusions step prior to filter\n" unless(-e $fusions_file && -e $potential_fusions);
+	
+	my $command = "$^X ";
+	$command .= _which('tophat_add_strand.pl');
+	$command .= sprintf $ADD_STRAND, 	$fusions_file,
+						$sample,
+						$potential_fusions,
+						$post_outdir;
+						
+	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
+	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);	
+	
+	return 1;
+}
 
 sub bam_to_fastq {
 
@@ -69,8 +95,7 @@ sub bam_to_fastq {
 	my $tmp = $options->{'tmp'};
 	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), $index);
 	
-	my @commands;
-	my $bam2fq;
+	my $command;
 	my $rg;
 	my $sample = $options->{'sample'};
 	my $inputdir = File::Spec->catdir($tmp, 'input');
@@ -78,19 +103,18 @@ sub bam_to_fastq {
 	my $iter = 1;
 	for my $input(@{$input_meta}) {
 		next if($iter++ != $index); # skip to the relevant element in the list
-		$bam2fq = _which('bamtofastq') || die "Unable to find 'bamtofastq' in path";
+		$command = _which('bamtofastq') || die "Unable to find 'bamtofastq' in path";
 		$rg = $input->rg;
-		$bam2fq .= sprintf $BAMFASTQ, 	File::Spec->catfile($tmp, "bamtofastq.$sample.$rg"),
+		$command .= sprintf $BAMFASTQ, 	File::Spec->catfile($tmp, "bamtofastq.$sample.$rg"),
 						File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.s"),
 						File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.o1"),
 						File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.o2"),
 						File::Spec->catfile($inputdir, $sample.'.'.$rg.'_1.fastq.gz'),
 						File::Spec->catfile($inputdir, $sample.'.'.$rg.'_2.fastq.gz'),
 						$input->in;
-		push @commands, $bam2fq;
 	}
 	
- 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), \@commands, $index);
+ 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, $index);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), $index);
 	
 	return 1;
@@ -134,7 +158,7 @@ sub check_input {
 	PCAP::Cli::file_for_reading('ensGene',File::Spec->catfile($ucsc_refdata,$options->{'genebuild'},$options->{'ensgene'}));
 	
 	# Check the normal fusions file exists for the filtering step
-	PCAP::Cli::file_for_reading('normals-list',File::Spec->catfile($ens_refdata,'normal-fusions',$options->{'normalfusionslist'}));
+	PCAP::Cli::file_for_reading('normals-list',File::Spec->catfile($ens_refdata,$options->{'normalfusionslist'}));
 	
 	$options->{'meta_set'} = PCAP::Bwa::Meta::files_to_meta($options->{'tmp'}, $options->{'raw_files'}, $options->{'sample'});
 	
@@ -205,14 +229,14 @@ sub filter_fusions {
 	die "Please run tophatfusion_post step prior to filter\n" unless(-d $post_outdir);
 	die "Please run tophatfusion_post step prior to filter\n" unless(-e $fusions_file);
 
-	my $normals_file = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'normal-fusions',$options->{'normalfusionslist'});
+	my $normals_file = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},$options->{'normalfusionslist'});
 	
 	my $command = "$^X ";
 	$command .= _which('filter_fusions.pl');
 	$command .= sprintf $FUSIONS_FILTER, 	$fusions_file,
 						$sample,
 						$normals_file,
-						$options->{'outdir'};
+						$post_outdir;
 
 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
