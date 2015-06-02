@@ -51,8 +51,6 @@ use PCAP::Bwa::Meta;
 use PCAP::Bam;
 use Sanger::CGP::Star;
 
-use Data::Dumper;
-
 const my $BAMFASTQ => q{ exclude=QCFAIL,SECONDARY,SUPPLEMENTARY T=%s S=%s O=%s O2=%s gz=1 level=1 F=%s F2=%s filename=%s};
 const my $FUSIONS_FILTER => q{ -i %s -s %s -n %s -o %s -p star};
 const my $STAR_MAX_CORES => 16;

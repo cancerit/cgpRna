@@ -43,15 +43,11 @@ use Pod::Usage qw(pod2usage);
 use Const::Fast qw(const);
 use PCAP::Cli;
 
-use Data::Dumper;
-
 const my @TOPHAT_HEADER => qw(breakpoint_ref sample_name gene_1 chr_1 pos_1 gene_2 chr_2 pos_2 num_spanning_reads num_spanning_mate_pairs num_spanning_mates_2 score strand_1 strand_2);
 
 {
 	my $options = setup();
 	
-print Dumper(\$options);
-
 	reformat($options);
 	add_strand($options);
 	write_output($options);
