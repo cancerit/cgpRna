@@ -113,8 +113,7 @@ sub annotate_bed {
 	$break1_annotated_file =~ s/bed/ann/;
 	$break2_annotated_file =~ s/bed/ann/;
 	my $break1_annotated_full_file = $break1_annotated_file."_full";
-	my $break2_annotated_full_file = $break2_annotated_file."_full";
-  
+	my $break2_annotated_full_file = $break2_annotated_file."_full";  
   
   # Format the bedtools closest commands. Use the filtered exon and gene gtf files to ensure we are getting back the relevant features of interest.
 	my $prog = _which('bedtools');
@@ -166,6 +165,8 @@ sub compare_overlaps {
   my $options = shift;
   
   my $tmp = $options->{'tmp'};
+  return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
+  
   my $sample = $options->{'sample'};
   
   # There will always be a 1_2 comparison file so deal with that first and build the fusions object.
@@ -173,14 +174,6 @@ sub compare_overlaps {
   # Establish the source of 1 and 2 respectively
   my $source1 = $options->{'fusion_files'}->{'1'}->{'format'};
   my $source2 = $options->{'fusion_files'}->{'2'}->{'format'};
-  
-  # The fusion will be represented twice in the overlapping file, use the first set of columns by default
-  my $col_set = 1;
-  
-  # If the first set of columns come from a defuse bedpe, use the second set of columns.
-  # This is because star and tophat are consistent in terms of strand orientation. If we use
-  # defuse data we would need to flip some of the gene and exon data
-  $col_set = 2 if($source1 eq 'defuse');
   
   my $gene_overlap_file1_2;
   my $exon_overlap_file1_2;
@@ -193,36 +186,10 @@ sub compare_overlaps {
 	closedir($dh);
 	
 	my %gene_list;
+	my %exon_list;
 	
   process_gene_overlaps($gene_overlap_file1_2, \%gene_list, $source1, $source2);
-  print Dumper(%gene_list);
-  
-	open (my $ifh1, $gene_overlap_file1_2) or die "Could not open file '$gene_overlap_file1_2' $!";
-	while (<$ifh1>) {
-	  chomp;
-	  my $line = $_;
-	  my @fields = split "\t", $line;
-	  next if(($fields[10] ne $fields[24] && $fields[10] ne $fields[26]) || ($fields[12] ne $fields[24] && $fields[12] ne $fields[26]));
-		my $gene_fusion = parse_overlap($line, $col_set, 'gene');
-	  $gene_list{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}} = $gene_fusion if(!exists $gene_list{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}});
-	  $gene_list{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}}{$source1} = 1 if(!exists $gene_list{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}}{$source1});
-	  $gene_list{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}}{$source2} = 1 if(!exists $gene_list{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}}{$source2});
-	}
-	close ($ifh1);
-	
-	my %exon_list;
-	open (my $ifh2, $exon_overlap_file1_2) or die "Could not open file '$exon_overlap_file1_2' $!";
-	while (<$ifh2>) {
-	  chomp;
-	  my $line = $_;
-	  my @fields = split "\t", $line;
-	  next if(($fields[15] ne $fields[33] && $fields[15] ne $fields[35]) || ($fields[17] ne $fields[33] && $fields[17] ne $fields[35]));
-		my $exon_fusion = parse_overlap($line, $col_set, 'exon');
-		$exon_list{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}} = $exon_fusion if(!exists $exon_list{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}});
-		$exon_list{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}}{$source1} = 1 if(!exists $exon_list{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}}{$source1});
-		$exon_list{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}}{$source2} = 1 if(!exists $exon_list{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}}{$source2});
-	}
-	close ($ifh2);
+	process_exon_overlaps($exon_overlap_file1_2, \%exon_list, $source1, $source2);
 		
   if($options->{'num'} == 3){
     my $gene_overlap_file1_3;
@@ -240,135 +207,83 @@ sub compare_overlaps {
 	    $exon_overlap_file2_3 = File::Spec->catfile($tmp, $file) if($file =~ m/^2_3.$sample.exon.bedpe_overlap/);
 	  }
 	  closedir($dh2);
-	
-	  open (my $ifh3, $gene_overlap_file1_3) or die "Could not open file '$gene_overlap_file1_3' $!";
-	  while (<$ifh3>) {
-	    chomp;
-	    my $line = $_;
-	    my @fields = split "\t", $line;
-	    next if(($fields[10] ne $fields[24] && $fields[10] ne $fields[26]) || ($fields[12] ne $fields[24] && $fields[12] ne $fields[26]));
-		  my $gene_fusion = parse_overlap($line, $col_set, 'gene');
-	    $gene_list{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}} = $gene_fusion if(!exists $gene_list{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}});
-	    $gene_list{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}}{$source1} = 1 if(!exists $gene_list{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}}{$source1});
-	    $gene_list{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}}{$source2} = 1 if(!exists $gene_list{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}}{$source2});
-	    $gene_list{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}}{$source3} = 1 if(!exists $gene_list{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}}{$source3});
-	  }
-	  close ($ifh3);
-	
-	  open (my $ifh4, $exon_overlap_file1_3) or die "Could not open file '$exon_overlap_file1_3' $!";
-	  while (<$ifh4>) {
-	    chomp;
-	    my $line = $_;
-	    my @fields = split "\t", $line;
-	    next if(($fields[15] ne $fields[33] && $fields[15] ne $fields[35]) || ($fields[17] ne $fields[33] && $fields[17] ne $fields[35]));
-		  my $exon_fusion = parse_overlap($line, $col_set, 'exon');
-		  $exon_list{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}} = $exon_fusion if(!exists $exon_list{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}});
-		  $exon_list{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}}{$source1} = 1 if(!exists $exon_list{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}}{$source1});
-		  $exon_list{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}}{$source2} = 1 if(!exists $exon_list{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}}{$source2});
-		  $exon_list{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}}{$source3} = 1 if(!exists $exon_list{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}}{$source3});
-	  }
-	  close ($ifh4);
 	  
-	  $col_set = 1;
-	  $col_set = 2 if($source2  eq 'defuse');
-	  
-	  open (my $ifh5, $gene_overlap_file2_3) or die "Could not open file '$gene_overlap_file2_3' $!";
-	  while (<$ifh5>) {
-	    chomp;
-	    my $line = $_;
-	    my @fields = split "\t", $line;
-	    next if(($fields[10] ne $fields[24] && $fields[10] ne $fields[26]) || ($fields[12] ne $fields[24] && $fields[12] ne $fields[26]));
-		  my $gene_fusion = parse_overlap($line, $col_set, 'gene');
-	    $gene_list{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}} = $gene_fusion if(!exists $gene_list{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}});
-	    $gene_list{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}}{$source1} = 1 if(!exists $gene_list{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}}{$source1});
-	    $gene_list{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}}{$source2} = 1 if(!exists $gene_list{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}}{$source2});
-	    $gene_list{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}}{$source2} = 1 if(!exists $gene_list{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}}{$source2});
-	  }
-	  close ($ifh5);
-	
-	  open (my $ifh6, $exon_overlap_file2_3) or die "Could not open file '$exon_overlap_file2_3' $!";
-	  while (<$ifh6>) {
-	    chomp;
-	    my $line = $_;
-	    my @fields = split "\t", $line;
-	    next if(($fields[15] ne $fields[33] && $fields[15] ne $fields[35]) || ($fields[17] ne $fields[33] && $fields[17] ne $fields[35]));
-		  my $exon_fusion = parse_overlap($line, $col_set, 'exon');
-		  $exon_list{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}} = $exon_fusion if(!exists $exon_list{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}});
-		  $exon_list{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}}{$source1} = 1 if(!exists $exon_list{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}}{$source1});
-		  $exon_list{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}}{$source2} = 1 if(!exists $exon_list{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}}{$source2});
-		  $exon_list{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}}{$source3} = 1 if(!exists $exon_list{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}}{$source3});
-	  }
-	  close ($ifh6);	
+	  process_gene_overlaps($gene_overlap_file1_3, \%gene_list, $source1, $source3, $source2);
+	  process_exon_overlaps($exon_overlap_file1_3, \%exon_list, $source1, $source3, $source2);
+	  process_gene_overlaps($gene_overlap_file2_3, \%gene_list, $source2, $source3, $source1);
+	  process_exon_overlaps($exon_overlap_file2_3, \%exon_list, $source2, $source3, $source1);
   
-    }
-    my $gene_output_file = File::Spec->catfile($tmp, "$sample.gene-fusions.txt");
-    open(my $ofh1, '>', $gene_output_file) or die "Could not open file $gene_output_file $!";
-    print $ofh1 $OUTPUT_GENE_HEADER;
-    for my $gene (keys %gene_list){
-      my @brk_list;
-      my @caller_list;
-  	  for my $brk (keys %{ $gene_list{$gene}}){
-  	    push @brk_list, $brk;
-  	    my $tophat = "-";
-  	    my $defuse = "-";
-  	    my $star = "-";
-  	    $tophat = "T" if(exists $gene_list{$gene}{$brk}->{'tophat'});
-  	    $defuse = "D" if(exists $gene_list{$gene}{$brk}->{'defuse'});
-  	    $star = "S" if(exists $gene_list{$gene}{$brk}->{'star'});
-  	    my $source_string = $tophat.$defuse.$star;
-  	    push @caller_list, $source_string;
-  	  }
-  	  my $chr1 = $gene_list{$gene}{$brk_list[0]}->{'chr1'};
-  	  my $strand1 = $gene_list{$gene}{$brk_list[0]}->{'strand1'};
-  	  my $gene1 = $gene_list{$gene}{$brk_list[0]}->{'gene1'};
-  	  my $gene1_start = $gene_list{$gene}{$brk_list[0]}->{'gene1_start'};
-  	  my $gene1_end = $gene_list{$gene}{$brk_list[0]}->{'gene1_end'};
-  	  my $chr2 = $gene_list{$gene}{$brk_list[0]}->{'chr2'};
-  	  my $strand2 = $gene_list{$gene}{$brk_list[0]}->{'strand2'};
-  	  my $gene2 = $gene_list{$gene}{$brk_list[0]}->{'gene2'};
-  	  my $gene2_start = $gene_list{$gene}{$brk_list[0]}->{'gene2_start'};
-  	  my $gene2_end = $gene_list{$gene}{$brk_list[0]}->{'gene2_end'};
+  }
+  my $gene_output_file = File::Spec->catfile($tmp, "$sample.gene-fusions.txt");
+  open(my $ofh1, '>', $gene_output_file) or die "Could not open file $gene_output_file $!";
+  print $ofh1 $OUTPUT_GENE_HEADER;
+  for my $gene (keys %gene_list){
+    my @brk_list;
+    my @caller_list;
+    for my $brk (keys %{ $gene_list{$gene}}){
+      push @brk_list, $brk;
+  	  my $tophat = "-";
+  	  my $defuse = "-";
+  	  my $star = "-";
+  	  $tophat = "T" if(exists $gene_list{$gene}{$brk}->{'tophat'});
+  	  $defuse = "D" if(exists $gene_list{$gene}{$brk}->{'defuse'});
+  	  $star = "S" if(exists $gene_list{$gene}{$brk}->{'star'});
+  	  my $source_string = $tophat.$defuse.$star;
+  	  push @caller_list, $source_string;
+  	}
+  	my $chr1 = $gene_list{$gene}{$brk_list[0]}->{'chr1'};
+  	my $strand1 = $gene_list{$gene}{$brk_list[0]}->{'strand1'};
+  	my $gene1 = $gene_list{$gene}{$brk_list[0]}->{'gene1'};
+  	my $gene1_start = $gene_list{$gene}{$brk_list[0]}->{'gene1_start'};
+  	my $gene1_end = $gene_list{$gene}{$brk_list[0]}->{'gene1_end'};
+  	my $chr2 = $gene_list{$gene}{$brk_list[0]}->{'chr2'};
+  	my $strand2 = $gene_list{$gene}{$brk_list[0]}->{'strand2'};
+  	my $gene2 = $gene_list{$gene}{$brk_list[0]}->{'gene2'};
+  	my $gene2_start = $gene_list{$gene}{$brk_list[0]}->{'gene2_start'};
+  	my $gene2_end = $gene_list{$gene}{$brk_list[0]}->{'gene2_end'};
   	  
-      my $breaks = join(",",@brk_list);
-      my $callers = join(",",@caller_list);
-      print $ofh1 "$gene\t$breaks\t$callers\t$chr1\t$strand1\t$gene1\t$gene1_start\t$gene1_end\t$chr2\t$strand2\t$gene2\t$gene2_start\t$gene2_end\n";
+    my $breaks = join(",",@brk_list);
+    my $callers = join(",",@caller_list);
+    print $ofh1 "$gene\t$breaks\t$callers\t$chr1\t$strand1\t$gene1\t$gene1_start\t$gene1_end\t$chr2\t$strand2\t$gene2\t$gene2_start\t$gene2_end\n";
+  }
+  close($ofh1);
+    
+  my $exon_output_file = File::Spec->catfile($tmp, "$sample.exon-fusions.txt");
+  open(my $ofh2, '>', $exon_output_file) or die "Could not open file $exon_output_file $!";
+  print $ofh2 $OUTPUT_EXON_HEADER;
+    
+  for my $exon (keys %exon_list){
+    my @brk_list;
+    my @caller_list;
+    for my $brk (keys %{ $exon_list{$exon}}){
+      push @brk_list, $brk;
+			my $tophat = "-";
+      my $defuse = "-";
+      my $star = "-";
+      $tophat = "T" if(exists $exon_list{$exon}{$brk}->{'tophat'});
+      $defuse = "D" if(exists $exon_list{$exon}{$brk}->{'defuse'});
+      $star = "S" if(exists $exon_list{$exon}{$brk}->{'star'});
+      my $source_string = $tophat.$defuse.$star;
+      push @caller_list, $source_string;
     }
-    close($ofh1);
-    
-    my $exon_output_file = File::Spec->catfile($tmp, "$sample.exon-fusions.txt");
-    open(my $ofh2, '>', $exon_output_file) or die "Could not open file $exon_output_file $!";
-    print $ofh2 $OUTPUT_EXON_HEADER;
-    
-    for my $exon (keys %exon_list){
-      my @brk_list;
-      my @caller_list;
-  	  for my $brk (keys %{ $exon_list{$exon}}){
-  	    push @brk_list, $brk;
-				my $tophat = "-";
-  	    my $defuse = "-";
-  	    my $star = "-";
-  	    $tophat = "T" if(exists $exon_list{$exon}{$brk}->{'tophat'});
-  	    $defuse = "D" if(exists $exon_list{$exon}{$brk}->{'defuse'});
-  	    $star = "S" if(exists $exon_list{$exon}{$brk}->{'star'});
-  	    my $source_string = $tophat.$defuse.$star;
-  	    push @caller_list, $source_string;
-  	  }
-  	  my $chr1 = $exon_list{$exon}{$brk_list[0]}->{'chr1'};
-  	  my $strand1 = $exon_list{$exon}{$brk_list[0]}->{'strand1'};
-  	  my $gene1 = $exon_list{$exon}{$brk_list[0]}->{'gene1'};
-  	  my $exon1_start = $exon_list{$exon}{$brk_list[0]}->{'feature1_start'};
-  	  my $exon1_end = $exon_list{$exon}{$brk_list[0]}->{'feature1_end'};
-  	  my $chr2 = $exon_list{$exon}{$brk_list[0]}->{'chr2'};
-  	  my $strand2 = $exon_list{$exon}{$brk_list[0]}->{'strand2'};
-  	  my $gene2 = $exon_list{$exon}{$brk_list[0]}->{'gene2'};
-  	  my $exon2_start = $exon_list{$exon}{$brk_list[0]}->{'feature2_start'};
-  	  my $exon2_end = $exon_list{$exon}{$brk_list[0]}->{'feature2_end'};
+    my $chr1 = $exon_list{$exon}{$brk_list[0]}->{'chr1'};
+    my $strand1 = $exon_list{$exon}{$brk_list[0]}->{'strand1'};
+    my $gene1 = $exon_list{$exon}{$brk_list[0]}->{'gene1'};
+    my $exon1_start = $exon_list{$exon}{$brk_list[0]}->{'feature1_start'};
+    my $exon1_end = $exon_list{$exon}{$brk_list[0]}->{'feature1_end'};
+    my $chr2 = $exon_list{$exon}{$brk_list[0]}->{'chr2'};
+    my $strand2 = $exon_list{$exon}{$brk_list[0]}->{'strand2'};
+    my $gene2 = $exon_list{$exon}{$brk_list[0]}->{'gene2'};
+    my $exon2_start = $exon_list{$exon}{$brk_list[0]}->{'feature2_start'};
+    my $exon2_end = $exon_list{$exon}{$brk_list[0]}->{'feature2_end'};
   	  
-      my $breaks = join(",",@brk_list);
-      my $callers = join(",",@caller_list);
-      print $ofh2 "$exon\t$breaks\t$callers\t$chr1\t$strand1\t$gene1\t$exon1_start\t$exon1_end\t$chr2\t$strand2\t$gene2\t$exon2_start\t$exon2_end\n";
-    }
-    close($ofh2);
+    my $breaks = join(",",@brk_list);
+    my $callers = join(",",@caller_list);
+    print $ofh2 "$exon\t$breaks\t$callers\t$chr1\t$strand1\t$gene1\t$exon1_start\t$exon1_end\t$chr2\t$strand2\t$gene2\t$exon2_start\t$exon2_end\n";
+  }
+  close($ofh2);
+
+  PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
 
   return 1;
 }
@@ -377,6 +292,8 @@ sub create_bed {
 	my ($index, $options) = @_;
 
 	my $tmp = $options->{'tmp'};
+	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), $index);
+	
 	my $sample = $options->{'sample'};
 	
 	my $file = $options->{'fusion_files'}->{$index}->{'name'};
@@ -460,7 +377,9 @@ sub create_bed {
   }
 	close ($ifh);
 	close ($ofh1);
-	close ($ofh2);	
+	close ($ofh2);
+	
+	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), $index);
 	
 	return 1;
 }
@@ -516,6 +435,7 @@ sub create_bedpe {
 		}
 	}
 	close ($ifh2);
+	
 	my %break1;
 	open (my $ifh3, $annot_file1) or die "Could not open file '$annot_file1' $!";
 	while (<$ifh3>) {
@@ -701,8 +621,39 @@ sub parse_overlap {
   return $fusion;
 }
 
+sub process_exon_overlaps {
+  my ($exon_overlap_file, $exon_list, $source1, $source2, $source3) = @_;
+  
+  # The fusion will be represented twice in the overlapping file, use the first set of columns by default
+  my $col_set = 1;
+  
+  # If the first set of columns come from a defuse bedpe, use the second set of columns.
+  # This is because star and tophat are consistent in terms of strand orientation. If we use
+  # defuse data we would need to flip some of the gene and exon data
+  $col_set = 2 if($source1 eq 'defuse');
+  
+  open (my $ifh, $exon_overlap_file) or die "Could not open file '$exon_overlap_file' $!";
+	while (<$ifh>) {
+	  chomp;
+	  my $line = $_;
+	  my @fields = split "\t", $line;
+	  next if(($fields[15] ne $fields[33] && $fields[15] ne $fields[35]) || ($fields[17] ne $fields[33] && $fields[17] ne $fields[35]));
+	  my $exon_fusion = parse_overlap($line, $col_set, 'exon');
+	  $exon_list->{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}} = $exon_fusion if(!exists $exon_list->{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}});
+		$exon_list->{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}}{$source1} = 1 if(!exists $exon_list->{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}}{$source1});
+		$exon_list->{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}}{$source2} = 1 if(!exists $exon_list->{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}}{$source2});
+		
+		if(defined $source3){
+		  $exon_list->{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}}{$source3} = 1 if(!exists $exon_list->{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}}{$source3});
+		}
+	}
+	close ($ifh);
+  
+  return 1;
+}
+
 sub process_gene_overlaps {
-  my ($gene_overlap_file, $gene_list, $source1, $source2) = @_;
+  my ($gene_overlap_file, $gene_list, $source1, $source2, $source3) = @_;
   
   # The fusion will be represented twice in the overlapping file, use the first set of columns by default
   my $col_set = 1;
@@ -722,6 +673,10 @@ sub process_gene_overlaps {
 	  $gene_list->{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}} = $gene_fusion if(!exists $gene_list->{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}});
 	  $gene_list->{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}}{$source1} = 1 if(!exists $gene_list->{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}}{$source1});
 	  $gene_list->{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}}{$source2} = 1 if(!exists $gene_list->{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}}{$source2});
+	  
+	  if(defined $source3){
+	    $gene_list->{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}}{$source3} = 1 if(!exists $gene_list->{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}}{$source3});
+	  }
 	}
 	close ($ifh);
   
