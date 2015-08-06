@@ -57,6 +57,7 @@ sub new {
   if ($args{-gene1_start}) { $self->gene1_start($args{-gene1_start}) }
   if ($args{-gene1_end}) { $self->gene1_end($args{-gene1_end}) }
   if ($args{-transcript1_id}) { $self->transcript1_id($args{-transcript1_id}) }
+  if ($args{-distance1}) { $self->distance1($args{-distance1}) }
   if ($args{-chr2}) { $self->chr2($args{-chr2}) }
   if ($args{-strand2}) { $self->strand2($args{-strand2}) }
   if ($args{-pos2_start}) { $self->pos2_start($args{-pos2_start}) }
@@ -71,6 +72,7 @@ sub new {
   if ($args{-gene2_start}) { $self->gene2_start($args{-gene2_start}) }
   if ($args{-gene2_end}) { $self->gene2_end($args{-gene2_end}) }
   if ($args{-transcript2_id}) { $self->transcript2_id($args{-transcript2_id}) }
+  if ($args{-distance2}) { $self->distance2($args{-distance2}) }
   
   return $self;
 }
@@ -249,6 +251,18 @@ sub transcript2_id {
   return($self->{transcript2_id});
 }
 
+sub distance1 {
+  my $self = shift;
+  $self->{distance1} = shift if @_;
+  return($self->{distance1});
+}
+
+sub distance2 {
+  my $self = shift;
+  $self->{distance2} = shift if @_;
+  return($self->{distance2});
+}
+
 sub format_bedpe_line {
   my ($self, $type) = @_;
 
@@ -260,7 +274,7 @@ sub format_bedpe_line {
   elsif($type eq 'exon'){
     my @exon_fields = ($self->{'chr1'},$self->{'feature1_start'},$self->{'feature1_end'},$self->{'chr2'},$self->{'feature2_start'},$self->{'feature2_end'}, 'exon');
     unshift @pe_fields, @exon_fields;
-    push @pe_fields, ($self->{'exon1_num'}, $self->{'exon1_id'},$self->{'transcript1_id'},$self->{'exon2_num'}, $self->{'exon2_id'},$self->{'transcript2_id'});
+    push @pe_fields, ($self->{'exon1_num'}, $self->{'exon1_id'},$self->{'transcript1_id'},$self->{'exon2_num'}, $self->{'exon2_id'},$self->{'transcript2_id'},$self->{'distance1'},$self->{'distance2'});
   }
   else{
     die "Only gene and exon bedpe files are currently formatted\n";
