@@ -47,7 +47,7 @@ use Sanger::CGP::CgpRna;
 
 use Data::Dumper;
 
-const my $BEDTOOLS_CLOSEST => q{ closest -d -a %s -b %s -t first > %s};
+const my $BEDTOOLS_CLOSEST => q{ closest -d -a %s -b %s | sort -k4,5 > %s};
 const my $BEDTOOLS_PAIRTOPAIR => q{ pairtopair -a %s -b %s -f 1.0 > %s};
 
 const my $OUTPUT_GENE_HEADER => "genes\tbreakpoints\tcalled_by\tchr1\tstrand1\tgene1\tgene1_start\tgene1_end\tchr2\tstrand2\tgene2\tgene2_start\tgene2_end\n";
@@ -127,8 +127,8 @@ sub annotate_bed {
 	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), $index);
 	
 	my $sample = $options->{'sample'};
-	my $exon_gtf = $options->{'exon_gtf'};
-	my $gene_gtf = $options->{'gene_gtf'};
+	my $exon_gtf = filter_gtf($options->{'gtf'}, $tmp, 'exon');
+	my $gene_gtf = filter_gtf($options->{'gtf'}, $tmp, 'gene');
 
 	my $break1_file;
 	my $break2_file;
@@ -156,6 +156,25 @@ sub annotate_bed {
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), $index);
 
   return 1;
+}
+
+sub check_gene_boundaries {
+  my $gene_line = shift;
+  
+  my @gene_fields = split "\t", $gene_line;
+  my $return_value = 1;
+  
+  $gene_fields[7] =~ m/^.*:([0-9]+)-.*:([0-9]+)/;
+  my $pos1 = $1;
+  my $pos2 = $2;
+  my $gene1_start = $gene_fields[1];
+  my $gene1_end = $gene_fields[2];
+  my $gene2_start = $gene_fields[4];
+  my $gene2_end = $gene_fields[5];
+
+  $return_value = 0 if(($pos1 < $gene1_start || $pos1 > $gene1_end) || ($pos2 < $gene2_start || $pos2 > $gene2_end));
+  
+  return $return_value;
 }
 
 sub check_input {
@@ -351,10 +370,12 @@ sub create_bed {
 	my $filetype = $options->{'fusion_files'}->{$index}->{'format'};
   my $output1 = File::Spec->catfile($tmp, "$index.$sample.$filetype.1.bed");
 	my $output2 = File::Spec->catfile($tmp, "$index.$sample.$filetype.2.bed");
+	my $output3 = File::Spec->catfile($tmp, "$index.$sample.$filetype.list");
 	
 	open (my $ifh, $file) or die "Could not open file '$file' $!";
 	open(my $ofh1, '>', $output1) or die "Could not open file '$output1' $!";
 	open(my $ofh2, '>', $output2) or die "Could not open file '$output2' $!";
+	open(my $ofh3, '>', $output3) or die "Could not open file '$output3' $!";
 		
 	while (<$ifh>) {
 		chomp;
@@ -369,7 +390,7 @@ sub create_bed {
 		my $chr2;
 		my $pos2_start;
 		my $pos2_end;
-		my $strand2;		  
+		my $strand2;	  
 		  
 		if($filetype eq 'tophat'){
 		  next if($line =~ m/$TOPHAT_HEADER_PATTERN/);
@@ -387,6 +408,7 @@ sub create_bed {
 		    		    
 		  print $ofh1 $chr1."\t".$pos1_start."\t".$pos1_end."\t".$name."\t".$strand1."\n";
 		  print $ofh2 $chr2."\t".$pos2_start."\t".$pos2_end."\t".$name."\t".$strand2."\n";
+		  print $ofh3 $name."\n";
 		}
 		elsif($filetype eq 'star'){
 			next if($line =~ m/$STAR_HEADER_PATTERN/);
@@ -404,7 +426,7 @@ sub create_bed {
 		    		    
 		  print $ofh1 $chr1."\t".$pos1_start."\t".$pos1_end."\t".$name."\t".$strand1."\n";
 		  print $ofh2 $chr2."\t".$pos2_start."\t".$pos2_end."\t".$name."\t".$strand2."\n";
-		  	
+		  print $ofh3 $name."\n";
 		}
 		elsif($filetype eq 'soap'){
 			next if($line =~ m/$SOAP_HEADER_PATTERN/);
@@ -422,7 +444,7 @@ sub create_bed {
 		    		    
 		  print $ofh1 $chr1."\t".$pos1_start."\t".$pos1_end."\t".$name."\t".$strand1."\n";
 		  print $ofh2 $chr2."\t".$pos2_start."\t".$pos2_end."\t".$name."\t".$strand2."\n";
-		  	
+		  print $ofh3 $name."\n";
 		}
 		# It must be defuse format
 		else{
@@ -441,6 +463,7 @@ sub create_bed {
 		    		    
 		  print $ofh1 $chr1."\t".$pos1_start."\t".$pos1_end."\t".$name."\t".$strand1."\n";
 		  print $ofh2 $chr2."\t".$pos2_start."\t".$pos2_end."\t".$name."\t".$strand2."\n";
+			print $ofh3 $name."\n";
 		}
 		  
   }
@@ -456,28 +479,26 @@ sub create_bed {
 sub create_bedpe {
   my ($index, $options) = @_;
   return 1 if(exists $options->{'index'} && $index != $options->{'index'});
-
   
   my $tmp = $options->{'tmp'};
   return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), $index);
   
 	my $sample = $options->{'sample'};
-	my $gtffile = $options->{'gtf'};
 	
 	my $annot_file1;
 	my $annot_file2;
 	my $gene_bedpe_file = File::Spec->catfile($tmp, "$index.$sample.gene.bedpe");
 	my $exon_bedpe_file = File::Spec->catfile($tmp, "$index.$sample.exon.bedpe");
+	my $gene_gtf = File::Spec->catfile($tmp, "filtered_gene.gtf");
 	
 	opendir(my $dh, $tmp);
 	while(my $file = readdir $dh) {
-	  $annot_file1 = File::Spec->catfile($tmp, $file) if($file =~ m/^$index.$sample.*.1.ann$/);
-	  $annot_file2 = File::Spec->catfile($tmp, $file) if($file =~ m/^$index.$sample.*.2.ann$/);
+	  $annot_file1 = File::Spec->catfile($tmp, $file) if($file =~ m/^$index.$sample.*.1.ann_final$/);
+	  $annot_file2 = File::Spec->catfile($tmp, $file) if($file =~ m/^$index.$sample.*.2.ann_final$/);
 	}
 	closedir($dh);
 
 	my %gene_info;
-	my $gene_gtf = $options->{'gene_gtf'};
 
 	open (my $ifh1, $gene_gtf) or die "Could not open file '$gene_gtf' $!";
 	while (<$ifh1>) {
@@ -575,15 +596,14 @@ sub create_bedpe {
 			}
 			
         $formatted_gene_line = $fusion->format_bedpe_line('gene');
-        print $ofh1 $formatted_gene_line."\n";
+        my $within_gene = check_gene_boundaries($formatted_gene_line);
+        print $ofh1 $formatted_gene_line."\n" if($within_gene);
         if(defined $fusion->exon1_num && $fusion->exon2_num){
           if($fusion->distance1 <= 10 && $fusion->distance2 <= 10){
             $formatted_exon_line = $fusion->format_bedpe_line('exon');
             print $ofh2 $formatted_exon_line."\n";
           }
-        }
-      
-      
+        }      
 	  }
 	close ($ofh1);
 	close ($ofh2);
@@ -623,6 +643,17 @@ sub filter_gtf {
 	close($ofh);
   
   return $filtered_gtf;
+}
+
+sub find_closest_boundary {
+  my ($break, $start, $end) = @_;
+  
+  my $distance = abs($start - $break);
+  my $distance2 = abs($end - $break);
+  
+  $distance = $distance2 if($distance2 < $distance);
+  
+  return $distance;
 }
 
 sub parse_annotation {
@@ -824,6 +855,102 @@ sub run_bed_pairtopair {
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
 
   return 1;
+}
+
+sub select_annotation {
+
+  # All possible exon annotations have been retrieved for each breakpoint, we need to select annotation for the nearest.
+  my ($index, $options) = @_;
+  return 1 if(exists $options->{'index'} && $index != $options->{'index'});
+  
+  my $tmp = $options->{'tmp'};
+  return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), $index);
+  
+	my $sample = $options->{'sample'};
+	my $annot_file1;
+	my $annot_file2;
+	my $final_annot_file1;
+	my $final_annot_file2;
+	
+	opendir(my $dh, $tmp);
+	while(my $file = readdir $dh) {
+	  $annot_file1 = File::Spec->catfile($tmp, $file) if($file =~ m/^$index.$sample.*.1.ann$/);
+	  $annot_file2 = File::Spec->catfile($tmp, $file) if($file =~ m/^$index.$sample.*.2.ann$/);
+	}
+	closedir($dh);
+	
+	$final_annot_file1 = $annot_file1."_final";
+	$final_annot_file2 = $annot_file2."_final";
+	
+	my $curr_distance = 10000000;
+	my $curr_line = "";
+	my $curr_break = "";
+		
+	# Process the first annotation file
+	open(my $ofh1, '>', $final_annot_file1) or die "Could not open file $final_annot_file1 $!";
+	open (my $ifh1, $annot_file1) or die "Could not open file '$annot_file1' $!";
+	while (<$ifh1>) {
+	  chomp;
+	  my $line = $_;
+	  my @fields = split "\t", $line;
+	  my $break = $fields[3].$fields[4];
+		
+		if($break ne $curr_break){
+		  print $ofh1 $curr_line."\n" unless($curr_break eq "");
+		  $curr_break = $break;
+		  $curr_distance = 10000000;
+		}
+		my $pos = $fields[2];
+		my $exon_start = $fields[8];
+		my $exon_end = $fields[9];
+
+		my $distance = find_closest_boundary($pos, $exon_start, $exon_end);
+
+		if($distance < $curr_distance){
+		  $curr_distance = $distance;
+		  $curr_line = $line;
+		}
+
+	}
+	print $ofh1 $curr_line."\n";
+	close ($ifh1);
+	close ($ofh1);
+	
+	$curr_distance = 10000000;
+	$curr_line = "";
+	$curr_break = "";
+	
+	# Process the second annotation file
+	open(my $ofh2, '>', $final_annot_file2) or die "Could not open file $final_annot_file2 $!";
+	open (my $ifh2, $annot_file2) or die "Could not open file '$annot_file2' $!";
+	while (<$ifh2>) {
+	  chomp;
+	  my $line = $_;
+	  my @fields = split "\t", $line;
+	  my $break = $fields[3].$fields[4];
+		
+		if($break ne $curr_break){
+		  print $ofh2 $curr_line."\n" unless($curr_break eq "");
+		  $curr_break = $break;
+		  $curr_distance = 10000000;
+		}
+		my $pos = $fields[2];
+		my $exon_start = $fields[8];
+		my $exon_end = $fields[9];
+
+		my $distance = find_closest_boundary($pos, $exon_start, $exon_end);
+
+		if($distance < $curr_distance){
+		  $curr_distance = $distance;
+		  $curr_line = $line;
+		}
+
+	}
+	print $ofh2 $curr_line."\n";
+	close ($ifh2);
+	close ($ofh2);
+	
+	return 1;
 }
 
 sub _which {

@@ -58,9 +58,10 @@ use Sanger::CGP::CompareFusions::FusionAnnotation;
 use Data::Dumper;
 
 const my @REQUIRED_PARAMS => qw(outdir sample gtf);
-const my @VALID_PROCESS => qw(createbed annotatebed createbedpe runbedpairtopair compareoverlaps);
+const my @VALID_PROCESS => qw(createbed annotatebed selectannotation createbedpe runbedpairtopair compareoverlaps);
 const my %INDEX_FACTOR => (	'createbed' => -1,
 				'annotatebed' => -1,
+				'selectannotation' => -1,
 				'createbedpe' => -1,
 				'runbedpairtopair' => 1,
 				'compareoverlaps' => 1);				
@@ -73,14 +74,12 @@ const my %INDEX_FACTOR => (	'createbed' => -1,
 	
 	$threads->add_function('createbed', \&Sanger::CGP::CompareFusions::Implement::create_bed);
 	$threads->add_function('annotatebed', \&Sanger::CGP::CompareFusions::Implement::annotate_bed);
+	$threads->add_function('selectannotation', \&Sanger::CGP::CompareFusions::Implement::select_annotation);
 	$threads->add_function('createbedpe', \&Sanger::CGP::CompareFusions::Implement::create_bedpe);
 	
   $threads->run($options->{'num'}, 'createbed', $options) if(!exists $options->{'process'} || $options->{'process'} eq 'createbed');
-  if(!exists $options->{'process'} || $options->{'process'} eq 'annotatebed'){
-    $options->{'exon_gtf'} = Sanger::CGP::CompareFusions::Implement::filter_gtf($options->{'gtf'}, $options->{'tmp'}, 'exon');
-	  $options->{'gene_gtf'} = Sanger::CGP::CompareFusions::Implement::filter_gtf($options->{'gtf'}, $options->{'tmp'}, 'gene');
-    $threads->run($options->{'num'}, 'annotatebed', $options);
-  }
+  $threads->run($options->{'num'}, 'annotatebed', $options) if(!exists $options->{'process'} || $options->{'process'} eq 'annotatebed');
+  $threads->run($options->{'num'}, 'selectannotation', $options) if(!exists $options->{'process'} || $options->{'process'} eq 'selectannotation');
   $threads->run($options->{'num'}, 'createbedpe', $options) if(!exists $options->{'process'} || $options->{'process'} eq 'createbedpe');
   
   Sanger::CGP::CompareFusions::Implement::run_bed_pairtopair($options) if(!exists $options->{'process'} || $options->{'process'} eq 'runbedpairtopair');
@@ -213,6 +212,7 @@ Available processes for this tool are:
 
   createbed
   annotatebed
+  selectannotation
   createbedpe
   runbedpairtopair
   compareoverlaps
