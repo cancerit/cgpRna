@@ -1,4 +1,4 @@
-package Sanger::CGP::Tophat;
+package Sanger::CGP::CgpRna;
 
 ##########LICENCE ##########
 #Copyright (c) 2015 Genome Research Ltd.
