@@ -67,7 +67,6 @@ const my %INDEX_FACTOR => (	'createbed' => -1,
 				'compareoverlaps' => 1);				
 {
 	my $options = setup();
-	print Dumper(\$options);
   
 	my $threads = PCAP::Threaded->new($options->{'threads'});
 	&PCAP::Threaded::disable_out_err if(exists $options->{'index'});
@@ -97,7 +96,7 @@ sub cleanup {
 	move(File::Spec->catfile($tmpdir, "$sample.gene-fusions.txt"), $options->{'outdir'}) || die $!;
 	move(File::Spec->catfile($tmpdir, "$sample.exon-fusions.txt"), $options->{'outdir'}) || die $!;
 	move(File::Spec->catdir($tmpdir, 'logs'), File::Spec->catdir($options->{'outdir'}, 'logs')) || die $!;
-	#remove_tree $tmpdir if(-e $tmpdir);
+	remove_tree $tmpdir if(-e $tmpdir);
 	return 0;
 }
 
