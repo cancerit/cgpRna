@@ -66,15 +66,15 @@ const my %INDEX_FACTOR => (	'createbed' => -1,
 				'runbedpairtopair' => 1,
 				'compareoverlaps' => 1);				
 {
-	my $options = setup();
+  my $options = setup();
   
-	my $threads = PCAP::Threaded->new($options->{'threads'});
-	&PCAP::Threaded::disable_out_err if(exists $options->{'index'});
+  my $threads = PCAP::Threaded->new($options->{'threads'});
+  &PCAP::Threaded::disable_out_err if(exists $options->{'index'});
 	
-	$threads->add_function('createbed', \&Sanger::CGP::CompareFusions::Implement::create_bed);
-	$threads->add_function('annotatebed', \&Sanger::CGP::CompareFusions::Implement::annotate_bed);
-	$threads->add_function('selectannotation', \&Sanger::CGP::CompareFusions::Implement::select_annotation);
-	$threads->add_function('createbedpe', \&Sanger::CGP::CompareFusions::Implement::create_bedpe);
+  $threads->add_function('createbed', \&Sanger::CGP::CompareFusions::Implement::create_bed);
+  $threads->add_function('annotatebed', \&Sanger::CGP::CompareFusions::Implement::annotate_bed);
+  $threads->add_function('selectannotation', \&Sanger::CGP::CompareFusions::Implement::select_annotation);
+  $threads->add_function('createbedpe', \&Sanger::CGP::CompareFusions::Implement::create_bedpe);
 	
   $threads->run($options->{'num'}, 'createbed', $options) if(!exists $options->{'process'} || $options->{'process'} eq 'createbed');
   $threads->run($options->{'num'}, 'annotatebed', $options) if(!exists $options->{'process'} || $options->{'process'} eq 'annotatebed');
@@ -90,91 +90,91 @@ const my %INDEX_FACTOR => (	'createbed' => -1,
 }
 
 sub cleanup {
-	my $options = shift;
-	my $tmpdir = $options->{'tmp'};
-	my $sample = $options->{'sample'};
-	move(File::Spec->catfile($tmpdir, "$sample.gene-fusions.txt"), $options->{'outdir'}) || die $!;
-	move(File::Spec->catfile($tmpdir, "$sample.exon-fusions.txt"), $options->{'outdir'}) || die $!;
-	move(File::Spec->catdir($tmpdir, 'logs'), File::Spec->catdir($options->{'outdir'}, 'logs')) || die $!;
-	remove_tree $tmpdir if(-e $tmpdir);
-	return 0;
+  my $options = shift;
+  my $tmpdir = $options->{'tmp'};
+  my $sample = $options->{'sample'};
+  move(File::Spec->catfile($tmpdir, "$sample.gene-fusions.txt"), $options->{'outdir'}) || die $!;
+  move(File::Spec->catfile($tmpdir, "$sample.exon-fusions.txt"), $options->{'outdir'}) || die $!;
+  move(File::Spec->catdir($tmpdir, 'logs'), File::Spec->catdir($options->{'outdir'}, 'logs')) || die $!;
+  remove_tree $tmpdir if(-e $tmpdir);
+  return 0;
 }
 
 sub setup {
-	my %opts;
-	pod2usage(-msg => "\nERROR: Options must be defined.\n", -verbose => 1, -output => \*STDERR) if(scalar @ARGV == 0);
-	$opts{'cmd'} = join " ", $0, @ARGV;
+  my %opts;
+  pod2usage(-msg => "\nERROR: Options must be defined.\n", -verbose => 1, -output => \*STDERR) if(scalar @ARGV == 0);
+  $opts{'cmd'} = join " ", $0, @ARGV;
 	
-	GetOptions( 	'h|help' => \$opts{'h'},
-			'm|man' => \$opts{'m'},
-			'g|gtf=s' => \$opts{'gtf'},
-			'o|outdir=s' => \$opts{'outdir'},
-			's|sample=s' => \$opts{'sample'},
-			't|threads=i' => \$opts{'threads'},
-			'p|process=s' => \$opts{'process'},
-			'i|index=i' => \$opts{'index'},
-	) or pod2usage(2);
+  GetOptions( 	'h|help' => \$opts{'h'},
+		'm|man' => \$opts{'m'},
+		'g|gtf=s' => \$opts{'gtf'},
+		'o|outdir=s' => \$opts{'outdir'},
+		's|sample=s' => \$opts{'sample'},
+		't|threads=i' => \$opts{'threads'},
+		'p|process=s' => \$opts{'process'},
+		'i|index=i' => \$opts{'index'},
+  ) or pod2usage(2);
 
-	pod2usage(-verbose => 1) if(defined $opts{'h'});
-	pod2usage(-verbose => 2) if(defined $opts{'m'});
+  pod2usage(-verbose => 1) if(defined $opts{'h'});
+  pod2usage(-verbose => 2) if(defined $opts{'m'});
 	
-	for(@REQUIRED_PARAMS) {
-		pod2usage(-msg => "\nERROR: $_ is a required argument.\n", -verbose => 1, -output => \*STDERR) unless(defined $opts{$_});
-	}
+  for(@REQUIRED_PARAMS) {
+    pod2usage(-msg => "\nERROR: $_ is a required argument.\n", -verbose => 1, -output => \*STDERR) unless(defined $opts{$_});
+  }
 	
-	PCAP::Cli::file_for_reading('gtf', $opts{'gtf'});
+  PCAP::Cli::file_for_reading('gtf', $opts{'gtf'});
 		
-	# Check the output directory exists and is writeable, create if not
-	PCAP::Cli::out_dir_check('outdir', $opts{'outdir'});
+  # Check the output directory exists and is writeable, create if not
+  PCAP::Cli::out_dir_check('outdir', $opts{'outdir'});
 	
-	# Create working directory for storing intermediate files
-	my $tmpdir = File::Spec->catdir($opts{'outdir'}, 'tmp_compareFusions');
-	make_path($tmpdir) unless(-d $tmpdir);
-	my $logdir = File::Spec->catdir($tmpdir, 'logs');
-	make_path($logdir) unless(-d $logdir);
-	my $progressdir = File::Spec->catdir($tmpdir, 'progress');
-	make_path($progressdir) unless(-d $progressdir);
-	$opts{'tmp'} = $tmpdir;
+  # Create working directory for storing intermediate files
+  my $tmpdir = File::Spec->catdir($opts{'outdir'}, 'tmp_compareFusions');
+  make_path($tmpdir) unless(-d $tmpdir);
+  my $logdir = File::Spec->catdir($tmpdir, 'logs');
+  make_path($logdir) unless(-d $logdir);
+  my $progressdir = File::Spec->catdir($tmpdir, 'progress');
+  make_path($progressdir) unless(-d $progressdir);
+  $opts{'tmp'} = $tmpdir;
 	
-	# Count the number of input files being compared and check the format is valid i.e. it's been generated by tophat, star or defuse
-	my $file_count = scalar @ARGV;
-	die "Please enter either two or three input files to compare." if($file_count <2 || $file_count > 3);
-	$opts{'num'} = $file_count;
-	$opts{'input_files'} = \@ARGV;
+  # Count the number of input files being compared and check the format is valid i.e. it's been generated by tophat, star or defuse
+  my $file_count = scalar @ARGV;
+  die "Please enter either two or three input files to compare." if($file_count <2 || $file_count > 3);
+  $opts{'num'} = $file_count;
+  $opts{'input_files'} = \@ARGV;
 	
-	my $format;
-	my %fusion_files;
-	my $input;
-	for (my $iter=1; $iter <= $file_count; $iter++) {
-	  $input = $ARGV[$iter-1];
-		$format = Sanger::CGP::CompareFusions::Implement::check_input($input);
-		$fusion_files{$iter}{'format'} = $format;
-		$fusion_files{$iter}{'name'} = $input;
-	}
+  my $format;
+  my %fusion_files;
+  my $input;
+  for (my $iter=1; $iter <= $file_count; $iter++) {
+    $input = $ARGV[$iter-1];
+    $format = Sanger::CGP::CompareFusions::Implement::check_input($input);
+    $fusion_files{$iter}{'format'} = $format;
+    $fusion_files{$iter}{'name'} = $input;
+  }
 	
-	$opts{'fusion_files'} = \%fusion_files;
-	delete $opts{'process'} unless(defined $opts{'process'});
-	delete $opts{'index'} unless(defined $opts{'index'});
+  $opts{'fusion_files'} = \%fusion_files;
+  delete $opts{'process'} unless(defined $opts{'process'});
+  delete $opts{'index'} unless(defined $opts{'index'});
 	
-	$opts{'threads'} = 1 unless(defined $opts{'threads'});
+  $opts{'threads'} = 1 unless(defined $opts{'threads'});
 
   if(exists $opts{'process'}) {
     PCAP::Cli::valid_process('process', $opts{'process'}, \@VALID_PROCESS);
     my $max_index = $INDEX_FACTOR{$opts{'process'}};
     if($max_index == -1) {
-     $max_index = $opts{'num'};
+      $max_index = $opts{'num'};
     }
-     $opts{'max_index'} = $max_index;
-     if(exists $opts{'index'}) {
-       PCAP::Cli::opt_requires_opts('index', \%opts, ['process']);
-       PCAP::Cli::valid_index_by_factor('index', $opts{'index'}, \@ARGV, $max_index);
-     }
-   }
-   elsif(exists $opts{'index'}) {
+    $opts{'max_index'} = $max_index;
+    if(exists $opts{'index'}) {
+      PCAP::Cli::opt_requires_opts('index', \%opts, ['process']);
+      PCAP::Cli::valid_index_by_factor('index', $opts{'index'}, \@ARGV, $max_index);
+    }
+  }
+  elsif(exists $opts{'index'}) {
     die "ERROR: -index cannot be defined without -process\n";
   }
 
-	return \%opts;
+  return \%opts;
 }
 
 __END__
