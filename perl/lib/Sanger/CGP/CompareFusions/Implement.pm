@@ -123,37 +123,37 @@ sub annotate_bed {
   my ($index, $options) = @_;
   return 1 if(exists $options->{'index'} && $index != $options->{'index'});
   
-	my $tmp = $options->{'tmp'};
-	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), $index);
-	
-	my $sample = $options->{'sample'};
-	my $exon_gtf = filter_gtf($options->{'gtf'}, $tmp, 'exon');
-	my $gene_gtf = filter_gtf($options->{'gtf'}, $tmp, 'gene');
+  my $tmp = $options->{'tmp'};
+  return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), $index);
 
-	my $break1_file;
-	my $break2_file;
+  my $sample = $options->{'sample'};
+  my $exon_gtf = filter_gtf($options->{'gtf'}, $tmp, 'exon');
+  my $gene_gtf = filter_gtf($options->{'gtf'}, $tmp, 'gene');
+
+  my $break1_file;
+  my $break2_file;
 	
-	opendir(my $dh, $tmp);
-	while(my $file = readdir $dh) {
-	  $break1_file = File::Spec->catfile($tmp, $file) if($file =~ m/^$index.*1.bed/);
-	  $break2_file = File::Spec->catfile($tmp, $file) if($file =~ m/^$index.*2.bed/);
-	}
-	closedir($dh);
+  opendir(my $dh, $tmp);
+  while(my $file = readdir $dh) {
+    $break1_file = File::Spec->catfile($tmp, $file) if($file =~ m/^$index.*1.bed/);
+    $break2_file = File::Spec->catfile($tmp, $file) if($file =~ m/^$index.*2.bed/);
+  }
+  closedir($dh);
 	
-	my $break1_annotated_file = $break1_file;
-	my $break2_annotated_file = $break2_file;
-	$break1_annotated_file =~ s/bed/ann/;
-	$break2_annotated_file =~ s/bed/ann/;
+  my $break1_annotated_file = $break1_file;
+  my $break2_annotated_file = $break2_file;
+  $break1_annotated_file =~ s/bed/ann/;
+  $break2_annotated_file =~ s/bed/ann/;
   
   # Format the bedtools closest commands. Use the filtered exon and gene gtf files to ensure we are getting back the relevant features of interest.
-	my $prog = _which('bedtools');
-	my $command1 = $prog . sprintf $BEDTOOLS_CLOSEST, $break1_file, $exon_gtf, $break1_annotated_file;
-	my $command2 = $prog . sprintf $BEDTOOLS_CLOSEST, $break2_file, $exon_gtf, $break2_annotated_file;
+  my $prog = _which('bedtools');
+  my $command1 = $prog . sprintf $BEDTOOLS_CLOSEST, $break1_file, $exon_gtf, $break1_annotated_file;
+  my $command2 = $prog . sprintf $BEDTOOLS_CLOSEST, $break2_file, $exon_gtf, $break2_annotated_file;
 	
-	my @commands = ($command1,$command2);
+  my @commands = ($command1,$command2);
 
-	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), \@commands, $index);
-	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), $index);
+  PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), \@commands, $index);
+  PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), $index);
 
   return 1;
 }
