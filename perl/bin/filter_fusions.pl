@@ -70,6 +70,14 @@ const my $STAR_GENE1 => 4;
 const my $STAR_GENE2 => 7;
 const my $STAR_HEADER_PATTERN => '^#fusion_name';
 
+# Position of the columns in the SOAPfuse output file used to format fusion breakpoint references.
+const my $SOAP_SPLIT_CHAR => '\t';
+const my $SOAP_CHR1 => 2;
+const my $SOAP_POS1 => 4;
+const my $SOAP_CHR2 => 7;
+const my $SOAP_POS2 => 9;
+const my $SOAP_HEADER_PATTERN => '^up_gene';
+
 {
 	my $options = setup();
 
@@ -126,8 +134,16 @@ sub process_program_params {
 		$options->{'gene2'} = $STAR_GENE2;
 		$options->{'header-pattern'} = $STAR_HEADER_PATTERN;
 	}
+	elsif($program eq 'soap'){
+		$options->{'split-char'} = $SOAP_SPLIT_CHAR;
+		$options->{'chr1'} = $SOAP_CHR1;
+		$options->{'pos1'} = $SOAP_POS1;
+		$options->{'chr2'} = $SOAP_CHR2;
+		$options->{'pos2'} = $SOAP_POS2;
+		$options->{'header-pattern'} = $SOAP_HEADER_PATTERN;
+	}
 	else{
-		die "An invalid program name has been entered, parameter -p should be tophat, defuse or star.\n"
+		die "An invalid program name has been entered, parameter -p should be tophat, defuse, star or soap.\n"
 	}
 	
 	return 1;
