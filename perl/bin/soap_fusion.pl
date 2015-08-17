@@ -65,7 +65,7 @@ const my %INDEX_FACTOR => (	'prepare' => -1,
 
 {
 	my $options = setup();
-print Dumper(\$options);
+
 	if(!exists $options->{'process'} || $options->{'process'} eq 'prepare'){
 		# Process the input files.
 		my $threads = PCAP::Threaded->new($options->{'threads'});
@@ -89,7 +89,7 @@ sub cleanup {
 	my $soap_outdir = File::Spec->catdir($options->{'tmp'}, 'soap');
 	move(File::Spec->catdir($tmpdir, 'logs'), File::Spec->catdir($options->{'outdir'}, 'logs_soap')) || die $!;
 	move(File::Spec->catdir($tmpdir, 'soapfuse'), File::Spec->catdir($options->{'outdir'}, 'logs_soap', 'soapfuse')) || die $!;
-	#remove_tree $tmpdir if(-e $tmpdir);
+	remove_tree $tmpdir if(-e $tmpdir);
 	return 0;
 }
 
