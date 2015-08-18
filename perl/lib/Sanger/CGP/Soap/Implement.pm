@@ -147,7 +147,6 @@ sub prepare {
  	my $library = $options->{'library'};
 	my $inputdir = File::Spec->catdir($tmp, 'input', $sample, $library);
 	
-	if($options->{'bam'} || $options->{'mixedfq'}){
 		my $input_meta = $options->{'meta_set'};
 		my $iter = 1;
 		
@@ -155,38 +154,50 @@ sub prepare {
 			next if($iter++ != $index); # skip to the relevant element in the list
 			# If the file name ends fastq or fq we need to gzip it to make it consistent with other input files in the list
 			if($input->fastq) {
+			  my ($filename, $filepath) = fileparse($input->in);
+				my $in_suffix = ".".$input->fastq;
+				my $out_suffix = ".fastq";
+				my $outfile = File::Spec->catfile($inputdir,$filename);
+				
 				if($input->fastq =~ m/f(ast)?q$/) {
-					my ($filename, $filepath) = fileparse($input->in);
-					my $suffix = ".".$input->fastq;
-					my $outfile = File::Spec->catfile($inputdir,$filename);
-					my $raw_files = $options->{'raw_files'};
-					
+		
 					if($input->paired_fq){
 
-						my $infile1 = $input->in."_1".$suffix;
-						my $infile2 = $input->in."_2".$suffix;
-						my $outfile1 = $outfile."_1".$suffix.".gz";
-						my $outfile2 = $outfile."_2".$suffix.".gz";
+						my $infile1 = $input->in."_1".$in_suffix;
+						my $infile2 = $input->in."_2".$in_suffix;
+						my $outfile1 = $outfile."_1".$out_suffix.".gz";
+						my $outfile2 = $outfile."_2".$out_suffix.".gz";
 						
 						system([0,2], "(gzip -c $infile1 > $outfile1) >& /dev/null") unless(-e $outfile1);
-						system([0,2], "(gzip -c $infile2 > $outfile2) >& /dev/null") unless(-e $outfile2);
-						
-						for(my $i=0; $i<@$raw_files; $i++){
-							@$raw_files[$i] = $outfile1 if(@$raw_files[$i] =~ $infile1);
-							@$raw_files[$i] = $outfile2 if(@$raw_files[$i] =~ $infile2);
-						}
+						system([0,2], "(gzip -c $infile2 > $outfile2) >& /dev/null") unless(-e $outfile2);			
 					}
 					else{
 
-						my $infile = $input->in.$suffix;
-						my $outfile = $outfile.$suffix.".gz";
+						my $infile = $input->in.$in_suffix;
+						my $outfile = $outfile.$out_suffix.".gz";
 						
 						system([0,2], "(gzip -c $infile > $outfile) >& /dev/null") unless(-e $outfile);
-						
-						for(my $i=0; $i<@$raw_files; $i++){
-							@$raw_files[$i] = $outfile if(@$raw_files[$i] =~ $infile);
-						}				
 					}
+				}
+				else{
+				  my $out_suffix = ".fastq";
+					my $outfile = File::Spec->catfile($inputdir,$filename);
+
+				  if($input->paired_fq){
+						my $infile1 = $input->in."_1".$in_suffix;
+						my $infile2 = $input->in."_2".$in_suffix;
+						my $outfile1 = $outfile."_1".$out_suffix.".gz";
+						my $outfile2 = $outfile."_2".$out_suffix.".gz";
+						
+						symlink($infile1, $outfile1);
+						symlink($infile2, $outfile2);
+				  }
+				  else{
+				    my $infile = $input->in.$in_suffix;
+						my $outfile = $outfile.$out_suffix.".gz";
+				  
+				    symlink($infile, $outfile);
+				  }
 				}
 			}
 			else{
@@ -202,11 +213,10 @@ sub prepare {
 								File::Spec->catfile($inputdir, $sample.'.'.$rg.'_2.fastq.gz'),
 								$input->in;
 																	
-					PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, $index);
+			  PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, $index);
 			
 			}
 		}
-	}
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), $index);
 	
 	return 1;
@@ -262,14 +272,8 @@ sub soap_setup {
   my $input_meta = $options->{'meta_set'};
   for my $input(@{$input_meta}) {
     if($input->fastq) {
-			# Paired fastq input
-			if($input->paired_fq) {
-			  # TODO
-			}
-			# Interleaved fastq input
-			else{
-				# TODO
-			}
+		  my ($filename, $filepath) = fileparse($input->in);
+		  print $ofh1 "$sample\t$library\t$filename\t$readlength\n";
 		}
   	else{
 			my $rg = $input->rg;
