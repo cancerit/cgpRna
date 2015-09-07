@@ -96,7 +96,7 @@ sub cleanup {
   move(File::Spec->catfile($tmpdir, "$sample.gene-fusions.txt"), $options->{'outdir'}) || die $!;
   move(File::Spec->catfile($tmpdir, "$sample.exon-fusions.txt"), $options->{'outdir'}) || die $!;
   move(File::Spec->catdir($tmpdir, 'logs'), File::Spec->catdir($options->{'outdir'}, 'logs')) || die $!;
-  remove_tree $tmpdir if(-e $tmpdir);
+  #remove_tree $tmpdir if(-e $tmpdir);
   return 0;
 }
 
