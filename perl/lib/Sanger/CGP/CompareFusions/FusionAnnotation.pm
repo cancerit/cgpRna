@@ -43,6 +43,7 @@ sub new {
   bless $self,$class;
   
   if ($args{-breakpoint}) { $self->breakpoint($args{-breakpoint}) }
+  if ($args{-alt_breakpoint}) { $self->alt_breakpoint($args{-alt_breakpoint}) }
   if ($args{-chr1}) { $self->chr1($args{-chr1}) }
   if ($args{-strand1}) { $self->strand1($args{-strand1}) }
   if ($args{-pos1_start}) { $self->pos1_start($args{-pos1_start}) }
@@ -81,6 +82,12 @@ sub breakpoint {
   my $self = shift;
   $self->{breakpoint} = shift if @_;
   return($self->{breakpoint});
+}
+
+sub alt_breakpoint {
+  my $self = shift;
+  $self->{alt_breakpoint} = shift if @_;
+  return($self->{alt_breakpoint});
 }
 
 sub chr1 {
