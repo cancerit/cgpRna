@@ -133,6 +133,7 @@ sub setup {
 	$opts{'species'} = $cfg->val('star-config','species') unless(defined $opts{'species'});
 	$opts{'starpath'} = $cfg->val('star-config','starpath');
 	$opts{'starfusionpath'} = $cfg->val('star-config','starfusionpath');
+	$opts{'fusion_mode'} = 1;
 
 	# Print version information for this program
 	if($opts{'version'}) {

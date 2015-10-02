@@ -65,6 +65,12 @@ const my $BAMSORT => q{ I=%s/Aligned.out.bam fixmate=1 inputformat=bam level=1 t
 sub check_input {
 	my $options = shift;
 
+  my $fusion_mode;
+	
+	if(exists $options->{'fusion_mode'}){
+	  $fusion_mode = $options->{'fusion_mode'};
+	}
+
 	my $ref_data = $options->{'refdataloc'};
 	my $species = $options->{'species'};
 	my $ref_build = $options->{'referencebuild'};
@@ -73,7 +79,10 @@ sub check_input {
 
 	# Check the gtf and normal fusions files exist
 	PCAP::Cli::file_for_reading('gtf-file', File::Spec->catfile($ref_build_loc, $gene_build, $options->{'gtffilename'}));
-	PCAP::Cli::file_for_reading('normals-list',File::Spec->catfile($ref_build_loc,$options->{'normalfusionslist'}));
+
+	if($fusion_mode){
+	  PCAP::Cli::file_for_reading('normals-list',File::Spec->catfile($ref_build_loc,$options->{'normalfusionslist'}));
+	}
 	
 	my $input_meta = PCAP::Bwa::Meta::files_to_meta($options->{'tmp'}, $options->{'raw_files'}, $options->{'sample'});
 	
@@ -217,7 +226,13 @@ sub prepare {
 }
 
 sub process_star_params {
-	my ($options, $fusion_mode) = @_;
+	my $options = shift;
+	
+	my $fusion_mode;
+	
+	if(exists $options->{'fusion_mode'}){
+	  $fusion_mode = $options->{'fusion_mode'};
+	}
 	
 	my $ini_file = $options->{'config'};
 	my $cfg = new Config::IniFiles( -file => $ini_file ) or die "Could not open config file: $ini_file";
@@ -329,7 +344,7 @@ sub star_chimeric {
 	$rg_line =~ s/\\t/ /g;
 	$options->{'rgline'} = $rg_line;
 	
-	my $star_params = process_star_params($options, 1);
+	my $star_params = process_star_params($options);
 	
 	my @files1;
 	my @files2;
