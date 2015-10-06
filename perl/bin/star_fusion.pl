@@ -73,7 +73,7 @@ const my %INDEX_FACTOR => (	'prepare' => -1,
 		$threads->run($options->{'max_split'}, 'prepare', $options);
 	}
 
-	Sanger::CGP::Star::Implement::star_chimeric($options) if(!exists $options->{'process'} || $options->{'process'} eq 'star');
+	Sanger::CGP::Star::Implement::star($options) if(!exists $options->{'process'} || $options->{'process'} eq 'star');
 	Sanger::CGP::Star::Implement::star_fusion($options) if(!exists $options->{'process'} || $options->{'process'} eq 'starfusion');
 	
 	if(!exists $options->{'process'} || $options->{'process'} eq 'filter'){

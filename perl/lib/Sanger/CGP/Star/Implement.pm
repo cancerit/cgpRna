@@ -313,7 +313,7 @@ sub sam_to_bam {
 	return 1;
 }
 
-sub star_chimeric {
+sub star {
 	my $options = shift;
 	
 	my $tmp = $options->{'tmp'};

@@ -71,7 +71,7 @@ const my %INDEX_FACTOR => (	'prepare' => -1,
 		$threads->run($options->{'max_split'}, 'prepare', $options);
 	}
   if(!exists $options->{'process'} || $options->{'process'} eq 'star'){
-	  Sanger::CGP::Star::Implement::star_chimeric($options);
+	  Sanger::CGP::Star::Implement::star($options);
 		cleanup($options);
 	}
 }
@@ -80,7 +80,7 @@ sub cleanup {
 	my $options = shift;
 	my $tmpdir = $options->{'tmp'};
 	my $star_outdir = File::Spec->catdir($options->{'tmp'}, 'star');
-	move(File::Spec->catdir($tmpdir, 'logs'), File::Spec->catdir($options->{'outdir'}, 'logs_star')) || die $!;
+	move(File::Spec->catdir($tmpdir, 'logs'), File::Spec->catdir($options->{'outdir'}, 'logs_star_map')) || die $!;
 	move(File::Spec->catfile($star_outdir, 'Aligned.sortedByCoord.out.bam'), File::Spec->catfile($options->{'outdir'}, $options->{'sample'}.'.star.Aligned.out.bam')) || die $!;
 	remove_tree $tmpdir if(-e $tmpdir);
 	return 0;
