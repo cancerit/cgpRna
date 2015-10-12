@@ -79,10 +79,11 @@ const my %INDEX_FACTOR => (	'createjunctionbed' => -1,
   Sanger::CGP::CompareFusions::Implement::create_bed($options) if(!exists $options->{'process'} || $options->{'process'} eq 'createbed');
   Sanger::CGP::CompareFusions::Implement::annotate_bed($options) if(!exists $options->{'process'} || $options->{'process'} eq 'annotatebed');
   Sanger::CGP::CompareFusions::Implement::select_annotation($options) if(!exists $options->{'process'} || $options->{'process'} eq 'selectannotation');
+  Sanger::CGP::CompareFusions::Implement::find_longest_transcript($options) if(!exists $options->{'process'} || $options->{'process'} eq 'selecttranscript');
   
   if(!exists $options->{'process'} || $options->{'process'} eq 'output') {
     Sanger::CGP::CompareFusions::Implement::generate_output($options);
-    cleanup($options);
+    #cleanup($options);
   } 
 }
 

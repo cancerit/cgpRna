@@ -132,6 +132,7 @@ sub annotate_bed {
   my $sample = $options->{'sample'};
   my $exon_gtf = filter_gtf($options->{'gtf'}, $tmp, 'exon');
   my $gene_gtf = filter_gtf($options->{'gtf'}, $tmp, 'gene');
+  my $transcript_gtf = filter_gtf($options->{'gtf'}, $tmp, 'transcript');
 
   my $break1_file;
   my $break2_file;
@@ -404,6 +405,122 @@ sub find_closest_boundary {
   return $distance;
 }
 
+sub find_longest_transcript {
+  my $options = shift;
+  
+  my $tmp = $options->{'tmp'};
+  
+  my $sample = $options->{'sample'};
+  my $annot_file1 = File::Spec->catfile($tmp, "$sample.1.ann");
+  my $annot_file2 = File::Spec->catfile($tmp, "$sample.2.ann");
+  my $final_annot_file1 = File::Spec->catfile($tmp, "$sample.1.ann_final");
+  my $final_annot_file2 = File::Spec->catfile($tmp, "$sample.2.ann_final");
+  my $transcript_list1 = File::Spec->catfile($tmp, "$sample.1.transcript");
+  my $transcript_list2 = File::Spec->catfile($tmp, "$sample.2.transcript");
+  my $transcript_gtf = File::Spec->catfile($tmp, "filtered_transcript.gtf");
+  
+  open (my $ifh1, $final_annot_file1) or die "Could not open file '$final_annot_file1' $!";
+  open (my $ofh1, '>', $transcript_list1) or die "Could not open file $transcript_list1 $!";
+  while (<$ifh1>){
+    chomp;
+    my $line = $_;
+    my @fields = split "\t";
+    my $breakpoint_id = $fields[0];
+    my $exon_id = $fields[6];
+    open (my $ifh2, $annot_file1) or die "Could not open file '$annot_file1' $!";
+    while (<$ifh2>){
+      chomp;
+      my $line2 = $_;
+      my $annotation = parse_annotation($line2);
+      if($exon_id eq $annotation->{'exon_id'}){
+      	print $ofh1 "$breakpoint_id $exon_id $annotation->{'transcript_id'}\n";
+      }
+  	}
+  	close($ifh2);
+  }
+  close($ofh1);
+  close($ifh1);
+  
+  open (my $ifh3, $final_annot_file2) or die "Could not open file '$final_annot_file2' $!";
+  open (my $ofh2, '>', $transcript_list2) or die "Could not open file $transcript_list2 $!";
+  while (<$ifh3>){
+    chomp;
+    my $line = $_;
+    my @fields = split "\t";
+    my $breakpoint_id = $fields[0];
+    my $exon_id = $fields[6];
+    open (my $ifh4, $annot_file2) or die "Could not open file '$annot_file2' $!";
+    while (<$ifh4>){
+      chomp;
+      my $line2 = $_;
+      my $annotation = parse_annotation($line2);
+      if($exon_id eq $annotation->{'exon_id'}){
+      	print $ofh2 "$breakpoint_id $exon_id $annotation->{'transcript_id'}\n";
+      }
+  	}
+  	close($ifh4);
+  }
+  close($ofh2);
+  close($ifh3);
+  
+  my %transcript_info;
+
+  open (my $ifh5, $transcript_gtf) or die "Could not open file '$transcript_gtf' $!";
+  while (<$ifh5>) {
+    chomp;
+    my $line = $_;
+    my $transcript_annot = parse_transcript($line);
+    if(!exists $transcript_info{$transcript_annot->{'transcript_id'}}){
+      $transcript_info{$transcript_annot->{'transcript_id'}}{'feature_start'} = $transcript_annot->{'feature_start'};
+      $transcript_info{$transcript_annot->{'transcript_id'}}{'feature_end'} = $transcript_annot->{'feature_end'};
+    }
+  }
+  close ($ifh5);
+  
+  
+  open (my $ifh6, $transcript_list1) or die "Could not open file '$transcript_list1' $!";
+  open (my $ofh3, '>', $transcript_list2) or die "Could not open file $transcript_list2 $!";
+  while (<$ifh6>){
+    chomp;
+    my $line = $_;
+    my @fields = split " ";
+    my $breakpoint_id = $fields[0];
+    my $exon_id = $fields[1];
+    my $transcript_id = $fields[2];
+		if(exists $transcript_info{$transcript_id}){
+		  my $start = $transcript_info{$transcript_id}{'feature_start'};
+		  my $end = $transcript_info{$transcript_id}{'feature_end'};
+		  my $transcript_length = $end - $start;
+		  #print "$breakpoint_id $exon_id $transcript_id $transcript_info{$transcript_id}{'feature_start'} $transcript_info{$transcript_id}{'feature_end'} $transcript_length\n";
+		}
+  }
+  close($ofh3);
+  close($ifh6);
+  
+  open (my $ifh7, $transcript_list2) or die "Could not open file '$transcript_list2' $!";
+  open (my $ofh4, '>', $transcript_list2) or die "Could not open file $transcript_list2 $!";
+  while (<$ifh7>){
+print "In file 7\n";
+    chomp;
+    my $line = $_;
+    my @fields = split " ";
+    my $breakpoint_id = $fields[0];
+    my $exon_id = $fields[1];
+    my $transcript_id = $fields[2];
+		if(exists $transcript_info{$transcript_id}){
+
+		  my $start = $transcript_info{$transcript_id}{'feature_start'};
+		  my $end = $transcript_info{$transcript_id}{'feature_end'};
+		  my $transcript_length = $end - $start;
+		  print "$breakpoint_id $exon_id $transcript_id $transcript_info{$transcript_id}{'feature_start'} $transcript_info{$transcript_id}{'feature_end'} $transcript_length\n";
+		}
+  }
+  close($ofh4);
+  close($ifh7);
+  
+  return 1;
+}
+
 sub generate_output {
   my $options = shift;
   
@@ -623,6 +740,29 @@ sub parse_overlap {
   }
   
   return $fusion;
+}
+
+sub parse_transcript {
+  my $line = shift;
+  $line =~ s/"//g;
+  
+  my %transcript_annotation;
+  my @fields = split "\t", $line;
+  
+  $transcript_annotation{'chr'} = $fields[0];
+  $transcript_annotation{'strand'} = $fields[6];
+  $transcript_annotation{'feature'} = $fields[2];
+  $transcript_annotation{'feature_start'} = $fields[3];
+  $transcript_annotation{'feature_end'} = $fields[4];
+
+	my $annot_column = scalar @fields;
+  my @annot_fields = split /; /, $fields[$annot_column-1];
+  foreach my $item(@annot_fields) {
+    my ($type,$value)= split / /, $item;
+    $transcript_annotation{$type} = $value;
+  }
+
+  return \%transcript_annotation;
 }
 
 sub run_bed_pairtopair {
