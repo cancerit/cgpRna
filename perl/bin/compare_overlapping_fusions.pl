@@ -93,7 +93,7 @@ sub cleanup {
   my $sample = $options->{'sample'};
   move(File::Spec->catfile($tmpdir, "$sample.star-defuse.overlapping.fusions.txt"), $options->{'outdir'}) || die $!;
   move(File::Spec->catdir($tmpdir, 'logs'), File::Spec->catdir($options->{'outdir'}, 'logs')) || die $!;
-  remove_tree $tmpdir if(-e $tmpdir);
+  #remove_tree $tmpdir if(-e $tmpdir);
   return 0;
 }
 
@@ -110,6 +110,7 @@ sub setup {
 		't|threads=i' => \$opts{'threads'},
 		'p|process=s' => \$opts{'process'},
 		'i|index=i' => \$opts{'index'},
+		'c|cache=s' => \$opts{'cache'},
   ) or pod2usage(2);
 
   pod2usage(-verbose => 1) if(defined $opts{'h'});

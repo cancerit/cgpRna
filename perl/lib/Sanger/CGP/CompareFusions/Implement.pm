@@ -44,13 +44,16 @@ use PCAP::Cli;
 use PCAP::Threaded;
 use Sanger::CGP::CompareFusions::FusionAnnotation;
 use Sanger::CGP::CgpRna;
+use Sanger::CGP::Vagrent::TranscriptSource::FileBasedTranscriptSource;
+use Sanger::CGP::Vagrent::Data::Exon;
+use Sanger::CGP::Vagrent::Data::Transcript;
 
 use Data::Dumper;
 
 const my $BEDTOOLS_CLOSEST => q{ closest -s -a %s -b %s | sort -k4,4 > %s};
 const my $BEDTOOLS_PAIRTOPAIR => q{ pairtopair -a %s -b %s -slop 5 > %s};
 
-const my $OUTPUT_HEADER => "sample\tstar_breakpoint\tdefuse_breakpoint\tfusion_name\tdefuse_splitr_count\tdefuse_span_count\tstar_JunctionReads\tstar_SpanningFrags\tLeftGene\tLeftGeneId\tLeftChr\tLeftPos\tLeftStrand\tLeftDistFromRefExonSplice\tRightGene\tRightGeneId\tRightChr\tRightPos\tRightStrand\tRightDistFromRefExonSplice\tbreak1_feature\texon1_id\texon1_num\texon1_start\texon1_end\tbreak2_feature\texon2_id\texon2_num\texon2_start\texon2_end\ttranscript1_id\tgene1_biotype\ttranscript2_id\tgene2_biotype\tdefuse_cluster_id\tdefuse_splitr_sequence\n";
+const my $OUTPUT_HEADER => "sample\tstar_breakpoint\tdefuse_breakpoint\tfusion_name\tdefuse_splitr_count\tdefuse_span_count\tstar_JunctionReads\tstar_SpanningFrags\tLeftGene\tLeftGeneId\tLeftChr\tLeftPos\tLeftStrand\tLeftDistFromRefExonSplice\tRightGene\tRightGeneId\tRightChr\tRightPos\tRightStrand\tRightDistFromRefExonSplice\tbreak1_feature\texon1_id\texon1_num\texon1_start\texon1_end\tbreak2_feature\texon2_id\texon2_num\texon2_start\texon2_end\ttranscript1_id\ttranscript1_src\tgene1_biotype\ttranscript2_id\ttranscript2_src\tgene2_biotype\tdefuse_cluster_id\tdefuse_splitr_sequence\n";
 
 my %ALLOWED_BIOTYPES = (
 	antisense => 1,
@@ -160,6 +163,30 @@ sub annotate_bed {
   PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
 
   return 1;
+}
+
+sub annotationSort {
+        my $a_ccds = 0;
+        my $b_ccds = 0;
+        if(defined($a->getCCDS) && $a->getCCDS ne ''){
+                $a_ccds = 1;
+        }
+        if(defined($b->getCCDS) && $b->getCCDS ne ''){
+                $b_ccds = 1;
+        }
+        my $ccds_cmp = $b_ccds <=> $a_ccds;
+        if($ccds_cmp == 0){
+                my $a_cds_len = $a->getCdsLength;
+                my $b_cds_len = $a->getCdsLength;;
+                my $cds_len_cmp = $b_cds_len <=> $a_cds_len;
+                if($cds_len_cmp == 0){
+                        return $b->getmRNALength <=> $a->getmRNALength;
+                } else {
+                        return $cds_len_cmp;
+                }
+        } else {
+                return $ccds_cmp;
+        }
 }
 
 sub check_gene_boundaries {
@@ -411,6 +438,7 @@ sub find_longest_transcript {
   my $tmp = $options->{'tmp'};
   
   my $sample = $options->{'sample'};
+  
   my $annot_file1 = File::Spec->catfile($tmp, "$sample.1.ann");
   my $annot_file2 = File::Spec->catfile($tmp, "$sample.2.ann");
   my $final_annot_file1 = File::Spec->catfile($tmp, "$sample.1.ann_final");
@@ -419,105 +447,112 @@ sub find_longest_transcript {
   my $transcript_list2 = File::Spec->catfile($tmp, "$sample.2.transcript");
   my $transcript_gtf = File::Spec->catfile($tmp, "filtered_transcript.gtf");
   
+  my $ts = Sanger::CGP::Vagrent::TranscriptSource::FileBasedTranscriptSource->new('cache' => $options->{'cache'});
+  
+  # Parse the annotation files so that we have all of the transcripts listed for an exon
+  open(my $ofh1, '>', $transcript_list1) or die "Could not open file $transcript_list1 $!";
   open (my $ifh1, $final_annot_file1) or die "Could not open file '$final_annot_file1' $!";
-  open (my $ofh1, '>', $transcript_list1) or die "Could not open file $transcript_list1 $!";
   while (<$ifh1>){
     chomp;
     my $line = $_;
-    my @fields = split "\t";
-    my $breakpoint_id = $fields[0];
-    my $exon_id = $fields[6];
-    open (my $ifh2, $annot_file1) or die "Could not open file '$annot_file1' $!";
-    while (<$ifh2>){
-      chomp;
-      my $line2 = $_;
-      my $annotation = parse_annotation($line2);
-      if($exon_id eq $annotation->{'exon_id'}){
-      	print $ofh1 "$breakpoint_id $exon_id $annotation->{'transcript_id'}\n";
-      }
-  	}
-  	close($ifh2);
+    my @fields = split "\t", $line;
+    my $break_id = $fields[0];
+    $break_id =~ m/^([0-9|X|Y|MT]+):[0-9]+-[0-9|X|Y|MT]+:[0-9]+/;
+    my $chr = $1;
+		my $exon_id = $fields[6];
+		my $exon_start = $fields[8];
+		my $exon_end = $fields[9];
+		my $exon = Sanger::CGP::Vagrent::Data::Exon->new('species' => 'human', 'genomeVersion' => 'GRCh38', 'chr' => $chr, 'minpos' => $exon_start, 'maxpos' => $exon_end, 'id' => $exon_id, 'rnaminpos' => $exon_start, 'rnamaxpos' => $exon_end);
+		my @trans = $ts->getTranscripts($exon);
+		
+		my @filteredTrans;
+
+		foreach my $t(@trans){
+			push(@filteredTrans, $t) if ($exon_start >= $t->getGenomicMinPos && $exon_end <= $t->getGenomicMaxPos);
+		}
+		my @sortedTrans = sort{&annotationSort} @filteredTrans;
+		
+		
+		if(defined $sortedTrans[0]){
+		  my $exon_number;
+		  my $transcript_id;
+		  my $num_transcripts = scalar @sortedTrans;
+		  for (my $x=0;$x<$num_transcripts; $x++){
+		    my @exons = $sortedTrans[$x]->getExons;
+		    my $num_exons = scalar @exons;
+		    for (my $y=0;$y<$num_exons; $y++){
+		      my $e = $exons[$y];
+		      if($exon_start == $e->getMinPos && $exon_end == $e->getMaxPos){
+		        $transcript_id = $sortedTrans[$x]->getAccession;
+		        $exon_number = $y+1;
+		        last;
+		      }
+		    }
+		    last if(defined $transcript_id);
+		  }
+		  $fields[7] = $exon_number;
+		  $fields[10] = $transcript_id."\tVAGrENT";
+		}
+		else{
+			$fields[10] =  $fields[10]."\tGTF";
+		}
+		print $ofh1 join("\t",@fields)."\n";
   }
-  close($ofh1);
   close($ifh1);
-  
-  open (my $ifh3, $final_annot_file2) or die "Could not open file '$final_annot_file2' $!";
-  open (my $ofh2, '>', $transcript_list2) or die "Could not open file $transcript_list2 $!";
-  while (<$ifh3>){
+  close($ofh1);
+	
+	open(my $ofh2, '>', $transcript_list2) or die "Could not open file $transcript_list2 $!";
+  open (my $ifh2, $final_annot_file2) or die "Could not open file '$final_annot_file2' $!";
+  while (<$ifh2>){
     chomp;
     my $line = $_;
-    my @fields = split "\t";
-    my $breakpoint_id = $fields[0];
-    my $exon_id = $fields[6];
-    open (my $ifh4, $annot_file2) or die "Could not open file '$annot_file2' $!";
-    while (<$ifh4>){
-      chomp;
-      my $line2 = $_;
-      my $annotation = parse_annotation($line2);
-      if($exon_id eq $annotation->{'exon_id'}){
-      	print $ofh2 "$breakpoint_id $exon_id $annotation->{'transcript_id'}\n";
-      }
-  	}
-  	close($ifh4);
+    my @fields = split "\t", $line;
+    my $break_id = $fields[0];
+    $break_id =~ m/^[0-9|X|Y|MT]+:[0-9]+-([0-9|X|Y|MT]+):[0-9]+/;
+    my $chr = $1;
+		my $exon_id = $fields[6];
+		my $exon_start = $fields[8];
+		my $exon_end = $fields[9];
+		my $exon = Sanger::CGP::Vagrent::Data::Exon->new('species' => 'human', 'genomeVersion' => 'GRCh38', 'chr' => $chr, 'minpos' => $exon_start, 'maxpos' => $exon_end, 'id' => $exon_id, 'rnaminpos' => $exon_start, 'rnamaxpos' => $exon_end);
+		my @trans = $ts->getTranscripts($exon);
+		
+		my @filteredTrans;
+
+		foreach my $t(@trans){
+			push(@filteredTrans, $t) if ($exon_start >= $t->getGenomicMinPos && $exon_end <= $t->getGenomicMaxPos);
+		}
+		my @sortedTrans = sort{&annotationSort} @filteredTrans;
+		
+		
+		if(defined $sortedTrans[0]){
+		  my $exon_number;
+		  my $transcript_id;
+		  my $num_transcripts = scalar @sortedTrans;
+		  for (my $x=0;$x<$num_transcripts; $x++){
+		    my @exons = $sortedTrans[$x]->getExons;
+		    my $num_exons = scalar @exons;
+		    for (my $y=0;$y<$num_exons; $y++){
+		      my $e = $exons[$y];
+		      if($exon_start == $e->getMinPos && $exon_end == $e->getMaxPos){
+		        $transcript_id = $sortedTrans[$x]->getAccession;
+		        $exon_number = $y+1;
+		        last;
+		      }
+		    }
+		    last if(defined $transcript_id);
+		  }
+		  $fields[7] = $exon_number;
+		  $fields[10] = $transcript_id."\tVAGrENT";
+		}
+		else{
+			$fields[10] =  $fields[10]."\tGTF";
+		}
+		print $ofh2 join("\t",@fields)."\n";
   }
+  close($ifh2);
   close($ofh2);
-  close($ifh3);
-  
-  my %transcript_info;
-
-  open (my $ifh5, $transcript_gtf) or die "Could not open file '$transcript_gtf' $!";
-  while (<$ifh5>) {
-    chomp;
-    my $line = $_;
-    my $transcript_annot = parse_transcript($line);
-    if(!exists $transcript_info{$transcript_annot->{'transcript_id'}}){
-      $transcript_info{$transcript_annot->{'transcript_id'}}{'feature_start'} = $transcript_annot->{'feature_start'};
-      $transcript_info{$transcript_annot->{'transcript_id'}}{'feature_end'} = $transcript_annot->{'feature_end'};
-    }
-  }
-  close ($ifh5);
-  
-  
-  open (my $ifh6, $transcript_list1) or die "Could not open file '$transcript_list1' $!";
-  open (my $ofh3, '>', $transcript_list2) or die "Could not open file $transcript_list2 $!";
-  while (<$ifh6>){
-    chomp;
-    my $line = $_;
-    my @fields = split " ";
-    my $breakpoint_id = $fields[0];
-    my $exon_id = $fields[1];
-    my $transcript_id = $fields[2];
-		if(exists $transcript_info{$transcript_id}){
-		  my $start = $transcript_info{$transcript_id}{'feature_start'};
-		  my $end = $transcript_info{$transcript_id}{'feature_end'};
-		  my $transcript_length = $end - $start;
-		  #print "$breakpoint_id $exon_id $transcript_id $transcript_info{$transcript_id}{'feature_start'} $transcript_info{$transcript_id}{'feature_end'} $transcript_length\n";
-		}
-  }
-  close($ofh3);
-  close($ifh6);
-  
-  open (my $ifh7, $transcript_list2) or die "Could not open file '$transcript_list2' $!";
-  open (my $ofh4, '>', $transcript_list2) or die "Could not open file $transcript_list2 $!";
-  while (<$ifh7>){
-print "In file 7\n";
-    chomp;
-    my $line = $_;
-    my @fields = split " ";
-    my $breakpoint_id = $fields[0];
-    my $exon_id = $fields[1];
-    my $transcript_id = $fields[2];
-		if(exists $transcript_info{$transcript_id}){
-
-		  my $start = $transcript_info{$transcript_id}{'feature_start'};
-		  my $end = $transcript_info{$transcript_id}{'feature_end'};
-		  my $transcript_length = $end - $start;
-		  print "$breakpoint_id $exon_id $transcript_id $transcript_info{$transcript_id}{'feature_start'} $transcript_info{$transcript_id}{'feature_end'} $transcript_length\n";
-		}
-  }
-  close($ofh4);
-  close($ifh7);
-  
+	
+	
   return 1;
 }
 
@@ -577,8 +612,8 @@ sub generate_output {
   }
   close ($ifh2);
 
-  my $annot_file1 = File::Spec->catfile($tmp, "$sample.1.ann_final");
-  my $annot_file2 = File::Spec->catfile($tmp, "$sample.2.ann_final");
+  my $annot_file1 = File::Spec->catfile($tmp, "$sample.1.transcript");
+  my $annot_file2 = File::Spec->catfile($tmp, "$sample.2.transcript");
   my $output_file = File::Spec->catfile($tmp, "$sample.star-defuse.overlapping.fusions.txt");
   
   my %break1;
@@ -625,6 +660,8 @@ sub generate_output {
       my $exon2_end = $break2{$brk}->{'exon_end'};
       my $transcript1_id = $break1{$brk}->{'transcript_id'};
       my $transcript2_id = $break2{$brk}->{'transcript_id'};
+      my $transcript1_src = $break1{$brk}->{'transcript_src'};
+      my $transcript2_src = $break2{$brk}->{'transcript_src'};
       my $biotype1 = $break1{$brk}->{'gene_biotype'};
       my $biotype2 = $break2{$brk}->{'gene_biotype'};
       my $defuse_breakpoint = $defuse_data{$alt_breakpoint}{'breakpoint'};
@@ -632,7 +669,7 @@ sub generate_output {
       my $defuse_split_reads = $defuse_data{$alt_breakpoint}{'split_reads'};
       my $defuse_span_reads = $defuse_data{$alt_breakpoint}{'span_reads'};
       my $defuse_sequence = $defuse_data{$alt_breakpoint}{'sequence'};
-      print $ofh1 "$sample\t$breakpoint\t$defuse_breakpoint\t$star_fusion_name\t$defuse_split_reads\t$defuse_span_reads\t$star_data\t$feature1\t$exon1_id\t$exon1_number\t$exon1_start\t$exon1_end\t$feature2\t$exon2_id\t$exon2_number\t$exon2_start\t$exon2_end\t$transcript1_id\t$biotype1\t$transcript2_id\t$biotype2\t$defuse_cluster_id\t$defuse_sequence\n";
+      print $ofh1 "$sample\t$breakpoint\t$defuse_breakpoint\t$star_fusion_name\t$defuse_split_reads\t$defuse_span_reads\t$star_data\t$feature1\t$exon1_id\t$exon1_number\t$exon1_start\t$exon1_end\t$feature2\t$exon2_id\t$exon2_number\t$exon2_start\t$exon2_end\t$transcript1_id\t$transcript1_src\t$biotype1\t$transcript2_id\t$transcript2_src\t$biotype2\t$defuse_cluster_id\t$defuse_sequence\n";
     }
   }
   close($ofh1);
@@ -687,7 +724,8 @@ sub parse_break_data {
   $break{'exon_start'} = $fields[8];
   $break{'exon_end'} = $fields[9];
   $break{'transcript_id'} = $fields[10];
-  $break{'gene_biotype'} = $fields[11];
+  $break{'transcript_src'} = $fields[11];
+  $break{'gene_biotype'} = $fields[12];
   
   return \%break;
 }
@@ -744,25 +782,23 @@ sub parse_overlap {
 
 sub parse_transcript {
   my $line = shift;
-  $line =~ s/"//g;
   
-  my %transcript_annotation;
+  my %transcript;
   my @fields = split "\t", $line;
   
-  $transcript_annotation{'chr'} = $fields[0];
-  $transcript_annotation{'strand'} = $fields[6];
-  $transcript_annotation{'feature'} = $fields[2];
-  $transcript_annotation{'feature_start'} = $fields[3];
-  $transcript_annotation{'feature_end'} = $fields[4];
+  $transcript{'chr'} = $fields[0];
+  $transcript{'start'} = $fields[3];
+  $transcript{'end'} = $fields[4];
+  $transcript{'strand'} = $fields[6];
 
 	my $annot_column = scalar @fields;
   my @annot_fields = split /; /, $fields[$annot_column-1];
+  
   foreach my $item(@annot_fields) {
     my ($type,$value)= split / /, $item;
-    $transcript_annotation{$type} = $value;
+    $transcript{$type} = $value;
   }
-
-  return \%transcript_annotation;
+  return \%transcript;
 }
 
 sub run_bed_pairtopair {
