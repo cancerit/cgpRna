@@ -58,11 +58,11 @@ use Sanger::CGP::CompareFusions::FusionAnnotation;
 use Data::Dumper;
 
 const my @REQUIRED_PARAMS => qw(outdir sample gtf);
-const my @VALID_PROCESS => qw(createjunctionbed runbedpairtopair createbed annotatebed selectannotation output);
+const my @VALID_PROCESS => qw(createjunctionbed runbedpairtopair queryvagrent annotatebed selectannotation collateannotation output);
 const my %INDEX_FACTOR => (	'createjunctionbed' => -1,
 				'runbedpairtopair' => 1,
-				'queryvagrent' => -1,
-				'annotatebed' => -1,
+				'queryvagrent' => 1,
+				'annotatebed' => 1,
 				'selectannotation' => 1,
 				'collateannotation' => 1,
 				'output' => 1);				
@@ -77,11 +77,13 @@ const my %INDEX_FACTOR => (	'createjunctionbed' => -1,
   $threads->run($options->{'num'}, 'createjunctionbed', $options) if(!exists $options->{'process'} || $options->{'process'} eq 'createjunctionbed');
   
   Sanger::CGP::CompareFusions::Implement::run_bed_pairtopair($options) if(!exists $options->{'process'} || $options->{'process'} eq 'runbedpairtopair');
-  Sanger::CGP::CompareFusions::Implement::query_vagrent($options) if(!exists $options->{'process'} || $options->{'process'} eq 'queryvagrent');
-  if(!-s File::Spec->catfile($options->{'tmp'}, $options->{'sample'}."1.bed") || !-s File::Spec->catfile($options->{'tmp'}, $options->{'sample'}."2.bed")){
-    Sanger::CGP::CompareFusions::Implement::annotate_bed($options) if(!exists $options->{'process'} || $options->{'process'} eq 'annotatebed');
-    Sanger::CGP::CompareFusions::Implement::select_annotation($options) if(!exists $options->{'process'} || $options->{'process'} eq 'selectannotation');
-    Sanger::CGP::CompareFusions::Implement::collate_annotation($options) if(!exists $options->{'process'} || $options->{'process'} eq 'collateannotation');
+  if(-s File::Spec->catfile($options->{'tmp'}, "1_2.".$options->{'sample'}.".bedpe_overlap")){
+    Sanger::CGP::CompareFusions::Implement::query_vagrent($options) if(!exists $options->{'process'} || $options->{'process'} eq 'queryvagrent');
+    if(-s File::Spec->catfile($options->{'tmp'}, $options->{'sample'}.".1.bed") || -s File::Spec->catfile($options->{'tmp'}, $options->{'sample'}.".2.bed")){
+      Sanger::CGP::CompareFusions::Implement::annotate_bed($options) if(!exists $options->{'process'} || $options->{'process'} eq 'annotatebed');
+      Sanger::CGP::CompareFusions::Implement::select_annotation($options) if(!exists $options->{'process'} || $options->{'process'} eq 'selectannotation');
+      Sanger::CGP::CompareFusions::Implement::collate_annotation($options) if(!exists $options->{'process'} || $options->{'process'} eq 'collateannotation');
+    }
   }
   if(!exists $options->{'process'} || $options->{'process'} eq 'output') {
     Sanger::CGP::CompareFusions::Implement::generate_output($options);
@@ -181,7 +183,7 @@ __END__
 
 =head1 compare_overlapping_fusions.pl
 
-Produces a report of overlapping fusions that have been called by star-fusion or deFuse.
+Produces a report of overlapping fusions that have been called by star-fusion and deFuse.
 
 =head1 SYNOPSIS
 
@@ -191,6 +193,7 @@ compare_overlapping_fusions.pl [options] [file(s)...]
     -outdir    		-o   	Folder to output result to.
     -sample   		-s   	Sample name
     -gtf    		-g   	GTF file to use with bedtools to annotate each fusion breakpoint position.
+    -cache    		-c   	VAGrENT cache file that should be the same reference and gene build as the GTF file being used e.g. GRCh38 e77.
     
   Optional:
     -threads    	-t   	Number of threads (cpus) to use [1].
@@ -211,9 +214,10 @@ Available processes for this tool are:
 
   createjunctionbed
   runbedpairtopair
-  createbed
+  queryvagrent
   annotatebed
   selectannotation
+  collateannotation
   output
 
 =back
