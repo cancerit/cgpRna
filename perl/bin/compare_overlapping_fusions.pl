@@ -60,10 +60,11 @@ use Data::Dumper;
 const my @REQUIRED_PARAMS => qw(outdir sample gtf);
 const my @VALID_PROCESS => qw(createjunctionbed runbedpairtopair createbed annotatebed selectannotation output);
 const my %INDEX_FACTOR => (	'createjunctionbed' => -1,
-				'runbedpairtopair' => -1,
-				'createbed' => -1,
+				'runbedpairtopair' => 1,
+				'queryvagrent' => -1,
 				'annotatebed' => -1,
 				'selectannotation' => 1,
+				'collateannotation' => 1,
 				'output' => 1);				
 {
   my $options = setup();
@@ -76,14 +77,15 @@ const my %INDEX_FACTOR => (	'createjunctionbed' => -1,
   $threads->run($options->{'num'}, 'createjunctionbed', $options) if(!exists $options->{'process'} || $options->{'process'} eq 'createjunctionbed');
   
   Sanger::CGP::CompareFusions::Implement::run_bed_pairtopair($options) if(!exists $options->{'process'} || $options->{'process'} eq 'runbedpairtopair');
-  Sanger::CGP::CompareFusions::Implement::create_bed($options) if(!exists $options->{'process'} || $options->{'process'} eq 'createbed');
-  Sanger::CGP::CompareFusions::Implement::annotate_bed($options) if(!exists $options->{'process'} || $options->{'process'} eq 'annotatebed');
-  Sanger::CGP::CompareFusions::Implement::select_annotation($options) if(!exists $options->{'process'} || $options->{'process'} eq 'selectannotation');
-  Sanger::CGP::CompareFusions::Implement::find_longest_transcript($options) if(!exists $options->{'process'} || $options->{'process'} eq 'selecttranscript');
-  
+  Sanger::CGP::CompareFusions::Implement::query_vagrent($options) if(!exists $options->{'process'} || $options->{'process'} eq 'queryvagrent');
+  if(!-s File::Spec->catfile($options->{'tmp'}, $options->{'sample'}."1.bed") || !-s File::Spec->catfile($options->{'tmp'}, $options->{'sample'}."2.bed")){
+    Sanger::CGP::CompareFusions::Implement::annotate_bed($options) if(!exists $options->{'process'} || $options->{'process'} eq 'annotatebed');
+    Sanger::CGP::CompareFusions::Implement::select_annotation($options) if(!exists $options->{'process'} || $options->{'process'} eq 'selectannotation');
+    Sanger::CGP::CompareFusions::Implement::collate_annotation($options) if(!exists $options->{'process'} || $options->{'process'} eq 'collateannotation');
+  }
   if(!exists $options->{'process'} || $options->{'process'} eq 'output') {
     Sanger::CGP::CompareFusions::Implement::generate_output($options);
-    #cleanup($options);
+    cleanup($options);
   } 
 }
 
@@ -93,7 +95,7 @@ sub cleanup {
   my $sample = $options->{'sample'};
   move(File::Spec->catfile($tmpdir, "$sample.star-defuse.overlapping.fusions.txt"), $options->{'outdir'}) || die $!;
   move(File::Spec->catdir($tmpdir, 'logs'), File::Spec->catdir($options->{'outdir'}, 'logs')) || die $!;
-  #remove_tree $tmpdir if(-e $tmpdir);
+  remove_tree $tmpdir if(-e $tmpdir);
   return 0;
 }
 

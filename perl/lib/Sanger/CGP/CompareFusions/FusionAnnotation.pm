@@ -57,6 +57,7 @@ sub new {
   if ($args{-gene1_id}) { $self->gene1_id($args{-gene1_id}) }
   if ($args{-gene1_start}) { $self->gene1_start($args{-gene1_start}) }
   if ($args{-gene1_end}) { $self->gene1_end($args{-gene1_end}) }
+  if ($args{-gene1_biotype}) { $self->gene1_biotype($args{-gene1_biotype}) }
   if ($args{-transcript1_id}) { $self->transcript1_id($args{-transcript1_id}) }
   if ($args{-distance1}) { $self->distance1($args{-distance1}) }
   if ($args{-chr2}) { $self->chr2($args{-chr2}) }
@@ -72,6 +73,7 @@ sub new {
   if ($args{-gene2_id}) { $self->gene2_id($args{-gene2_id}) }
   if ($args{-gene2_start}) { $self->gene2_start($args{-gene2_start}) }
   if ($args{-gene2_end}) { $self->gene2_end($args{-gene2_end}) }
+  if ($args{-gene2_biotype}) { $self->gene2_biotype($args{-gene2_biotype}) }
   if ($args{-transcript2_id}) { $self->transcript2_id($args{-transcript2_id}) }
   if ($args{-distance2}) { $self->distance2($args{-distance2}) }
   
@@ -222,6 +224,18 @@ sub gene2_end {
   return($self->{gene2_end});
 }
 
+sub gene1_biotype {
+  my $self = shift;
+  $self->{gene1_biotype} = shift if @_;
+  return($self->{gene1_biotype});
+}
+
+sub gene2_biotype {
+  my $self = shift;
+  $self->{gene2_biotype} = shift if @_;
+  return($self->{gene2_biotype});
+}
+
 sub exon1_num {
   my $self = shift;
   $self->{exon1_num} = shift if @_;
@@ -270,6 +284,15 @@ sub distance2 {
   return($self->{distance2});
 }
 
+sub format_bed_line {
+  my ($self, $breaknum) = @_;
+  
+  my @fields = ($self->{'chr'.$breaknum},$self->{'pos'.$breaknum.'_start'},$self->{'pos'.$breaknum.'_end'},$self->breakpoint,$self->alt_breakpoint,$self->{'strand'.$breaknum},$self->{'gene'.$breaknum},$self->{'gene'.$breaknum.'_id'});
+  
+  my $formatted_line = join("\t", @fields);
+  return $formatted_line;
+}
+
 sub format_bedpe_line {
   my ($self, $type) = @_;
 
@@ -290,3 +313,21 @@ sub format_bedpe_line {
   my $bedpe_line = join("\t", @pe_fields);
   return $bedpe_line;
 }
+
+sub format_annotation_line {
+  my ($self,$annot_source) = @_;
+  my @fields = ($self->{'breakpoint'},$self->{'alt_breakpoint'},$self->{'gene1'},$self->{'gene1_id'},$self->{'transcript1_id'},$annot_source,$self->{'exon1_num'},$self->{'feature1_start'},$self->{'feature1_end'},$self->{'gene2'},$self->{'gene2_id'},$self->{'transcript2_id'},$annot_source,$self->{'exon2_num'},$self->{'feature2_start'},$self->{'feature2_end'});
+  
+  my $formatted_line = join("\t", @fields);
+  return $formatted_line;
+}
+
+sub format_break_line {
+  my ($self, $breaknum, $annot_source) = @_;
+
+  my @fields = ($self->{'breakpoint'},$self->{'alt_breakpoint'},$self->{'gene'.$breaknum},$self->{'gene'.$breaknum.'_id'},$self->{'transcript'.$breaknum.'_id'},$annot_source,$self->{'exon'.$breaknum.'_num'},$self->{'feature'.$breaknum.'_start'},$self->{'feature'.$breaknum.'_end'});
+  
+  my $formatted_line = join("\t", @fields);
+  return $formatted_line;
+}
+
