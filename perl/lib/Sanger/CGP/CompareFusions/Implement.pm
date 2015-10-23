@@ -38,6 +38,7 @@ use autodie qw(:all);
 use English qw( -no_match_vars );
 use Const::Fast qw(const);
 use File::Which qw(which);
+use File::Basename;
 use FindBin qw($Bin);
 use File::Spec;
 use PCAP::Cli;
@@ -461,7 +462,7 @@ sub generate_output {
       print $ofh1 "$sample\t$star_fusion_name\t$breakpoint\t$defuse_breakpoint\t$defuse_split_reads\t$defuse_span_reads\t$star_data\t$transcript1_id\t$transcript1_src\t$exon1_number\t$exon1_start\t$exon1_end\t$transcript2_id\t$transcript2_src\t$exon2_number\t$exon2_start\t$exon2_end\t$defuse_cluster_id\t$defuse_sequence\n";
     }
     else{
-      print $ofh1 "$sample\t-\t$breakpoint\t$defuse_breakpoint\tFUSION COULD NOT BE ANNOTATED\n";
+      print $ofh1 "$sample\tFUSION COULD NOT BE ANNOTATED\t$breakpoint\t$defuse_breakpoint\n";
     }
   }
   close($ifh3);
@@ -638,6 +639,10 @@ sub process_annotation_file {
   my $curr_pos;
   my $curr_exon_start;
 	my $curr_exon_end;
+  my $break;
+  my $alt_break;
+  
+  my ($gtf, $path) = fileparse($options->{'gtf'});
   
   open(my $ofh1, '>>', $output) or die "Could not open file $output $!";
   open (my $ifh1, $input) or die "Could not open file '$input' $!";
@@ -645,8 +650,9 @@ sub process_annotation_file {
     chomp;
     my $line = $_;
     my $annotation = parse_annotation($line);
+		$break = $annotation->{'breakpoint'};
+		$alt_break = $annotation->{'alt_breakpoint'};
 		next if($annotation->{'gene_name'} ne $annotation->{'star_genename'});
-		my $break = $annotation->{'breakpoint'};
 		if($break ne $curr_break){
 		  unless($curr_break eq ""){
 		    $curr_pos = $curr_annotation->{'pos_end'};
@@ -654,10 +660,10 @@ sub process_annotation_file {
     		$curr_exon_end = $curr_annotation->{'feature_end'};
     		
 		    if($curr_distance <= 10){
-          print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'star_genename'}."\t".$curr_annotation->{'star_geneid'}."\t".$curr_annotation->{'transcript_id'}."\t".$options->{'gtf'}."\t".$curr_annotation->{'exon_number'}."\t".$curr_annotation->{'feature_start'}."\t".$curr_annotation->{'feature_end'}."\n";
+          print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'star_genename'}."\t".$curr_annotation->{'star_geneid'}."\t".$curr_annotation->{'transcript_id'}."\t".$gtf."\t".$curr_annotation->{'exon_number'}."\t".$curr_annotation->{'feature_start'}."\t".$curr_annotation->{'feature_end'}."\n";
 			  }
 			  elsif($curr_pos > $curr_exon_start && $curr_pos < $curr_exon_end){
-          print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'star_genename'}."\t".$curr_annotation->{'star_geneid'}."\t".$curr_annotation->{'transcript_id'}."\t".$options->{'gtf'}."\t".$curr_annotation->{'exon_number'}."\t".$curr_annotation->{'feature_start'}."\t".$curr_annotation->{'feature_end'}."\n";			    
+          print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'star_genename'}."\t".$curr_annotation->{'star_geneid'}."\t".$curr_annotation->{'transcript_id'}."\t".$gtf."\t".$curr_annotation->{'exon_number'}."\t".$curr_annotation->{'feature_start'}."\t".$curr_annotation->{'feature_end'}."\n";			    
 			  }
 			  else{
 			    # The breakpoint doesn't fall within 10bp of an exon boundary. We need to check it falls within the footprint of the star gene and, for now, print it as intronic
@@ -665,7 +671,7 @@ sub process_annotation_file {
 			    my $gene_end = $gene_info->{$curr_annotation->{'star_genename'}}{'feature_end'};
 			    my $break_pos = $curr_annotation->{'pos_end'};
 			    if($break_pos >= $gene_start && $break_pos <= $gene_end){
-			      print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'star_genename'}."\t".$curr_annotation->{'star_geneid'}."\tIntronic\t".$options->{'gtf'}."\t-\t-\t-\n";
+			      print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'star_genename'}."\t".$curr_annotation->{'star_geneid'}."\tIntronic\t".$gtf."\t-\t-\t-\n";
 			    }
 			  }
 			  $curr_distance = 10000000;
@@ -683,24 +689,29 @@ sub process_annotation_file {
       $curr_break = $break;
     }
   }
-  $curr_pos = $curr_annotation->{'pos_end'};
-	$curr_exon_start = $curr_annotation->{'feature_start'};
-  $curr_exon_end = $curr_annotation->{'feature_end'};
+  if (defined $curr_annotation){
+    $curr_pos = $curr_annotation->{'pos_end'};
+	  $curr_exon_start = $curr_annotation->{'feature_start'};
+    $curr_exon_end = $curr_annotation->{'feature_end'};
   
-	if($curr_distance <= 10){
-   print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'star_genename'}."\t".$curr_annotation->{'star_geneid'}."\t".$curr_annotation->{'transcript_id'}."\t".$options->{'gtf'}."\t".$curr_annotation->{'exon_number'}."\t".$curr_annotation->{'feature_start'}."\t".$curr_annotation->{'feature_end'}."\n";
-	}
-  elsif($curr_pos > $curr_exon_start && $curr_pos < $curr_exon_end){
-    print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'star_genename'}."\t".$curr_annotation->{'star_geneid'}."\t".$curr_annotation->{'transcript_id'}."\t".$options->{'gtf'}."\t".$curr_annotation->{'exon_number'}."\t".$curr_annotation->{'feature_start'}."\t".$curr_annotation->{'feature_end'}."\n";			    
+	  if($curr_distance <= 10){
+      print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'star_genename'}."\t".$curr_annotation->{'star_geneid'}."\t".$curr_annotation->{'transcript_id'}."\t".$gtf."\t".$curr_annotation->{'exon_number'}."\t".$curr_annotation->{'feature_start'}."\t".$curr_annotation->{'feature_end'}."\n";
+	  }
+    elsif($curr_pos > $curr_exon_start && $curr_pos < $curr_exon_end){
+      print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'star_genename'}."\t".$curr_annotation->{'star_geneid'}."\t".$curr_annotation->{'transcript_id'}."\t".$gtf."\t".$curr_annotation->{'exon_number'}."\t".$curr_annotation->{'feature_start'}."\t".$curr_annotation->{'feature_end'}."\n";			    
+    }
+	  else{
+	    # The breakpoint doesn't fall within 10bp of an exon boundary. We need to check it falls within the footprint of the star gene and, for now, print it as intronic
+	    my $gene_start = $gene_info->{$curr_annotation->{'star_genename'}}{'feature_start'};
+	    my $gene_end = $gene_info->{$curr_annotation->{'star_genename'}}{'feature_end'};
+	    my $break_pos = $curr_annotation->{'pos_end'};
+	    if($break_pos >= $gene_start && $break_pos <= $gene_end){
+	      print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'star_genename'}."\t".$curr_annotation->{'star_geneid'}."\tIntronic\t".$gtf."\t-\t-\t-\n";
+		  }
+    }
   }
-	else{
-	  # The breakpoint doesn't fall within 10bp of an exon boundary. We need to check it falls within the footprint of the star gene and, for now, print it as intronic
-	  my $gene_start = $gene_info->{$curr_annotation->{'star_genename'}}{'feature_start'};
-	  my $gene_end = $gene_info->{$curr_annotation->{'star_genename'}}{'feature_end'};
-	  my $break_pos = $curr_annotation->{'pos_end'};
-	  if($break_pos >= $gene_start && $break_pos <= $gene_end){
-	    print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'star_genename'}."\t".$curr_annotation->{'star_geneid'}."\tIntronic\t".$options->{'gtf'}."\t-\t-\t-\n";
-		}
+  else{
+    print $ofh1 $break."\t".$alt_break."\n";
   }
   close ($ifh1);
   close ($ofh1);
