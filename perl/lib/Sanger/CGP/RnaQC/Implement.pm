@@ -51,6 +51,7 @@ sub check_input {
   
   # Check all the required input files exist
 	PCAP::Cli::file_for_reading('gene-coverage', File::Spec->catfile($inputdir, "$sample.coverage.geneBodyCoverage.r"));
+	PCAP::Cli::file_for_reading('junction-saturation', File::Spec->catfile($inputdir, "$sample.junction_sat.junctionSaturation_plot.r"));
 	PCAP::Cli::file_for_reading('rrna-percentage', File::Spec->catfile($inputdir, "$sample.rrna.txt"));
 	PCAP::Cli::file_for_reading('bam-stats', File::Spec->catfile($inputdir, "$sample.bas"));
 	PCAP::Cli::file_for_reading('read-distribution', File::Spec->catfile($inputdir, "$sample.read_dist.txt"));
@@ -65,7 +66,6 @@ sub gene_coverage {
   my $sample = $options->{'sample'};
   my $gene_coverage_r_file = File::Spec->catfile($inputdir, "$sample.coverage.geneBodyCoverage.r");
   my $updated_coverage_r_file = File::Spec->catfile($inputdir, "$sample.coverage.geneBodyCoverage_UPDATED.r");
-  #copy($gene_coverage_r_file,$updated_coverage_r_file) or die "Copy failed: $!";
   
   # Modify the R script so that it runs the shapiro-wilk normality test and outputs that test statistic plus p-value to a text file. Also draw the gene body coverage graph with a more distinctly coloured line
   open (my $ifh, $gene_coverage_r_file) or die "Could not open file $gene_coverage_r_file $!";
@@ -87,6 +87,7 @@ sub gene_coverage {
   my $sample_r = $sample;
   my $output_file = File::Spec->catfile($inputdir, "$sample.gene.cov.bas");
   $sample_r =~ s/-/_/g;
+  $sample_r = "V".$sample_r if($sample_r =~ m/^[0-9]/);
   print $ofh "test_result <- shapiro.test($sample_r.star.Aligned.out)\n";
   print $ofh 'statistics<-unlist(test_result)'."\n";
   print $ofh 'shapiro_stat<-as.numeric(statistics["statistic.W"])'."\n";
@@ -103,6 +104,40 @@ sub gene_coverage {
   return 1;
 }
 
+sub junction_saturation {
+  my $options = shift;
+  my $inputdir = $options->{'indir'};
+  my $sample = $options->{'sample'};
+  my $saturation_r_file = File::Spec->catfile($inputdir, "$sample.junction_sat.junctionSaturation_plot.r");
+  my $updated_saturation_r_file = File::Spec->catfile($inputdir, "$sample.junction_sat.junctionSaturation_plot_UPDATED.r");
+  
+  # Modify the R script so that it runs R commands to check the 'straightness' of the known junctions line. Capture a statistic for this into a bas file.
+  open (my $ifh, $saturation_r_file) or die "Could not open file $saturation_r_file $!";
+  open (my $ofh, '>', $updated_saturation_r_file) or die "Could not open file $updated_saturation_r_file $!";
+  
+  while (<$ifh>){
+    chomp;
+    my $line = $_;
+    unless($line =~ m/^dev.off/){
+      print $ofh $line."\n";
+    }
+  }
+  close($ifh);
+  
+  my $output_file = File::Spec->catfile($inputdir, "$sample.junction.sat.bas");
+  print $ofh "abline(mod <- lm(x ~ y))\n";
+  print $ofh "gradient<-coef(mod)[2]\n";
+  print $ofh 'output <- data.frame("junction_sat_stat"=gradient)'."\n";
+  print $ofh "write.table(output,file=\"$output_file\", row.names=FALSE, col.names=TRUE, quote=FALSE)\n";
+  close($ofh);
+  
+  my $command = _which('Rscript'); 
+  $command .= " $updated_saturation_r_file";
+  system($command);
+  
+  return 1;
+}
+
 sub read_distribution_stats {
   my $options = shift;
   
@@ -111,7 +146,7 @@ sub read_distribution_stats {
   
   my $read_dist_stats_file = File::Spec->catfile($inputdir, "$sample.read_dist.txt");
   my $read_dist_reformatted_file = File::Spec->catfile($inputdir, "$sample.read.dist.bas");
-  my $stats_pattern = 'Exons|Introns|TSS|TES';
+  my $stats_pattern = 'Exons|Introns|TSS_up_10kb|TES_down_10kb';
   my $total_reads = 0;
   my $exonic_reads = 0;
   my $intronic_reads = 0;
@@ -121,18 +156,22 @@ sub read_distribution_stats {
   while (<$ifh>) {
 		chomp;
 		my $line = $_;
-	
+	  
+	  if($line =~ m/Total Assigned Tags/){
+	    my @fields = split " ", $line;
+	    $total_reads = $fields[3];
+	  }
+	  
 		if($line =~ m/$stats_pattern/){
 			my @fields = split " ", $line;
-			$total_reads += $fields[2];
-
+			
 			if($fields[0] =~ m/Exons/){
 			  $exonic_reads += $fields[2];
 			}
 			elsif($fields[0] =~ m/Introns/){
 			  $intronic_reads += $fields[2];
 			}
-			else{
+			elsif($fields[0] =~ m/TSS|TES.*10kb/){
 			  $intergenic_reads += $fields[2];
 			}
 		}
@@ -141,7 +180,7 @@ sub read_distribution_stats {
   
   open(my $ofh, '>', $read_dist_reformatted_file) or die "Could not open file $read_dist_reformatted_file $!";
 	
-	print $ofh "#_total_read_dist_reads\t#_exonic_reads\t#_intronic_reads\t#_intergenic_reads\n";
+	print $ofh "#_total_read_dist_reads\t#_exonic_reads\t#_intronic_reads\t#_intergenic_within10kb_reads\n";
   print $ofh "$total_reads\t$exonic_reads\t$intronic_reads\t$intergenic_reads\n";
   
   close($ofh);

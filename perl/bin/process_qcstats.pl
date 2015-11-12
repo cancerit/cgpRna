@@ -59,8 +59,7 @@ const my @REQUIRED_PARAMS => qw(indir outdir sample);
 	Sanger::CGP::RnaQC::Implement::rrna_stats($options);
 	Sanger::CGP::RnaQC::Implement::read_distribution_stats($options);
 	Sanger::CGP::RnaQC::Implement::gene_coverage($options);
-
-	
+  Sanger::CGP::RnaQC::Implement::junction_saturation($options);
 }
 
 sub setup {
