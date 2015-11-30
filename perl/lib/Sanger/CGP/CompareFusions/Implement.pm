@@ -962,15 +962,20 @@ sub process_annotation_file {
           print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'alt_breakpoint2'}."\t".$curr_annotation->{'genename'}."\t".$curr_annotation->{'gene_id'}."\t".$curr_annotation->{'transcript_id'}."\t".$gtf."\t".$curr_annotation->{'exon_number'}."\t".$curr_annotation->{'feature_start'}."\t".$curr_annotation->{'feature_end'}."\t".$curr_annotation->{'source'}."\n";
 			  }
 			  else{
-			  my $breakpoint = $curr_annotation->{'breakpoint'};
-			  my $name = $curr_annotation->{'genename'};
 			    # The breakpoint doesn't fall within 10bp of an exon boundary. We need to check it falls within the footprint of the star gene and, for now, print it as intronic
-			print "The gene is $name\n";
 			    my $gene_start = $gene_info->{$curr_annotation->{'genename'}}{'feature_start'};
 			    my $gene_end = $gene_info->{$curr_annotation->{'genename'}}{'feature_end'};
 			    my $break_pos = $curr_annotation->{'pos_end'};
-			    if($break_pos >= $gene_start && $break_pos <= $gene_end){
-			      print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'alt_breakpoint2'}."\t".$curr_annotation->{'genename'}."\t".$curr_annotation->{'gene_id'}."\tIntronic\t".$gtf."\tNA\tNA\tNA\t".$curr_annotation->{'source'}."\n";
+			    if(defined $gene_start && defined $gene_end){
+			      if($break_pos >= $gene_start && $break_pos <= $gene_end){
+			        print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'alt_breakpoint2'}."\t".$curr_annotation->{'genename'}."\t".$curr_annotation->{'gene_id'}."\tIntronic\t".$gtf."\tNA\tNA\tNA\t".$curr_annotation->{'source'}."\n";
+			      }
+			      else{
+			        print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'alt_breakpoint2'}."\t".$curr_annotation->{'genename'}."\tNA\tUnannotated\tNA\tNA\tNA\tNA\t".$curr_annotation->{'source'}."\n";
+			      }
+			    }
+			    else{
+			      print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'alt_breakpoint2'}."\t".$curr_annotation->{'genename'}."\tNA\tUnannotated\tNA\tNA\tNA\tNA\t".$curr_annotation->{'source'}."\n";
 			    }
 			  }
 			  $curr_distance = 10000000;
@@ -1004,9 +1009,17 @@ sub process_annotation_file {
 	    my $gene_start = $gene_info->{$curr_annotation->{'genename'}}{'feature_start'};
 	    my $gene_end = $gene_info->{$curr_annotation->{'genename'}}{'feature_end'};
 	    my $break_pos = $curr_annotation->{'pos_end'};
-	    if($break_pos >= $gene_start && $break_pos <= $gene_end){
-	      print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'alt_breakpoint2'}."\t".$curr_annotation->{'genename'}."\t".$curr_annotation->{'gene_id'}."\tIntronic\t".$gtf."\tNA\tNA\tNA\t".$curr_annotation->{'source'}."\n";
+	    if(defined $gene_start && defined $gene_end){
+	      if($break_pos >= $gene_start && $break_pos <= $gene_end){
+	        print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'alt_breakpoint2'}."\t".$curr_annotation->{'genename'}."\t".$curr_annotation->{'gene_id'}."\tIntronic\t".$gtf."\tNA\tNA\tNA\t".$curr_annotation->{'source'}."\n";
+		    }
+			  else{
+			    print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'alt_breakpoint2'}."\t".$curr_annotation->{'genename'}."\tNA\tUnannotated\tNA\tNA\tNA\tNA\t".$curr_annotation->{'source'}."\n";
+			  }
 		  }
+			else{
+			  print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'alt_breakpoint2'}."\t".$curr_annotation->{'genename'}."\tNA\tUnannotated\tNA\tNA\tNA\tNA\t".$curr_annotation->{'source'}."\n";
+			}		  
     }
   }
   else{
