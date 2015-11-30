@@ -58,13 +58,16 @@ use Sanger::CGP::CompareFusions::FusionAnnotation;
 use Data::Dumper;
 
 const my @REQUIRED_PARAMS => qw(outdir sample gtf);
-const my @VALID_PROCESS => qw(createjunctionbed runbedpairtopair queryvagrent annotatebed selectannotation collateannotation output);
+const my @VALID_PROCESS => qw(createjunctionbed runbedpairtopair processoverlaps singletons queryvagrent annotatebed selectannotation collateannotation deduplicate output);
 const my %INDEX_FACTOR => (	'createjunctionbed' => -1,
 				'runbedpairtopair' => 1,
+				'processoverlaps' => 1,
+				'singletons' => 1,
 				'queryvagrent' => 1,
 				'annotatebed' => 1,
 				'selectannotation' => 1,
 				'collateannotation' => 1,
+				'deduplicate' => 1,
 				'output' => 1);				
 {
   my $options = setup();
@@ -78,16 +81,19 @@ const my %INDEX_FACTOR => (	'createjunctionbed' => -1,
   
   Sanger::CGP::CompareFusions::Implement::run_bed_pairtopair($options) if(!exists $options->{'process'} || $options->{'process'} eq 'runbedpairtopair');
   if(-s File::Spec->catfile($options->{'tmp'}, "1_2.".$options->{'sample'}.".bedpe_overlap")){
+    Sanger::CGP::CompareFusions::Implement::process_overlap_files($options) if(!exists $options->{'process'} || $options->{'process'} eq 'processoverlaps');
+    Sanger::CGP::CompareFusions::Implement::process_singletons($options) if(!exists $options->{'process'} || $options->{'process'} eq 'singletons');
     Sanger::CGP::CompareFusions::Implement::query_vagrent($options) if(!exists $options->{'process'} || $options->{'process'} eq 'queryvagrent');
     if(-s File::Spec->catfile($options->{'tmp'}, $options->{'sample'}.".1.bed") || -s File::Spec->catfile($options->{'tmp'}, $options->{'sample'}.".2.bed")){
       Sanger::CGP::CompareFusions::Implement::annotate_bed($options) if(!exists $options->{'process'} || $options->{'process'} eq 'annotatebed');
       Sanger::CGP::CompareFusions::Implement::select_annotation($options) if(!exists $options->{'process'} || $options->{'process'} eq 'selectannotation');
       Sanger::CGP::CompareFusions::Implement::collate_annotation($options) if(!exists $options->{'process'} || $options->{'process'} eq 'collateannotation');
+      Sanger::CGP::CompareFusions::Implement::deduplicate_fusions($options) if(!exists $options->{'process'} || $options->{'process'} eq 'deduplicate');
     }
   }
   if(!exists $options->{'process'} || $options->{'process'} eq 'output') {
     Sanger::CGP::CompareFusions::Implement::generate_output($options);
-    cleanup($options);
+    #cleanup($options);
   } 
 }
 
@@ -145,13 +151,23 @@ sub setup {
   $opts{'input_files'} = \@ARGV;
 	
   my $format;
+  my $format_num;
   my %fusion_files;
   my $input;
   for (my $iter=1; $iter <= $file_count; $iter++) {
     $input = $ARGV[$iter-1];
     $format = Sanger::CGP::CompareFusions::Implement::check_input($input);
-    $fusion_files{$iter}{'format'} = $format;
-    $fusion_files{$iter}{'name'} = $input;
+    if($format eq 'star'){
+      $format_num = 1;
+    }
+    elsif($format eq 'tophat'){
+      $format_num = 2;
+    }
+    else{
+      $format_num = 3;
+    }
+    $fusion_files{$format_num}{'format'} = $format;
+    $fusion_files{$format_num}{'name'} = $input;
   }
 	
   $opts{'fusion_files'} = \%fusion_files;
