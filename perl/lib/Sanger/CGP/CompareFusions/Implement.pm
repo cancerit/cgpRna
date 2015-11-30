@@ -855,6 +855,8 @@ sub parse_transcript_data {
 		my $exon_end;
 		my $transcript_id;
 		my $gene_biotype;
+		my $found_exon_boundary = 0;
+		my $curr_distance = 10000000;
 		my $num_transcripts = scalar @sortedTrans;
 		for (my $x=0;$x<$num_transcripts; $x++){
 		  my @exons = $sortedTrans[$x]->getExons;
@@ -862,15 +864,25 @@ sub parse_transcript_data {
 		  for (my $y=0;$y<$num_exons; $y++){
 		    my $e = $exons[$y];
 		    if($fusion->{'pos'.$breaknum.'_end'} == $e->getMinPos || $fusion->{'pos'.$breaknum.'_end'} == $e->getMaxPos){
+		      $found_exon_boundary = 1;
 		      $transcript_id = $sortedTrans[$x]->getAccession;
 		      $gene_biotype = $sortedTrans[$x]->{'_genetype'};
 		      $exon_start = $e->getMinPos;
 		      $exon_end = $e->getMaxPos;
 		      $exon_number = $y+1;
 		      last;
+		    }elsif($fusion->{'pos'.$breaknum.'_end'} > $e->getMinPos && $fusion->{'pos'.$breaknum.'_end'} < $e->getMaxPos){
+		       my $distance = find_closest_boundary($fusion->{'pos'.$breaknum.'_end'}, $e->getMinPos, $e->getMaxPos);
+		       if ($distance < $curr_distance){
+		         $transcript_id = $sortedTrans[$x]->getAccession;
+		         $gene_biotype = $sortedTrans[$x]->{'_genetype'};
+		         $exon_start = $e->getMinPos;
+		         $exon_end = $e->getMaxPos;
+		         $exon_number = $y+1;
+		       }
 		    }
 		  }
-		  last if(defined $transcript_id);
+		  last if($found_exon_boundary);
 		}
 		if($breaknum == 1){
 		  $fusion->transcript1_id($transcript_id);
@@ -936,7 +948,7 @@ sub process_annotation_file {
 		$break = $annotation->{'breakpoint'};
 		$alt_break = $annotation->{'alt_breakpoint'};
 		$alt_break2 = $annotation->{'alt_breakpoint2'};
-		next if($annotation->{'gene_name'} ne $annotation->{'genename'} && $annotation->{'source'} ne "D");
+		#next if($annotation->{'gene_name'} ne $annotation->{'genename'} && $annotation->{'source'} ne "D");
 		if($break ne $curr_break){
 		  unless($curr_break eq ""){
 		    $curr_pos = $curr_annotation->{'pos_end'};
@@ -953,6 +965,7 @@ sub process_annotation_file {
 			  my $breakpoint = $curr_annotation->{'breakpoint'};
 			  my $name = $curr_annotation->{'genename'};
 			    # The breakpoint doesn't fall within 10bp of an exon boundary. We need to check it falls within the footprint of the star gene and, for now, print it as intronic
+			print "The gene is $name\n";
 			    my $gene_start = $gene_info->{$curr_annotation->{'genename'}}{'feature_start'};
 			    my $gene_end = $gene_info->{$curr_annotation->{'genename'}}{'feature_end'};
 			    my $break_pos = $curr_annotation->{'pos_end'};
