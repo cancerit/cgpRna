@@ -654,6 +654,43 @@ sub parse_annotation {
   return \%annotation;
 }
 
+sub parse_bed_file {
+  my ($line, $breaknum) = @_;
+  
+  my @fields = split "\t", $line; 
+  my $fusion;
+  
+  if($breaknum == 1){
+  
+    $fusion = new Sanger::CGP::CompareFusions::FusionAnnotation(
+    -breakpoint	=> $fields[3],
+    -alt_breakpoint	=> $fields[4],
+    -alt_breakpoint2	=> $fields[8],
+    -chr1	=> $fields[0],
+    -pos1_start	=> $fields[1],
+    -pos1_end	=> $fields[2],
+    -strand1	=> $fields[5],
+    -gene1	=> $fields[6],
+    -gene1_id	=> $fields[7],
+    -feature1 => $fields[9]);
+  }
+  else{
+    $fusion = new Sanger::CGP::CompareFusions::FusionAnnotation(
+    -breakpoint	=> $fields[3],
+    -alt_breakpoint	=> $fields[4],
+    -alt_breakpoint2	=> $fields[8],
+    -chr2	=> $fields[0],
+    -pos2_start	=> $fields[1],
+    -pos2_end	=> $fields[2],
+    -strand2	=> $fields[5],
+    -gene2	=> $fields[6],
+    -gene2_id	=> $fields[7],
+    -feature1 => $fields[9]);    
+  }
+  
+  return $fusion;
+}
+
 sub parse_break_data {
   my $line = shift;
   
@@ -711,6 +748,63 @@ sub parse_defuse_file {
   close ($ifh1);
 
   return \%defuse_data;
+}
+
+sub parse_exon_data {
+  my ($fusion, $breaknum, $exons) = @_;
+
+	my $exon_number;
+	my $exon_start;
+	my $exon_end;
+	my $transcript_id;
+	my $gene_biotype;
+	my $found_exon_boundary = 0;
+	my $found_exon = 0;
+	my $curr_distance = 10000000;
+
+  my $break_pos = $fusion->{'pos'.$breaknum.'_end'};
+
+  for my $e (keys $exons){
+    my $exon = $exons->{$e};
+    if($break_pos == $exon->{'feature_start'} || $break_pos == $exon->{'feature_end'}){
+      $found_exon_boundary = 1;
+      $transcript_id = $exon->{'transcript_id'};
+		  $gene_biotype = $exon->{'gene_biotype'};
+		  $exon_start = $exon->{'feature_start'};
+		  $exon_end = $exon->{'feature_end'};
+		  $exon_number = $exon->{'exon_number'};
+      last;
+    }
+    elsif($break_pos > $exon->{'feature_start'} && $break_pos < $exon->{'feature_end'}){
+      my $distance = find_closest_boundary($break_pos, $exon->{'feature_start'}, $exon->{'feature_end'});
+      if ($distance < $curr_distance){
+		    $found_exon = 1;
+        $transcript_id = $exon->{'transcript_id'};
+		    $gene_biotype = $exon->{'gene_biotype'};
+		    $exon_start = $exon->{'feature_start'};
+		    $exon_end = $exon->{'feature_end'};
+		    $exon_number = $exon->{'exon_number'};
+		  }
+    }
+    last if($found_exon_boundary);
+  }
+	if ($found_exon_boundary || $found_exon){
+	  if($breaknum == 1){
+	    $fusion->transcript1_id($transcript_id);
+		  $fusion->gene1_biotype($gene_biotype);
+		  $fusion->exon1_num($exon_number);
+		  $fusion->feature1_start($exon_start);
+		  $fusion->feature1_end($exon_end);
+	  }
+	  else{
+	    $fusion->transcript2_id($transcript_id);
+		  $fusion->gene2_biotype($gene_biotype);
+		  $fusion->exon2_num($exon_number);
+		  $fusion->feature2_start($exon_start);
+		  $fusion->feature2_end($exon_end);
+    }
+  }
+  return $fusion;
 }
 
 sub parse_gene_info {
@@ -841,7 +935,6 @@ sub parse_tophat_file {
 
 sub parse_transcript_data {
   my ($fusion, $breaknum, $transcripts) = @_;
-  
   my @filteredTrans;
   foreach my $t(@{$transcripts}){
 		push(@filteredTrans, $t) if ($fusion->{'pos'.$breaknum.'_end'} >= $t->getGenomicMinPos && $fusion->{'pos'.$breaknum.'_end'} <= $t->getGenomicMaxPos);
@@ -849,13 +942,14 @@ sub parse_transcript_data {
 	my @sortedTrans = sort{&annotation_sort} @filteredTrans;
 	
 	if(defined $sortedTrans[0]){
-
+    my $vagrent_genename;
 	  my $exon_number;
 		my $exon_start;
 		my $exon_end;
 		my $transcript_id;
 		my $gene_biotype;
 		my $found_exon_boundary = 0;
+		my $found_exon = 0;
 		my $curr_distance = 10000000;
 		my $num_transcripts = scalar @sortedTrans;
 		for (my $x=0;$x<$num_transcripts; $x++){
@@ -870,35 +964,43 @@ sub parse_transcript_data {
 		      $exon_start = $e->getMinPos;
 		      $exon_end = $e->getMaxPos;
 		      $exon_number = $y+1;
+					$vagrent_genename = $sortedTrans[$x]->{'_genename'};
 		      last;
 		    }elsif($fusion->{'pos'.$breaknum.'_end'} > $e->getMinPos && $fusion->{'pos'.$breaknum.'_end'} < $e->getMaxPos){
 		       my $distance = find_closest_boundary($fusion->{'pos'.$breaknum.'_end'}, $e->getMinPos, $e->getMaxPos);
 		       if ($distance < $curr_distance){
+		         $found_exon = 1;
 		         $transcript_id = $sortedTrans[$x]->getAccession;
 		         $gene_biotype = $sortedTrans[$x]->{'_genetype'};
 		         $exon_start = $e->getMinPos;
 		         $exon_end = $e->getMaxPos;
 		         $exon_number = $y+1;
+		  			 $vagrent_genename = $sortedTrans[$x]->{'_genename'};
 		       }
 		    }
 		  }
 		  last if($found_exon_boundary);
 		}
-		if($breaknum == 1){
-		  $fusion->transcript1_id($transcript_id);
-		  $fusion->gene1_biotype($gene_biotype);
-		  $fusion->exon1_num($exon_number);
-		  $fusion->feature1_start($exon_start);
-		  $fusion->feature1_end($exon_end);
-		}
-		else{
-			$fusion->transcript2_id($transcript_id);
-		  $fusion->gene2_biotype($gene_biotype);
-		  $fusion->exon2_num($exon_number);
-		  $fusion->feature2_start($exon_start);
-		  $fusion->feature2_end($exon_end);
-		}
-	}
+
+  if(defined $vagrent_genename){
+    if($vagrent_genename eq $fusion->{'gene'.$breaknum} && ($found_exon_boundary || $found_exon)){
+		    if($breaknum == 1){
+		      $fusion->transcript1_id($transcript_id);
+		      $fusion->gene1_biotype($gene_biotype);
+		      $fusion->exon1_num($exon_number);
+		      $fusion->feature1_start($exon_start);
+		      $fusion->feature1_end($exon_end);
+		    }
+		    else{
+			    $fusion->transcript2_id($transcript_id);
+		      $fusion->gene2_biotype($gene_biotype);
+		      $fusion->exon2_num($exon_number);
+		      $fusion->feature2_start($exon_start);
+		      $fusion->feature2_end($exon_end);
+        }
+	    }
+    }	
+  }
   return $fusion;
 }
 
@@ -925,110 +1027,24 @@ sub parse_vagrent_query_file {
 }
 
 sub process_annotation_file {
-  my ($options, $input, $output, $gene_info) = @_;
+  my ($input) = @_;
 
-  my $curr_distance = 10000000;
-  my $curr_break = "";
-  my $curr_annotation;
-  my $curr_pos;
-  my $curr_exon_start;
-	my $curr_exon_end;
-  my $break;
-  my $alt_break;
-  my $alt_break2;
+  my %exon_annotation;
   
-  my ($gtf, $path) = fileparse($options->{'gtf'});
-  
-  open(my $ofh1, '>>', $output) or die "Could not open file $output $!";
   open (my $ifh1, $input) or die "Could not open file '$input' $!";
   while (<$ifh1>){
     chomp;
     my $line = $_;
     my $annotation = parse_annotation($line);
-		$break = $annotation->{'breakpoint'};
-		$alt_break = $annotation->{'alt_breakpoint'};
-		$alt_break2 = $annotation->{'alt_breakpoint2'};
-		#next if($annotation->{'gene_name'} ne $annotation->{'genename'} && $annotation->{'source'} ne "D");
-		if($break ne $curr_break){
-		  unless($curr_break eq ""){
-		    $curr_pos = $curr_annotation->{'pos_end'};
-		    $curr_exon_start = $curr_annotation->{'feature_start'};
-    		$curr_exon_end = $curr_annotation->{'feature_end'};
-    		
-		    if($curr_distance <= 10){
-          print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'alt_breakpoint2'}."\t".$curr_annotation->{'genename'}."\t".$curr_annotation->{'gene_id'}."\t".$curr_annotation->{'transcript_id'}."\t".$gtf."\t".$curr_annotation->{'exon_number'}."\t".$curr_annotation->{'feature_start'}."\t".$curr_annotation->{'feature_end'}."\t".$curr_annotation->{'source'}."\n";
-			  }
-			  elsif($curr_pos > $curr_exon_start && $curr_pos < $curr_exon_end){
-          print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'alt_breakpoint2'}."\t".$curr_annotation->{'genename'}."\t".$curr_annotation->{'gene_id'}."\t".$curr_annotation->{'transcript_id'}."\t".$gtf."\t".$curr_annotation->{'exon_number'}."\t".$curr_annotation->{'feature_start'}."\t".$curr_annotation->{'feature_end'}."\t".$curr_annotation->{'source'}."\n";
-			  }
-			  else{
-			    # The breakpoint doesn't fall within 10bp of an exon boundary. We need to check it falls within the footprint of the star gene and, for now, print it as intronic
-			    my $gene_start = $gene_info->{$curr_annotation->{'genename'}}{'feature_start'};
-			    my $gene_end = $gene_info->{$curr_annotation->{'genename'}}{'feature_end'};
-			    my $break_pos = $curr_annotation->{'pos_end'};
-			    if(defined $gene_start && defined $gene_end){
-			      if($break_pos >= $gene_start && $break_pos <= $gene_end){
-			        print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'alt_breakpoint2'}."\t".$curr_annotation->{'genename'}."\t".$curr_annotation->{'gene_id'}."\tIntronic\t".$gtf."\tNA\tNA\tNA\t".$curr_annotation->{'source'}."\n";
-			      }
-			      else{
-			        print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'alt_breakpoint2'}."\t".$curr_annotation->{'genename'}."\tNA\tUnannotated\tNA\tNA\tNA\tNA\t".$curr_annotation->{'source'}."\n";
-			      }
-			    }
-			    else{
-			      print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'alt_breakpoint2'}."\t".$curr_annotation->{'genename'}."\tNA\tUnannotated\tNA\tNA\tNA\tNA\t".$curr_annotation->{'source'}."\n";
-			    }
-			  }
-			  $curr_distance = 10000000;
-			  $curr_break = $break;
-		  }
-		}
-		my $pos = $annotation->{'pos_end'};
-    my $exon_start = $annotation->{'feature_start'};
-    my $exon_end = $annotation->{'feature_end'};
-    my $distance = find_closest_boundary($pos, $exon_start, $exon_end);
-
-    if($distance < $curr_distance){
-      $curr_distance = $distance;
-      $curr_annotation = $annotation;
-      $curr_break = $break;
+    if($annotation->{'gene_name'} eq $annotation->{'genename'}){
+      my $break = $annotation->{'breakpoint'};
+      my $exon = $annotation->{'exon_id'};
+      $exon_annotation{$break}{$exon} = $annotation;
     }
-  }
-  if (defined $curr_annotation){
-    $curr_pos = $curr_annotation->{'pos_end'};
-	  $curr_exon_start = $curr_annotation->{'feature_start'};
-    $curr_exon_end = $curr_annotation->{'feature_end'};
-  
-	  if($curr_distance <= 10){
-      print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'alt_breakpoint2'}."\t".$curr_annotation->{'genename'}."\t".$curr_annotation->{'gene_id'}."\t".$curr_annotation->{'transcript_id'}."\t".$gtf."\t".$curr_annotation->{'exon_number'}."\t".$curr_annotation->{'feature_start'}."\t".$curr_annotation->{'feature_end'}."\t".$curr_annotation->{'source'}."\n";
-	  }
-    elsif($curr_pos > $curr_exon_start && $curr_pos < $curr_exon_end){
-      print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'alt_breakpoint2'}."\t".$curr_annotation->{'genename'}."\t".$curr_annotation->{'gene_id'}."\t".$curr_annotation->{'transcript_id'}."\t".$gtf."\t".$curr_annotation->{'exon_number'}."\t".$curr_annotation->{'feature_start'}."\t".$curr_annotation->{'feature_end'}."\t".$curr_annotation->{'source'}."\n";
-    }
-	  else{
-	    # The breakpoint doesn't fall within 10bp of an exon boundary. We need to check it falls within the footprint of the star gene and, for now, print it as intronic
-	    my $gene_start = $gene_info->{$curr_annotation->{'genename'}}{'feature_start'};
-	    my $gene_end = $gene_info->{$curr_annotation->{'genename'}}{'feature_end'};
-	    my $break_pos = $curr_annotation->{'pos_end'};
-	    if(defined $gene_start && defined $gene_end){
-	      if($break_pos >= $gene_start && $break_pos <= $gene_end){
-	        print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'alt_breakpoint2'}."\t".$curr_annotation->{'genename'}."\t".$curr_annotation->{'gene_id'}."\tIntronic\t".$gtf."\tNA\tNA\tNA\t".$curr_annotation->{'source'}."\n";
-		    }
-			  else{
-			    print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'alt_breakpoint2'}."\t".$curr_annotation->{'genename'}."\tNA\tUnannotated\tNA\tNA\tNA\tNA\t".$curr_annotation->{'source'}."\n";
-			  }
-		  }
-			else{
-			  print $ofh1 $curr_annotation->{'breakpoint'}."\t".$curr_annotation->{'alt_breakpoint'}."\t".$curr_annotation->{'alt_breakpoint2'}."\t".$curr_annotation->{'genename'}."\tNA\tUnannotated\tNA\tNA\tNA\tNA\t".$curr_annotation->{'source'}."\n";
-			}		  
-    }
-  }
-  else{
-    print $ofh1 $break."\t".$alt_break."\t".$alt_break2."\n";
   }
   close ($ifh1);
-  close ($ofh1);
 
-  return 1;
+  return \%exon_annotation;
 }
 
 sub process_overlap_files {
@@ -1376,8 +1392,8 @@ sub query_vagrent {
     my @trans1 = $ts->getTranscripts($genomic_pos1);
     my @trans2 = $ts->getTranscripts($genomic_pos2);
     
-    parse_transcript_data($fusion, 1, \@trans1);
-    parse_transcript_data($fusion, 2, \@trans2);
+    $fusion = parse_transcript_data($fusion, 1, \@trans1);
+    $fusion = parse_transcript_data($fusion, 2, \@trans2);
 		$breaklist{$fusion->{'breakpoint'}} = $fusion if(!exists $breaklist{$fusion->{'breakpoint'}});
   }
   close ($ifh2);
@@ -1480,12 +1496,27 @@ sub select_annotation {
   return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
   
   my $sample = $options->{'sample'};
-  my $annot_file1;
-  my $annot_file2;
-  my $final_annot_file1;
-  my $final_annot_file2;
   
-  my $gene_gtf = File::Spec->catfile($tmp, "filtered_gene.gtf");
+  my ($gtf, $path) = fileparse($options->{'gtf'});
+	
+  my $annot_file1 = File::Spec->catfile($tmp, "$sample.1.ann");
+  my $annot_file2 = File::Spec->catfile($tmp, "$sample.2.ann");
+  my $bed_file1 = File::Spec->catfile($tmp, "$sample.1.bed");
+  my $bed_file2 = File::Spec->catfile($tmp, "$sample.2.bed");
+  my $final_annot_file1 = $annot_file1."_final";
+  my $final_annot_file2 = $annot_file2."_final";
+  
+  my $exon_annotation1;
+  my $exon_annotation2;
+
+	if(-s $annot_file1){
+    $exon_annotation1 = process_annotation_file($annot_file1);
+	}
+	if(-s $annot_file2){
+    $exon_annotation2 = process_annotation_file($annot_file2);
+	}
+	
+	my $gene_gtf = File::Spec->catfile($tmp, "filtered_gene.gtf");
   my %gene_info;
 
   open (my $ifh1, $gene_gtf) or die "Could not open file '$gene_gtf' $!";
@@ -1500,24 +1531,88 @@ sub select_annotation {
   }
   close ($ifh1);
 	
-  opendir(my $dh, $tmp);
-  while(my $file = readdir $dh){
-    $annot_file1 = File::Spec->catfile($tmp, $file) if($file eq "$sample.1.ann");
-    $annot_file2 = File::Spec->catfile($tmp, $file) if($file eq "$sample.2.ann");
-  }
-  closedir($dh);
-	
-  $final_annot_file1 = $annot_file1."_final";
-  $final_annot_file2 = $annot_file2."_final";
-
-	if(-s $annot_file1){
-    process_annotation_file($options, $annot_file1, $final_annot_file1, \%gene_info);
+	my $bed1;
+  my $bed2;
+  
+  if(-s $bed_file1){
+    open(my $ofh1, '>>', $final_annot_file1) or die "Could not open file '$final_annot_file1' $!";
+    open (my $ifh2, $bed_file1) or die "Could not open file '$bed_file1' $!";
+    while (<$ifh2>) {
+      chomp;
+      my $line = $_;
+      my $fusion = parse_bed_file($line, 1);
+      if(exists $exon_annotation1->{$fusion->breakpoint}){
+        $fusion = parse_exon_data($fusion, 1, $exon_annotation1->{$fusion->breakpoint});
+      }
+      if(!exists $fusion->{'transcript1_id'}){
+        $fusion->{'exon1_number'} = 'NA';
+        $fusion->{'feature1_start'} = 'NA';
+        $fusion->{'feature1_end'} = 'NA';
+        # Check whether the breakpoint falls within the footprint of the gene.
+        my $gene_start = $gene_info{$fusion->{'gene1'}}{'feature_start'};
+			  my $gene_end = $gene_info{$fusion->{'gene1'}}{'feature_end'};
+			  my $break_pos = $fusion->{'pos1_end'};
+			  if(defined $gene_start && defined $gene_end){
+			    if($break_pos >= $gene_start && $break_pos <= $gene_end){
+			      $fusion->{'transcript1_id'} = 'Intronic';
+			    }
+			    else{
+			      my $location = 'upstream';
+			      $location = 'downstream' if($break_pos > $gene_end);
+			  		$fusion->{'transcript1_id'} = $location;
+			    }
+			  }
+			  else{
+			    $fusion->{'transcript1_id'} = 'Unannotated';
+			  }
+      }
+      my $output_line = $fusion->format_break_line(1, $gtf);
+		  print $ofh1 $output_line."\n";
+    }
+    close($ifh2);
+    close($ofh1);
 	}
-	if(-s $annot_file2){
-    process_annotation_file($options, $annot_file2, $final_annot_file2, \%gene_info);
-	}	
-    
-  PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
+	
+	if(-s $bed_file2){
+	  open(my $ofh2, '>>', $final_annot_file2) or die "Could not open file '$final_annot_file2' $!";
+    open (my $ifh3, $bed_file2) or die "Could not open file '$bed_file2' $!";
+    while (<$ifh3>) {
+      chomp;
+      my $line = $_;
+      my $fusion = parse_bed_file($line, 2);
+      if(exists $exon_annotation1->{$fusion->breakpoint}){
+        $fusion = parse_exon_data($fusion, 2, $exon_annotation1->{$fusion->breakpoint});
+      }
+      if(!exists $fusion->{'transcript2_id'}){
+        $fusion->{'exon2_number'} = 'NA';
+        $fusion->{'feature2_start'} = 'NA';
+        $fusion->{'feature2_end'} = 'NA';
+        # Check whether the breakpoint falls within the footprint of the gene.
+        my $gene_start = $gene_info{$fusion->{'gene2'}}{'feature_start'};
+			  my $gene_end = $gene_info{$fusion->{'gene2'}}{'feature_end'};
+			  my $break_pos = $fusion->{'pos2_end'};
+			  if(defined $gene_start && defined $gene_end){
+			    if($break_pos >= $gene_start && $break_pos <= $gene_end){
+			      $fusion->{'transcript2_id'} = 'Intronic';
+			    }
+			    else{
+			      my $location = 'upstream';
+			      $location = 'downstream' if($break_pos > $gene_end);
+			  		$fusion->{'transcript2_id'} = $location;
+			    }
+			  }
+			  else{
+			    $fusion->{'transcript2_id'} = 'Unannotated';
+			  }
+      }
+      my $output_line = $fusion->format_break_line(2, $gtf);
+		  print $ofh2 $output_line."\n";
+    }
+    close($ifh3);
+    close($ofh2);
+	}
+
+  #PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
 	
   return 1;
 }
