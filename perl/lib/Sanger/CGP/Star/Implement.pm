@@ -59,7 +59,7 @@ const my $STAR_FUSION_SECTION => 'star-fusion-parameters';
 const my $STAR => q{ %s %s --readFilesIn %s };
 const my $STAR_FUSION => q{ %s --chimeric_out_sam %s --chimeric_junction %s --ref_GTF %s --min_novel_junction_support 10 --min_alt_pct_junction 10.0 --out_prefix %s };
 const my $SAMTOBAM => q{ view -bS %s > %s };
-const my $BAMSORT => q{ I=%s/Aligned.out.bam fixmate=1 inputformat=bam level=1 tmpfile=%s/tmp O=%s/Aligned.sortedByCoord.out.bam inputthreads=%s outputthreads=%s};
+const my $BAMSORT => q{ I=%s fixmate=1 inputformat=bam level=1 tmpfile=%s/tmp O=%s inputthreads=%s outputthreads=%s};
 
 
 sub check_input {
@@ -251,6 +251,7 @@ sub process_star_params {
 	$cfg->setval($STAR_DEFAULTS_SECTION, 'sjdbGTFfile', $gtf);
 	$cfg->setval($STAR_DEFAULTS_SECTION, 'genomeDir', $star_index);
 	$cfg->setval($STAR_DEFAULTS_SECTION, 'outSAMattrRGline', $options->{'rgline'}) if(defined $options->{'rgline'});
+	$cfg->setval($STAR_DEFAULTS_SECTION, 'quantMode', 'TranscriptomeSAM') unless(defined $fusion_mode);
 	
 	my @star_command;
 	my @star_defaults = $cfg->Parameters($STAR_DEFAULTS_SECTION);
@@ -270,7 +271,6 @@ sub process_star_params {
 				push @star_command, "--".$key." ".$cfg->val($STAR_FUSION_SECTION, $key);
 			}
 		}
-		
 	}
 	
 	return join(" ", @star_command);
@@ -437,15 +437,24 @@ sub star {
 	
 
 	my $stardir = File::Spec->catdir($options->{'tmp'},'star');
-	my $bamsort_command = which('bamsort') || die "Unable to find 'bamsort' in path\n";
+	my $bamsort_path = which('bamsort') || die "Unable to find 'bamsort' in path\n";
 	
-	$bamsort_command .= sprintf $BAMSORT, 	$stardir,
+	my $bamsort_command1 = $bamsort_path.sprintf $BAMSORT, File::Spec->catfile($stardir, 'Aligned.out.bam'),
 														$stardir,
-														$stardir,
+														File::Spec->catfile($stardir, 'Aligned.sortedByCoord.out.bam'),
 														$threads,
 														$threads;
 
-	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $bamsort_command, 0);
+	my $bamsort_command2 = $bamsort_path.sprintf $BAMSORT, File::Spec->catfile($stardir, 'Aligned.toTranscriptome.out.bam'),
+														$stardir,
+														File::Spec->catfile($stardir, 'Aligned.toTranscriptome.sortedByCoord.out.bam'),
+														$threads,
+														$threads;
+  my @commands;
+  push @commands, $bamsort_command1;
+  push @commands, $bamsort_command2;
+
+	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), \@commands, 0);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
 	
 	return 1;
@@ -465,13 +474,13 @@ sub star_fusion {
 	my $sample = $options->{'sample'};
 	my $gtf = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'}, $options->{'genebuild'}, $options->{'gtffilename'});
 	
-	my $command = sprintf $STAR_FUSION,	$options->{'starfusionpath'},
+	my $commands = sprintf $STAR_FUSION,	$options->{'starfusionpath'},
 						$chimeric_sam,
 						$chimeric_junction,
 						$gtf,
 						$star_dir."/$sample";
 																			
-	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
+	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $commands, 0);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
 	
 	return 1;

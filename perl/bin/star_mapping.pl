@@ -82,6 +82,7 @@ sub cleanup {
 	my $star_outdir = File::Spec->catdir($options->{'tmp'}, 'star');
 	move(File::Spec->catdir($tmpdir, 'logs'), File::Spec->catdir($options->{'outdir'}, 'logs_star_map')) || die $!;
 	move(File::Spec->catfile($star_outdir, 'Aligned.sortedByCoord.out.bam'), File::Spec->catfile($options->{'outdir'}, $options->{'sample'}.'.star.Aligned.out.bam')) || die $!;
+  move(File::Spec->catfile($star_outdir, 'Aligned.toTranscriptome.sortedByCoord.out.bam'), File::Spec->catfile($options->{'outdir'}, $options->{'sample'}.'.star.AlignedtoTranscriptome.out.bam')) || die $!;
 	remove_tree $tmpdir if(-e $tmpdir);
 	return 0;
 }
