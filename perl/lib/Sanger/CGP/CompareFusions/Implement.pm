@@ -83,12 +83,12 @@ my %ALLOWED_BIOTYPES = (
 
 my %CONFIDENCE_SCORES = (
   STD => '76%',
-  SD => '79%',
+  SD => '77%',
   ST => '48%',
   TD => '25%',
-  D => '59%',
-  T => '51%',
-  S => '24%',
+  D => '58%',
+  T => '50%',
+  S => '22%',
 );
 
 # Position of the columns in the tophat-fusion filtered file used to format the bed file.
@@ -1375,7 +1375,7 @@ sub query_vagrent {
 	my %breaklist;
 	
 	my $vagrent_query_file = File::Spec->catfile($tmp, "$sample.vagrent.query.list");
-	
+
   open (my $ifh2, $vagrent_query_file) or die "Could not open file '$vagrent_query_file' $!";
   while (<$ifh2>) {
     chomp;
@@ -1388,12 +1388,18 @@ sub query_vagrent {
     
     my $genomic_pos1 = Sanger::CGP::Vagrent::Data::GenomicRegion->new('species' => 'human', 'genomeVersion' => 'GRCh38', 'chr' => $fusion->{'chr1'}, 'minpos' => $fusion->{'pos1_start'}, 'maxpos' => $fusion->{'pos1_end'}, 'id' => $fusion->{'breakpoint'});
     my $genomic_pos2 = Sanger::CGP::Vagrent::Data::GenomicRegion->new('species' => 'human', 'genomeVersion' => 'GRCh38', 'chr' => $fusion->{'chr2'}, 'minpos' => $fusion->{'pos2_start'}, 'maxpos' => $fusion->{'pos2_end'}, 'id' => $fusion->{'breakpoint'});
-		
-    my @trans1 = $ts->getTranscripts($genomic_pos1);
-    my @trans2 = $ts->getTranscripts($genomic_pos2);
+	  
+	  unless($genomic_pos1->{'_chr'} eq 'GL000219.1' || $genomic_pos2->{'_chr'} eq 'GL000219.1' || $genomic_pos1->{'_chr'} eq 'KI270726.1' || $genomic_pos2->{'_chr'} eq 'KI270726.1'){
+	  
+	  print Dumper $genomic_pos1;
+	  print Dumper $genomic_pos2;
+      my @trans1 = $ts->getTranscripts($genomic_pos1);
+      my @trans2 = $ts->getTranscripts($genomic_pos2);
+   
+      $fusion = parse_transcript_data($fusion, 1, \@trans1);
+      $fusion = parse_transcript_data($fusion, 2, \@trans2);
+    }
     
-    $fusion = parse_transcript_data($fusion, 1, \@trans1);
-    $fusion = parse_transcript_data($fusion, 2, \@trans2);
 		$breaklist{$fusion->{'breakpoint'}} = $fusion if(!exists $breaklist{$fusion->{'breakpoint'}});
   }
   close ($ifh2);
