@@ -1391,8 +1391,6 @@ sub query_vagrent {
 	  
 	  unless($genomic_pos1->{'_chr'} eq 'GL000219.1' || $genomic_pos2->{'_chr'} eq 'GL000219.1' || $genomic_pos1->{'_chr'} eq 'KI270726.1' || $genomic_pos2->{'_chr'} eq 'KI270726.1'){
 	  
-	  print Dumper $genomic_pos1;
-	  print Dumper $genomic_pos2;
       my @trans1 = $ts->getTranscripts($genomic_pos1);
       my @trans2 = $ts->getTranscripts($genomic_pos2);
    
@@ -1551,7 +1549,7 @@ sub select_annotation {
         $fusion = parse_exon_data($fusion, 1, $exon_annotation1->{$fusion->breakpoint});
       }
       if(!exists $fusion->{'transcript1_id'}){
-        $fusion->{'exon1_number'} = 'NA';
+        $fusion->{'exon1_num'} = 'NA';
         $fusion->{'feature1_start'} = 'NA';
         $fusion->{'feature1_end'} = 'NA';
         # Check whether the breakpoint falls within the footprint of the gene.
@@ -1590,7 +1588,7 @@ sub select_annotation {
         $fusion = parse_exon_data($fusion, 2, $exon_annotation1->{$fusion->breakpoint});
       }
       if(!exists $fusion->{'transcript2_id'}){
-        $fusion->{'exon2_number'} = 'NA';
+        $fusion->{'exon2_num'} = 'NA';
         $fusion->{'feature2_start'} = 'NA';
         $fusion->{'feature2_end'} = 'NA';
         # Check whether the breakpoint falls within the footprint of the gene.
