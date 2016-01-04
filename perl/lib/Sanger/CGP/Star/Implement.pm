@@ -51,6 +51,8 @@ use PCAP::Bwa::Meta;
 use PCAP::Bam;
 use Sanger::CGP::Star;
 
+use Data::Dumper;
+
 const my $BAMFASTQ => q{ exclude=QCFAIL,SECONDARY,SUPPLEMENTARY T=%s S=%s O=%s O2=%s gz=1 level=1 F=%s F2=%s filename=%s};
 const my $FUSIONS_FILTER => q{ -i %s -s %s -n %s -o %s -p star};
 const my $STAR_MAX_CORES => 16;
@@ -148,6 +150,67 @@ sub filter_fusions {
 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
 	return 1;
+}
+
+sub format_rg_tags {
+  my $options = shift;
+
+  my $sample = $options->{'sample'};
+  
+  # Format the PU RG tag if the npg_run and lane_pos parameters have been provided
+  $options->{'PU'} = $options->{'npg'}."_".$options->{'lane_pos'} if(defined $options->{'npg'} && $options->{'lane_pos'});
+  
+  # Check the input data
+	my $input_meta = $options->{'meta_set'};
+	
+	# Get the RG header information to format the @RG line for the mapped BAM
+	my $first_file = $input_meta->[0];
+	my $rg_line;
+  
+  # Retrieve RG tag information for the input fastq or BAM
+	if($first_file->fastq) {
+		$rg_line = $first_file->rg_header(q{\t});
+	}
+	else {
+		($rg_line, undef) = PCAP::Bam::rg_line_for_output($first_file->in, $sample);
+		$rg_line = $rg_line;
+	}
+	
+	# Prepare the new RG tags for the CGP mapped BAM
+	my @rg_tags = split(/\\t/, $rg_line);
+	my @comment_rg_tags = '@CO';
+	my @rg_header;
+	push @rg_header, 'ID:'.$options->{'ID'} if(exists $options->{'ID'});
+	push @rg_header, 'LB:'.$options->{'LB'} if(exists $options->{'LB'});
+	# Quotes need to be around the description (DS:) tag text
+	push @rg_header, '"DS:'.$options->{'DS'}.'"' if(exists $options->{'DS'});
+	push @rg_header, 'PL:'.$options->{'PL'} if(exists $options->{'PL'});
+	push @rg_header, 'PU:'.$options->{'PU'} if(exists $options->{'PU'});
+
+	foreach my $r(@rg_tags){
+	  unless($r eq '@RG'){
+	    my @tag = split ':', $r;
+	    if(!exists $options->{$tag[0]}){
+	      $r = '"'.$r.'"' if($r =~ /DS:/);
+	      push @rg_header, $r;
+	    }
+	    # Once the RG tag has been formatted correctly for the CGP mapped BAM, add any pre-existing tags to a comment line to store what was in the BAM RG tags previously
+	    $r = 'original_'.$r;
+	    push @comment_rg_tags, $r;
+	  }
+	}
+	
+	# Write the old RG tags to a comment line in a file which STAR will read in using the outSAMheaderCommentFile parameter
+	my $comment_file = File::Spec->catfile($options->{'tmp'}, 'star_comment_file.txt');
+	open(my $ofh, '>', $comment_file) or die "Could not open file '$comment_file' $!";
+  print $ofh join("\t",@comment_rg_tags);
+	close($ofh);
+	
+	$options->{'commentfile'} = $comment_file unless($first_file->fastq);
+
+	$options->{'rgline'} = join(" ",@rg_header);
+
+  return 1;
 }
 
 sub prepare {
@@ -251,6 +314,7 @@ sub process_star_params {
 	$cfg->setval($STAR_DEFAULTS_SECTION, 'sjdbGTFfile', $gtf);
 	$cfg->setval($STAR_DEFAULTS_SECTION, 'genomeDir', $star_index);
 	$cfg->setval($STAR_DEFAULTS_SECTION, 'outSAMattrRGline', $options->{'rgline'}) if(defined $options->{'rgline'});
+	$cfg->setval($STAR_DEFAULTS_SECTION, 'outSAMheaderCommentFile', $options->{'commentfile'}) if(defined $options->{'commentfile'});
 	$cfg->setval($STAR_DEFAULTS_SECTION, 'quantMode', 'TranscriptomeSAM') unless(defined $fusion_mode);
 	
 	my @star_command;
@@ -323,27 +387,10 @@ sub star {
 	$threads = $options->{'threads'} if($options->{'threads'} < $STAR_MAX_CORES);
 	my $sample = $options->{'sample'};
 	
-	# Check the input data
-	my $input_meta = $options->{'meta_set'};
+	# Ensure the correct RG tags will be in the mapped BAM
+	format_rg_tags($options);
 	
-	# Get the RG header information to format parameters --rg-id and --rg-sample
-	my $first_file = $input_meta->[0];
-	my $rg_line;
-
-	if($first_file->fastq) {
-		$rg_line = $first_file->rg_header(q{\t});
-	}
-	else {
-		($rg_line, undef) = PCAP::Bam::rg_line_for_output($first_file->in, $sample);
-		$rg_line = $rg_line;
-	}
-	
-	# Format the @RG header line for the output BAM file. Quotes need to be around the description (DS:) tag text
-	$rg_line =~ s/^(.*)(DS:[^\\]+)(\\t.*$)/$1"$2"$3/;
-	$rg_line =~ s/^\@RG\\t//;
-	$rg_line =~ s/\\t/ /g;
-	$options->{'rgline'} = $rg_line;
-	
+	# Format the star command
 	my $star_params = process_star_params($options);
 	
 	my @files1;
@@ -366,6 +413,8 @@ sub star {
 	}
 	else{
 		my $raw_files = $options->{'raw_files'};
+		my $input_meta = $options->{'meta_set'};
+		my $first_file = $input_meta->[0];
 		
 		# If there are multiple input fastqs, some gzipped and some not, need to check both the input directory and raw_files array for the locations of the input files
 		if($options->{'mixedfq'}){

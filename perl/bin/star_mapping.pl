@@ -106,6 +106,13 @@ sub setup {
 			'p|process=s' => \$opts{'process'},
 			'i|index=i' => \$opts{'index'},
 			'c|config=s' => \$opts{'config'},
+			'l|lane-id=i' => \$opts{'ID'},
+			'b|library=s' => \$opts{'LB'},
+			'ds|ds-tag=s' => \$opts{'DS'},
+			'y|machine-type=s' => \$opts{'PL'},
+			'n|npg-run=s' => \$opts{'npg'},
+      'a|lane-pos=i' => \$opts{'lane_pos'},
+			
 	) or pod2usage(1);
 
 	pod2usage(-verbose => 1) if(defined $opts{'h'});
@@ -159,6 +166,12 @@ sub setup {
 	delete $opts{'process'} unless(defined $opts{'process'});
 	delete $opts{'index'} unless(defined $opts{'index'});
 	delete $opts{'config'} unless(defined $opts{'config'});
+	delete $opts{'ID'} unless(defined $opts{'ID'});
+	delete $opts{'LB'} unless(defined $opts{'LB'});
+	delete $opts{'DS'} unless(defined $opts{'DS'});
+	delete $opts{'PL'} unless(defined $opts{'PL'});
+	delete $opts{'npg'} unless(defined $opts{'npg'});
+	delete $opts{'lane_pos'} unless(defined $opts{'lane_pos'});
 
  	# Apply defaults
 	$opts{'threads'} = 1 unless(defined $opts{'threads'});
@@ -210,7 +223,13 @@ star_mapping.pl [options] [file(s)...]
     -genebuild 		-gb 	Gene build version. This needs to be consistent with the reference build in terms of the version and chromosome name style. Please use the build number only minus any prefixes such as e/ensembl [77]
     -refdataloc  	-r  	Parent directory of the reference data
     -species  		-sp 	Species [human]
-
+    -lane-id  		-l 	ID_AP_LANE of the lane being processed for the RG BAM header ID tag
+    -library  		-b 	Sequencing library name for the RG BAM header LB tag
+    -ds-tag  		-ds 	Study description for the RG BAM header DS tag    
+    -machine-type  	-y 	Machine type or sequencing platform for the RG BAM header PL tag
+    -npg-run  		-n 	NPG run id which will be used as the first part of the RG BAM header PU tag
+    -lane-pos  		-a 	Sequencing lane - this will be used as the second part of the RG BAM header PU tag
+      
   Targeted processing (further detail under OPTIONS):
     -process   		-p   	Only process this step then exit
     -index    		-i   	Only valid for process prepare - 1..<num_input_files>
