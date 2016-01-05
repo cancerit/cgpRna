@@ -50,10 +50,10 @@ sub check_input {
   my $sample = $options->{'sample'};
   
   # Check all the required input files exist
+  PCAP::Cli::file_for_reading('bam-stats', File::Spec->catfile($inputdir, "$sample.bas"));
+  PCAP::Cli::file_for_reading('bam-stats', File::Spec->catfile($inputdir, "$sample.transcriptome.bas"));
 	PCAP::Cli::file_for_reading('gene-coverage', File::Spec->catfile($inputdir, "$sample.coverage.geneBodyCoverage.r"));
-	PCAP::Cli::file_for_reading('junction-saturation', File::Spec->catfile($inputdir, "$sample.junction_sat.junctionSaturation_plot.r"));
 	PCAP::Cli::file_for_reading('rrna-percentage', File::Spec->catfile($inputdir, "$sample.rrna.txt"));
-	PCAP::Cli::file_for_reading('bam-stats', File::Spec->catfile($inputdir, "$sample.bas"));
 	PCAP::Cli::file_for_reading('read-distribution', File::Spec->catfile($inputdir, "$sample.read_dist.txt"));
 
   return 1;
