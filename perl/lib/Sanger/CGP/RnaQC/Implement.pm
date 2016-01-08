@@ -88,7 +88,7 @@ sub gene_coverage {
   my $output_file = File::Spec->catfile($inputdir, "$sample.gene.cov.bas");
   $sample_r =~ s/-/_/g;
   $sample_r = "V".$sample_r if($sample_r =~ m/^[0-9]/);
-  print $ofh "test_result <- shapiro.test($sample_r.star.Aligned.out)\n";
+  print $ofh "test_result <- shapiro.test($sample_r)\n";
   print $ofh 'statistics<-unlist(test_result)'."\n";
   print $ofh 'shapiro_stat<-as.numeric(statistics["statistic.W"])'."\n";
   print $ofh 'shapiro_pval<-as.numeric(statistics["p.value"])'."\n";
@@ -222,6 +222,56 @@ sub rrna_stats {
   print $ofh "#_total_rrna_reads\t#_subset_rrna_reads\n";
   print $ofh "$rrna_total_reads\t$rrna_subset_reads\n";
   
+  close($ofh);
+  
+  return 1;
+}
+
+sub transcriptome_stats {
+  my $options = shift;
+  
+  my $inputdir = $options->{'indir'};
+  my $sample = $options->{'sample'};
+  
+  my $first_bas_col_name = 'bam_filename';
+  my $mean_insert_size_col_name = 'mean_insert_size';
+  my $insert_size_sd_col_name = 'insert_size_sd';
+  my $median_insert_size_col_name = 'median_insert_size';
+  my $mean_insert_size_col_num;
+  my $insert_size_sd_col_num;
+  my $median_insert_size_col_num;
+  my $mean_insert_size_val;
+  my $insert_size_sd_val;
+  my $median_insert_size_val;
+  
+  my $transcriptome_in_bas = File::Spec->catfile($inputdir, "$sample.transcriptome.bas");
+  my $transcriptome_out_bas = File::Spec->catfile($inputdir, "$sample.insert.bas");
+  
+  open (my $ifh, $transcriptome_in_bas) or die "Could not open file $transcriptome_in_bas $!";
+  while (<$ifh>) {
+		chomp;
+		my $line = $_;
+		my @fields = split "\t", $line;
+		my $length = scalar @fields;
+		if($line =~ m/^$first_bas_col_name/){
+		  for(my $i=0; $i < $length; $i++){
+		    $mean_insert_size_col_num = $i if($fields[$i] eq $mean_insert_size_col_name);
+		    $insert_size_sd_col_num = $i if($fields[$i] eq $insert_size_sd_col_name);
+		    $median_insert_size_col_num = $i if($fields[$i] eq $median_insert_size_col_name);
+		  }
+		}
+		else{
+		  die "Transcriptome insert size values could not be found\n" if(!defined $mean_insert_size_col_num || !defined $insert_size_sd_col_num || !defined $median_insert_size_col_num);
+		  $mean_insert_size_val = $fields[$mean_insert_size_col_num];
+ 			$insert_size_sd_val = $fields[$insert_size_sd_col_num];
+  		$median_insert_size_val = $fields[$median_insert_size_col_num];
+		}
+	}
+  close($ifh);
+  
+  open(my $ofh, '>', $transcriptome_out_bas) or die "Could not open file $transcriptome_out_bas $!";
+  print $ofh "transcriptome_$mean_insert_size_col_name\ttranscriptome_$insert_size_sd_col_name\ttranscriptome_$median_insert_size_col_name\n";
+  print $ofh "$mean_insert_size_val\t$insert_size_sd_val\t$median_insert_size_val\n";
   close($ofh);
   
   return 1;
