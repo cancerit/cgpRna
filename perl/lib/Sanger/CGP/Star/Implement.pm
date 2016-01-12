@@ -49,7 +49,7 @@ use PCAP::Cli;
 use PCAP::Threaded;
 use PCAP::Bwa::Meta;
 use PCAP::Bam;
-use Sanger::CGP::Star;
+use Sanger::CGP::CgpRna;
 
 use Data::Dumper;
 
