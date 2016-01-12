@@ -99,7 +99,7 @@ sub setup {
 			's|sample=s' => \$opts{'sample'},
 			'sp|species=s' => \$opts{'species'},
 			'rb|refbuild=s' => \$opts{'referencebuild'},
-			'gb|genebuild=i' => \$opts{'genebuild'},
+			'gb|genebuild=s' => \$opts{'genebuild'},
 			'r|refdataloc=s' => \$opts{'refdataloc'},
 			'g|gtffile=s' => \$opts{'gtffilename'},
 			't|threads=i' => \$opts{'threads'},
@@ -216,11 +216,11 @@ star_mapping.pl [options] [file(s)...]
     -sample   		-s   	Sample name
 
   Optional
-    -gtffile 		-g  	GTF annotation file name which should be compatible with the refbuild and gene build versions. It should reside under /refdataloc/species/refbuild/genebuild/ [Homo_sapiens.GRCh38.77.gtf]
+    -gtffile 		-g  	GTF annotation file name which should be compatible with the refbuild and gene build versions. It should reside under /refdataloc/species/refbuild/star/genebuild/ [Homo_sapiens.GRCh38.77.gtf]
     -threads   		-t  	Number of cores to use. [1]
     -config   		-c  	Path to config.ini file. It contains defaults for; the reference and gene build versions, star software and default star and star-fusion parameters [<cgpRna-install-location>/perl/config/star.ini]
     -refbuild 		-rb 	Reference assembly version. Can be UCSC or Ensembl format e.g. GRCh38 or hg38 [GRCh38] 
-    -genebuild 		-gb 	Gene build version. This needs to be consistent with the reference build in terms of the version and chromosome name style. Please use the build number only minus any prefixes such as e/ensembl [77]
+    -genebuild 		-gb 	Gene build version. This needs to be consistent with the reference build in terms of the version and chromosome name style.[e77]
     -refdataloc  	-r  	Parent directory of the reference data
     -species  		-sp 	Species [human]
     -lane-id  		-l 	ID_AP_LANE of the lane being processed for the RG BAM header ID tag
@@ -240,7 +240,7 @@ star_mapping.pl [options] [file(s)...]
     -version   		-v   	Version
 
   File list can be full file names or wildcard, e.g.
-    star_fusion.pl -t 16 -o myout -refbuild GRCh38 -genebuild 77 -s sample input/*.bam
+    star_fusion.pl -t 16 -o myout -refbuild GRCh38 -genebuild e77 -s sample input/*.bam
 
   Run with '-m' for possible input file types.
 

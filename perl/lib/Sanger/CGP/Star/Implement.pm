@@ -63,7 +63,6 @@ const my $STAR_FUSION => q{ %s --chimeric_out_sam %s --chimeric_junction %s --re
 const my $SAMTOBAM => q{ view -bS %s > %s };
 const my $BAMSORT => q{ I=%s fixmate=1 inputformat=bam level=1 tmpfile=%s/tmp O=%s inputthreads=%s outputthreads=%s};
 
-
 sub check_input {
 	my $options = shift;
 
@@ -80,7 +79,7 @@ sub check_input {
 	my $ref_build_loc = File::Spec->catdir($ref_data, $species, $ref_build);
 
 	# Check the gtf and normal fusions files exist
-	PCAP::Cli::file_for_reading('gtf-file', File::Spec->catfile($ref_build_loc, $gene_build, $options->{'gtffilename'}));
+	PCAP::Cli::file_for_reading('gtf-file', File::Spec->catfile($ref_build_loc, 'star', $gene_build, $options->{'gtffilename'}));
 
 	if($fusion_mode){
 	  PCAP::Cli::file_for_reading('normals-list',File::Spec->catfile($ref_build_loc,$options->{'normalfusionslist'}));
@@ -308,8 +307,8 @@ sub process_star_params {
 	$cfg->setval($STAR_DEFAULTS_SECTION, 'runThreadN', $threads);
 	$cfg->setval($STAR_DEFAULTS_SECTION, 'outFileNamePrefix', $options->{'tmp'}.'/star/');
 	
-	my $gtf = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'}, $options->{'genebuild'}, $options->{'gtffilename'});
-	my $star_index = File::Spec->catdir($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'}, 'star-index');
+	my $gtf = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'}, 'star', $options->{'genebuild'}, $options->{'gtffilename'});
+	my $star_index = File::Spec->catdir($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'}, 'star');
 	
 	$cfg->setval($STAR_DEFAULTS_SECTION, 'sjdbGTFfile', $gtf);
 	$cfg->setval($STAR_DEFAULTS_SECTION, 'genomeDir', $star_index);
@@ -521,7 +520,7 @@ sub star_fusion {
 	die "Some star-fusion setup files are missing, please check the output from STAR and re-run the previous stage (star) if necessary." unless(-e $chimeric_junction && -e $chimeric_sam);
 	
 	my $sample = $options->{'sample'};
-	my $gtf = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'}, $options->{'genebuild'}, $options->{'gtffilename'});
+	my $gtf = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'}, 'star',$options->{'genebuild'}, $options->{'gtffilename'});
 	
 	my $commands = sprintf $STAR_FUSION,	$options->{'starfusionpath'},
 						$chimeric_sam,
