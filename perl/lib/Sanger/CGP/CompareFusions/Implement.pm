@@ -431,6 +431,15 @@ sub deduplicate_fusions {
           shift @fields;
           print $ofh2 join("\t", @fields)."\n";
         }
+      }     
+      elsif($source eq 'D'){
+        $fields[1] =~ m/^(.*)_[0-9]+$/;
+        my $junction = $1;
+        if(!exists $seen{$junction}){
+          $seen{$junction} = $fields[1];
+          shift @fields;
+          print $ofh2 join("\t", @fields)."\n";
+        }
       }
       else{
         if(!exists $seen{$fields[1]}){
@@ -579,12 +588,15 @@ sub generate_output {
   	  $defuse_breakpoint = $fields[$defuse_pos];
   	  $defuse_splitr_count = $defuse_data->{$defuse_breakpoint}{'split_reads'};
   	  $defuse_span_count = $defuse_data->{$defuse_breakpoint}{'span_reads'};
- 	    $chr1 = $defuse_data->{$defuse_breakpoint}{'chr1'};
-  	  $pos1 = $defuse_data->{$defuse_breakpoint}{'pos1'};
-  	  $strand1 = $defuse_data->{$defuse_breakpoint}{'strand1'};
-  	  $chr2 = $defuse_data->{$defuse_breakpoint}{'chr2'};
-  	  $pos2 = $defuse_data->{$defuse_breakpoint}{'pos2'};
-  	  $strand2 = $defuse_data->{$defuse_breakpoint}{'strand2'};
+  	  # If we already have the chr-pos-strand info we don't want to pick it up from deFuse in case the orientation is reported differently
+  	  if(!defined $star_pos && !defined $tophat_pos){
+ 	      $chr1 = $defuse_data->{$defuse_breakpoint}{'chr1'};
+  	    $pos1 = $defuse_data->{$defuse_breakpoint}{'pos1'};
+  	    $strand1 = $defuse_data->{$defuse_breakpoint}{'strand1'};
+  	    $chr2 = $defuse_data->{$defuse_breakpoint}{'chr2'};
+  	    $pos2 = $defuse_data->{$defuse_breakpoint}{'pos2'};
+  	    $strand2 = $defuse_data->{$defuse_breakpoint}{'strand2'};
+  	  }
   	  $defuse_splitr_seq = $defuse_data->{$defuse_breakpoint}{'sequence'};
   	  my @defuse_temp = split "_", $defuse_breakpoint;
   	  $defuse_junction = $defuse_temp[0];
