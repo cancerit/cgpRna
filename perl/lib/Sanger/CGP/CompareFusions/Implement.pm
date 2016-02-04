@@ -56,7 +56,7 @@ const my $BEDTOOLS_PAIRTOPAIR => q{ pairtopair -a %s -b %s -slop 5 > %s};
 const my $SORT => q{ sort -k%d,%d %s > %s};
 const my $TRI_SORT => q{ sort -k%d,%d -k%d,%dr -k%d,%dr %s > %s};
 const my $JOIN => q{ join -1 8 -2 8 %s %s > %s };
-const my $OUTPUT_HEADER => "sample\tfusion_name\talgorithm\tconfidence_score\tstar_junction\ttophat_junction\tdefuse_junction\tdefuse_cluster_id\tstar_junction_reads\tstar_spanning_frags\ttophat_junction_reads\ttophat_spanning_frags\tdefuse_splitr_count\tdefuse_span_count\t5'_gene\t5'_gene_id\t5'_chr\t5'_pos\t5'_strand\t3'_gene\t3'_gene_id\t3'_chr\t3'_pos\t3'_strand\t5'_transcript_id\t5'_transcript_src\t5'_exon_num\t5'_exon_start\t5'_exon_end\t3'_transcript_id\t3'_transcript_src\t3'_exon_num\t3'_exon_start\t3'_exon_end\tdefuse_splitr_sequence\ttophat_splitr_sequence\n";
+const my $OUTPUT_HEADER => "sample\tfusion_name\talgorithm\tconfidence_score\tstar_junction\ttophat_junction\tdefuse_junction\tdefuse_cluster_id\tstar_junction_reads\tstar_spanning_frags\ttophat_junction_reads\ttophat_spanning_frags\tdefuse_splitr_count\tdefuse_span_count\t5'_gene\t5'_gene_id\t5'_chr\t5'_pos\t5'_strand\t3'_gene\t3'_gene_id\t3'_chr\t3'_pos\t3'_strand\t5'_transcript_id\t5'_transcript_src\t5'_exon_num\t5'_exon_start\t5'_exon_end\t3'_transcript_id\t3'_transcript_src\t3'_exon_num\t3'_exon_start\t3'_exon_end\tdefuse_splitr_sequence\ttophat_splitr_sequence\tcgp_defuse_filter\n";
 
 # This filter on biotypes is currently not used in subroutine filter_gtf (uncomment the line to switch on).
 my %ALLOWED_BIOTYPES = (
@@ -125,6 +125,7 @@ const my $DEFUSE_CLUSTER_ID => 2;
 const my $DEFUSE_SEQUENCE => 3;
 const my $DEFUSE_SPLIT_READS => 4;
 const my $DEFUSE_SPAN_READS => 62;
+const my $DEFUSE_CGP_FILTER => 73;
 const my $DEFUSE_HEADER_PATTERN => 'cluster_id';
 
 # Position of the columns in the star-fusion output file used to format fusion breakpoint references.
@@ -561,6 +562,7 @@ sub generate_output {
   	my $defuse_splitr_count = 'NA';
   	my $defuse_span_count = 'NA';
   	my $defuse_splitr_seq = 'NA';
+  	my $defuse_cgp_filter = 'NA';
   	  
   	if(defined $tophat_pos){
   	  $tophat_breakpoint = $fields[$tophat_pos];
@@ -601,6 +603,7 @@ sub generate_output {
   	  my @defuse_temp = split "_", $defuse_breakpoint;
   	  $defuse_junction = $defuse_temp[0];
   	  $defuse_clusterid = $defuse_temp[1];
+  	  $defuse_cgp_filter = $defuse_data->{$defuse_breakpoint}{'cgp_filter'};
   	}
     if($length > 11){
   	  my $gene1_name = $fields[3];
@@ -621,11 +624,11 @@ sub generate_output {
       
       $source = reverse $source;
       
-      print $ofh1 "$sample\t$fusion_name\t$source\t$confidence\t$star_breakpoint\t$tophat_breakpoint\t$defuse_junction\t$defuse_clusterid\t$star_junction_reads\t$star_spanning_frags\t$tophat_junction_reads\t$tophat_spanning_frags\t$defuse_splitr_count\t$defuse_span_count\t$gene1_name\t$gene1_id\t$chr1\t$pos1\t$strand1\t$gene2_name\t$gene2_id\t$chr2\t$pos2\t$strand2\t$transcript1_id\t$transcript1_src\t$exon1_number\t$exon1_start\t$exon1_end\t$transcript2_id\t$transcript2_src\t$exon2_number\t$exon2_start\t$exon2_end\t$defuse_splitr_seq\t$tophat_splitr_seq\n";
+      print $ofh1 "$sample\t$fusion_name\t$source\t$confidence\t$star_breakpoint\t$tophat_breakpoint\t$defuse_junction\t$defuse_clusterid\t$star_junction_reads\t$star_spanning_frags\t$tophat_junction_reads\t$tophat_spanning_frags\t$defuse_splitr_count\t$defuse_span_count\t$gene1_name\t$gene1_id\t$chr1\t$pos1\t$strand1\t$gene2_name\t$gene2_id\t$chr2\t$pos2\t$strand2\t$transcript1_id\t$transcript1_src\t$exon1_number\t$exon1_start\t$exon1_end\t$transcript2_id\t$transcript2_src\t$exon2_number\t$exon2_start\t$exon2_end\t$defuse_splitr_seq\t$tophat_splitr_seq\t$defuse_cgp_filter\n";
     }
     else{
       $source = reverse $source;
-      print $ofh1 "$sample\tFUSION COULD NOT BE ANNOTATED\t$source\t$confidence\t$star_breakpoint\t$tophat_breakpoint\t$defuse_junction\t$defuse_clusterid\t$star_junction_reads\t$star_spanning_frags\t$tophat_junction_reads\t$tophat_spanning_frags\t$defuse_splitr_count\t$defuse_span_count\t\t\t$chr1\t$pos1\t$strand1\t\t\t$chr2\t$pos2\t$strand2\t\t\t\t\t\t\t\t\t\t\t$defuse_splitr_seq\t$tophat_splitr_seq\n";
+      print $ofh1 "$sample\tFUSION COULD NOT BE ANNOTATED\t$source\t$confidence\t$star_breakpoint\t$tophat_breakpoint\t$defuse_junction\t$defuse_clusterid\t$star_junction_reads\t$star_spanning_frags\t$tophat_junction_reads\t$tophat_spanning_frags\t$defuse_splitr_count\t$defuse_span_count\t\t\t$chr1\t$pos1\t$strand1\t\t\t$chr2\t$pos2\t$strand2\t\t\t\t\t\t\t\t\t\t\t$defuse_splitr_seq\t$tophat_splitr_seq\t$defuse_cgp_filter\n";
     }
   }
   close($ifh1);
@@ -756,6 +759,7 @@ sub parse_defuse_file {
     $defuse_data{$breakpoint}{'sequence'} = $fields[$DEFUSE_SEQUENCE-1];
     $defuse_data{$breakpoint}{'split_reads'} = $fields[$DEFUSE_SPLIT_READS-1];
     $defuse_data{$breakpoint}{'span_reads'} = $fields[$DEFUSE_SPAN_READS-1];
+    $defuse_data{$breakpoint}{'cgp_filter'} = $fields[$DEFUSE_CGP_FILTER-1];
   }
   close ($ifh1);
 
