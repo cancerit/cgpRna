@@ -76,7 +76,7 @@ const my $SPAN_COVERAGE_MIN_VAL => 0.6; # span_coverage_min - > 0.6
 		chomp;
 		my $line = $_;
 		if($line =~ m/^breakpoint_ref/){
-		  print $ofh $line."\n";
+		  print $ofh $line."\tcgp_defuse_filter\n";
 		}
 		else{
 		  my @fields = split $DEFUSE_SPLIT_CHAR, $line;
@@ -84,7 +84,10 @@ const my $SPAN_COVERAGE_MIN_VAL => 0.6; # span_coverage_min - > 0.6
 		     $fields[$CDNA_BREAKSEQS_PERCIDENT_COL-1] < $CDNA_BREAKSEQS_PERCIDENT_VAL && $fields[$EST_BREAKSEQS_PERCIDENT_COL-1] < $EST_BREAKSEQS_PERCIDENT_VAL && 
 		     $fields[$GENOME_BREAKSEQS_PERCIDENT_COL-1] < $GENOME_BREAKSEQS_PERCIDENT_VAL && $fields[$SPAN_COVERAGE_MIN_COL-1] > $SPAN_COVERAGE_MIN_VAL) {
 		   
-		   print $ofh $line."\n";		     
+		    print $ofh $line."\t1\n";		     
+		  }
+		  else{
+		    print $ofh $line."\t0\n";
 		  }
 		} 
   }
@@ -147,7 +150,8 @@ __END__
 
 =head1 defuse_fusions.pl
 
-Filters the defuse data based on validation carried out by Graham Bignell on the CTTV RNA-Seq cell lines data set. Details of the filters are provided in the constants section at the top of the script.
+Adds a flag (called cgp_defuse_filter) to the raw defuse data based on validation carried out by Graham Bignell on the CTTV RNA-Seq cell lines data set. 
+The flag can be used to filter the data in downstream analysis with the aim of reducing the number of false positive fusions called. Details of the filter thresholds can be found in the constants section at the top of the script.
 
 =head1 SYNOPSIS
 
@@ -158,3 +162,4 @@ defuse_fusions.pl [options]
     -sample   		-s   	Sample name
     -input    		-i   	deFuse input file containing fusions called by the cgpRna pipeline.
 
+In the output file, a row with a 1 in the column cgp_defuse_filter means that this fusion has passed the set of filter thresholds whereas 0 means this fusion can potentially be filtered out.
