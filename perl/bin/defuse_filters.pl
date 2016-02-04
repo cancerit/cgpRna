@@ -119,33 +119,6 @@ sub setup {
 	return \%opts;
 }
 
-sub write_output {
-	my $options = shift;
-	
-	my $tmp = $options->{'tmp'};
-	my $sample = $options-> {'sample'};
-	my $program = $options-> {'program'};
-	my $header = $options->{'header'};
-	my $outdir = $options->{'outdir'};
-	my $fusions_file = File::Spec->catfile($tmp,"$sample.fusions.filtered");
-	my $output_file = File::Spec->catfile($outdir,"$sample.$program-fusion.normals.filtered.txt");
-	PCAP::Cli::file_for_reading('filtered.fusions', $fusions_file);
-	
-	open (my $ifh, $fusions_file) or die "Could not open file $fusions_file $!";
-	open(my $ofh, '>', $output_file) or die "Could not open file $output_file $!";
-	print $ofh $header."\n";
-	while (<$ifh>) {
-		chomp;
-		my $line = $_;
-		$line =~ s/\s/\t/g;
-		print $ofh $line."\n";
-	}
-	close ($ifh);
-	close ($ofh);	
-	
-	return 1;
-}
-
 __END__
 
 =head1 defuse_fusions.pl
