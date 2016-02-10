@@ -49,7 +49,7 @@ use PCAP::Cli;
 use PCAP::Threaded;
 use PCAP::Bwa::Meta;
 use PCAP::Bam;
-use Sanger::CGP::Defuse;
+use Sanger::CGP::CgpRna;
 
 const my $DEFUSE => q{ %s -c %s -p %d -o %s -n %s -l %s -s direct -1 %s -2 %s};
 const my $BAMFASTQ => q{ exclude=QCFAIL,SECONDARY,SUPPLEMENTARY T=%s S=%s O=%s O2=%s F=%s F2=%s filename=%s};

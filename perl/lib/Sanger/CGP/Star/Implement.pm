@@ -49,7 +49,9 @@ use PCAP::Cli;
 use PCAP::Threaded;
 use PCAP::Bwa::Meta;
 use PCAP::Bam;
-use Sanger::CGP::Star;
+use Sanger::CGP::CgpRna;
+
+use Data::Dumper;
 
 const my $BAMFASTQ => q{ exclude=QCFAIL,SECONDARY,SUPPLEMENTARY T=%s S=%s O=%s O2=%s gz=1 level=1 F=%s F2=%s filename=%s};
 const my $FUSIONS_FILTER => q{ -i %s -s %s -n %s -o %s -p star};
@@ -59,11 +61,16 @@ const my $STAR_FUSION_SECTION => 'star-fusion-parameters';
 const my $STAR => q{ %s %s --readFilesIn %s };
 const my $STAR_FUSION => q{ %s --chimeric_out_sam %s --chimeric_junction %s --ref_GTF %s --min_novel_junction_support 10 --min_alt_pct_junction 10.0 --out_prefix %s };
 const my $SAMTOBAM => q{ view -bS %s > %s };
-const my $BAMSORT => q{ I=%s/Aligned.out.bam fixmate=1 inputformat=bam level=1 tmpfile=%s/tmp O=%s/Aligned.sortedByCoord.out.bam inputthreads=%s outputthreads=%s};
-
+const my $BAMSORT => q{ I=%s fixmate=1 inputformat=bam level=1 tmpfile=%s/tmp O=%s inputthreads=%s outputthreads=%s};
 
 sub check_input {
 	my $options = shift;
+
+  my $fusion_mode;
+	
+	if(exists $options->{'fusion_mode'}){
+	  $fusion_mode = $options->{'fusion_mode'};
+	}
 
 	my $ref_data = $options->{'refdataloc'};
 	my $species = $options->{'species'};
@@ -72,8 +79,11 @@ sub check_input {
 	my $ref_build_loc = File::Spec->catdir($ref_data, $species, $ref_build);
 
 	# Check the gtf and normal fusions files exist
-	PCAP::Cli::file_for_reading('gtf-file', File::Spec->catfile($ref_build_loc, $gene_build, $options->{'gtffilename'}));
-	PCAP::Cli::file_for_reading('normals-list',File::Spec->catfile($ref_build_loc,$options->{'normalfusionslist'}));
+	PCAP::Cli::file_for_reading('gtf-file', File::Spec->catfile($ref_build_loc, 'star', $gene_build, $options->{'gtffilename'}));
+
+	if($fusion_mode){
+	  PCAP::Cli::file_for_reading('normals-list',File::Spec->catfile($ref_build_loc,$options->{'normalfusionslist'}));
+	}
 	
 	my $input_meta = PCAP::Bwa::Meta::files_to_meta($options->{'tmp'}, $options->{'raw_files'}, $options->{'sample'});
 	
@@ -139,6 +149,67 @@ sub filter_fusions {
 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
 	return 1;
+}
+
+sub format_rg_tags {
+  my $options = shift;
+
+  my $sample = $options->{'sample'};
+  
+  # Format the PU RG tag if the npg_run and lane_pos parameters have been provided
+  $options->{'PU'} = $options->{'npg'}."_".$options->{'lane_pos'} if(defined $options->{'npg'} && $options->{'lane_pos'});
+  
+  # Check the input data
+	my $input_meta = $options->{'meta_set'};
+	
+	# Get the RG header information to format the @RG line for the mapped BAM
+	my $first_file = $input_meta->[0];
+	my $rg_line;
+  
+  # Retrieve RG tag information for the input fastq or BAM
+	if($first_file->fastq) {
+		$rg_line = $first_file->rg_header(q{\t});
+	}
+	else {
+		($rg_line, undef) = PCAP::Bam::rg_line_for_output($first_file->in, $sample);
+		$rg_line = $rg_line;
+	}
+	
+	# Prepare the new RG tags for the CGP mapped BAM
+	my @rg_tags = split(/\\t/, $rg_line);
+	my @comment_rg_tags = '@CO';
+	my @rg_header;
+	push @rg_header, 'ID:'.$options->{'ID'} if(exists $options->{'ID'});
+	push @rg_header, 'LB:'.$options->{'LB'} if(exists $options->{'LB'});
+	# Quotes need to be around the description (DS:) tag text
+	push @rg_header, '"DS:'.$options->{'DS'}.'"' if(exists $options->{'DS'});
+	push @rg_header, 'PL:'.$options->{'PL'} if(exists $options->{'PL'});
+	push @rg_header, 'PU:'.$options->{'PU'} if(exists $options->{'PU'});
+
+	foreach my $r(@rg_tags){
+	  unless($r eq '@RG'){
+	    my @tag = split ':', $r;
+	    if(!exists $options->{$tag[0]}){
+	      $r = '"'.$r.'"' if($r =~ /DS:/);
+	      push @rg_header, $r;
+	    }
+	    # Once the RG tag has been formatted correctly for the CGP mapped BAM, add any pre-existing tags to a comment line to store what was in the BAM RG tags previously
+	    $r = 'original_'.$r;
+	    push @comment_rg_tags, $r;
+	  }
+	}
+	
+	# Write the old RG tags to a comment line in a file which STAR will read in using the outSAMheaderCommentFile parameter
+	my $comment_file = File::Spec->catfile($options->{'tmp'}, 'star_comment_file.txt');
+	open(my $ofh, '>', $comment_file) or die "Could not open file '$comment_file' $!";
+  print $ofh join("\t",@comment_rg_tags);
+	close($ofh);
+	
+	$options->{'commentfile'} = $comment_file unless($first_file->fastq);
+
+	$options->{'rgline'} = join(" ",@rg_header);
+
+  return 1;
 }
 
 sub prepare {
@@ -217,7 +288,13 @@ sub prepare {
 }
 
 sub process_star_params {
-	my ($options, $fusion_mode) = @_;
+	my $options = shift;
+	
+	my $fusion_mode;
+	
+	if(exists $options->{'fusion_mode'}){
+	  $fusion_mode = $options->{'fusion_mode'};
+	}
 	
 	my $ini_file = $options->{'config'};
 	my $cfg = new Config::IniFiles( -file => $ini_file ) or die "Could not open config file: $ini_file";
@@ -230,12 +307,14 @@ sub process_star_params {
 	$cfg->setval($STAR_DEFAULTS_SECTION, 'runThreadN', $threads);
 	$cfg->setval($STAR_DEFAULTS_SECTION, 'outFileNamePrefix', $options->{'tmp'}.'/star/');
 	
-	my $gtf = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'}, $options->{'genebuild'}, $options->{'gtffilename'});
-	my $star_index = File::Spec->catdir($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'}, 'star-index');
+	my $gtf = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'}, 'star', $options->{'genebuild'}, $options->{'gtffilename'});
+	my $star_index = File::Spec->catdir($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'}, 'star');
 	
 	$cfg->setval($STAR_DEFAULTS_SECTION, 'sjdbGTFfile', $gtf);
 	$cfg->setval($STAR_DEFAULTS_SECTION, 'genomeDir', $star_index);
 	$cfg->setval($STAR_DEFAULTS_SECTION, 'outSAMattrRGline', $options->{'rgline'}) if(defined $options->{'rgline'});
+	$cfg->setval($STAR_DEFAULTS_SECTION, 'outSAMheaderCommentFile', $options->{'commentfile'}) if(defined $options->{'commentfile'});
+	$cfg->setval($STAR_DEFAULTS_SECTION, 'quantMode', 'TranscriptomeSAM') unless(defined $fusion_mode);
 	
 	my @star_command;
 	my @star_defaults = $cfg->Parameters($STAR_DEFAULTS_SECTION);
@@ -255,7 +334,6 @@ sub process_star_params {
 				push @star_command, "--".$key." ".$cfg->val($STAR_FUSION_SECTION, $key);
 			}
 		}
-		
 	}
 	
 	return join(" ", @star_command);
@@ -298,7 +376,7 @@ sub sam_to_bam {
 	return 1;
 }
 
-sub star_chimeric {
+sub star {
 	my $options = shift;
 	
 	my $tmp = $options->{'tmp'};
@@ -308,28 +386,11 @@ sub star_chimeric {
 	$threads = $options->{'threads'} if($options->{'threads'} < $STAR_MAX_CORES);
 	my $sample = $options->{'sample'};
 	
-	# Check the input data
-	my $input_meta = $options->{'meta_set'};
+	# Ensure the correct RG tags will be in the mapped BAM
+	format_rg_tags($options);
 	
-	# Get the RG header information to format parameters --rg-id and --rg-sample
-	my $first_file = $input_meta->[0];
-	my $rg_line;
-
-	if($first_file->fastq) {
-		$rg_line = $first_file->rg_header(q{\t});
-	}
-	else {
-		($rg_line, undef) = PCAP::Bam::rg_line_for_output($first_file->in, $sample);
-		$rg_line = $rg_line;
-	}
-	
-	# Format the @RG header line for the output BAM file. Quotes need to be around the description (DS:) tag text
-	$rg_line =~ s/^(.*)(DS:[^\\]+)(\\t.*$)/$1"$2"$3/;
-	$rg_line =~ s/^\@RG\\t//;
-	$rg_line =~ s/\\t/ /g;
-	$options->{'rgline'} = $rg_line;
-	
-	my $star_params = process_star_params($options, 1);
+	# Format the star command
+	my $star_params = process_star_params($options);
 	
 	my @files1;
 	my @files2;
@@ -351,6 +412,8 @@ sub star_chimeric {
 	}
 	else{
 		my $raw_files = $options->{'raw_files'};
+		my $input_meta = $options->{'meta_set'};
+		my $first_file = $input_meta->[0];
 		
 		# If there are multiple input fastqs, some gzipped and some not, need to check both the input directory and raw_files array for the locations of the input files
 		if($options->{'mixedfq'}){
@@ -422,15 +485,24 @@ sub star_chimeric {
 	
 
 	my $stardir = File::Spec->catdir($options->{'tmp'},'star');
-	my $bamsort_command = which('bamsort') || die "Unable to find 'bamsort' in path\n";
+	my $bamsort_path = which('bamsort') || die "Unable to find 'bamsort' in path\n";
 	
-	$bamsort_command .= sprintf $BAMSORT, 	$stardir,
+	my $bamsort_command1 = $bamsort_path.sprintf $BAMSORT, File::Spec->catfile($stardir, 'Aligned.out.bam'),
 														$stardir,
-														$stardir,
+														File::Spec->catfile($stardir, 'Aligned.sortedByCoord.out.bam'),
 														$threads,
 														$threads;
 
-	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $bamsort_command, 0);
+	my $bamsort_command2 = $bamsort_path.sprintf $BAMSORT, File::Spec->catfile($stardir, 'Aligned.toTranscriptome.out.bam'),
+														$stardir,
+														File::Spec->catfile($stardir, 'Aligned.toTranscriptome.sortedByCoord.out.bam'),
+														$threads,
+														$threads;
+  my @commands;
+  push @commands, $bamsort_command1;
+  push @commands, $bamsort_command2;
+
+	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), \@commands, 0);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
 	
 	return 1;
@@ -448,15 +520,15 @@ sub star_fusion {
 	die "Some star-fusion setup files are missing, please check the output from STAR and re-run the previous stage (star) if necessary." unless(-e $chimeric_junction && -e $chimeric_sam);
 	
 	my $sample = $options->{'sample'};
-	my $gtf = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'}, $options->{'genebuild'}, $options->{'gtffilename'});
+	my $gtf = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'}, 'star',$options->{'genebuild'}, $options->{'gtffilename'});
 	
-	my $command = sprintf $STAR_FUSION,	$options->{'starfusionpath'},
+	my $commands = sprintf $STAR_FUSION,	$options->{'starfusionpath'},
 						$chimeric_sam,
 						$chimeric_junction,
 						$gtf,
 						$star_dir."/$sample";
 																			
-	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
+	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $commands, 0);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
 	
 	return 1;
