@@ -49,7 +49,7 @@ use PCAP::Cli;
 use PCAP::Threaded;
 use PCAP::Bwa::Meta;
 use PCAP::Bam;
-use Sanger::CGP::Tophat;
+use Sanger::CGP::CgpRna;
 
 const my @BOWTIE1_SUFFIXES => qw(.1.ebwt .2.ebwt .3.ebwt .4.ebwt .rev.1.ebwt .rev.2.ebwt .fa .fa.fai);
 const my @BOWTIE2_SUFFIXES => qw(.1.bt2 .2.bt2 .3.bt2 .4.bt2 .rev.1.bt2 .rev.2.bt2 .fa .fa.fai);
