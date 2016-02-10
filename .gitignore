@@ -1,0 +1,10 @@
+*.o
+/perl/Makefile
+/perl/blib
+/perl/pm_to_blib
+/install_tmp
+/setup.log
+/LICENSE
+/README.md
+/perl/MYMETA.json
+/perl/MYMETA.yml
