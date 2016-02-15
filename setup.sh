@@ -117,6 +117,7 @@ set -eu
 
 # cleanup inst_path
 mkdir -p $INST_PATH/bin
+mkdir -p $INST_PATH/config
 cd $INST_PATH
 INST_PATH=`pwd`
 cd $INIT_DIR
@@ -231,6 +232,7 @@ echo -n "Installing cgpRna..."
   make
   make test
   make install
+  cp $INIT_DIR/perl/config/star.ini $INST_PATH/perl/config/
 ) >>$INIT_DIR/setup.log 2>&1
 done_message "" "cgpRna install failed."
 
