@@ -232,7 +232,7 @@ echo -n "Installing cgpRna..."
   make
   make test
   make install
-  cp $INIT_DIR/perl/config/star.ini $INST_PATH/perl/config/
+  cp $INIT_DIR/perl/config/star.ini $INST_PATH/config/
 ) >>$INIT_DIR/setup.log 2>&1
 done_message "" "cgpRna install failed."
 
