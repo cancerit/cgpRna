@@ -179,7 +179,21 @@ sub format_rg_tags {
 	my @rg_tags = split(/\\t/, $rg_line);
 	my @comment_rg_tags = '@CO';
 	my @rg_header;
-	push @rg_header, 'ID:'.$options->{'ID'} if(exists $options->{'ID'});
+	
+	# Need to make sure the ID tag is the first
+	if(exists $options->{'ID'}){
+	  push @rg_header, 'ID:'.$options->{'ID'};
+	}
+	else{
+	  foreach my $r(@rg_tags){
+	    my @tag = split ':', $r;
+	    if($tag[0] eq 'ID'){
+	      push @rg_header, $r;
+	      push @comment_rg_tags, 'original_'.$r;
+	    }
+	  }
+	}
+
 	push @rg_header, 'LB:'.$options->{'LB'} if(exists $options->{'LB'});
 	# Quotes need to be around the description (DS:) tag text
 	push @rg_header, '"DS:'.$options->{'DS'}.'"' if(exists $options->{'DS'});
@@ -187,7 +201,7 @@ sub format_rg_tags {
 	push @rg_header, 'PU:'.$options->{'PU'} if(exists $options->{'PU'});
 
 	foreach my $r(@rg_tags){
-	  unless($r eq '@RG'){
+	  unless($r eq '@RG' || $r =~ /^ID/){
 	    my @tag = split ':', $r;
 	    if(!exists $options->{$tag[0]}){
 	      $r = '"'.$r.'"' if($r =~ /DS:/);
@@ -199,10 +213,13 @@ sub format_rg_tags {
 	  }
 	}
 	
+	my $comment_line = join("\t",@comment_rg_tags);
+	$comment_line =~ s/"//g;
+	
 	# Write the old RG tags to a comment line in a file which STAR will read in using the outSAMheaderCommentFile parameter
 	my $comment_file = File::Spec->catfile($options->{'tmp'}, 'star_comment_file.txt');
 	open(my $ofh, '>', $comment_file) or die "Could not open file '$comment_file' $!";
-  print $ofh join("\t",@comment_rg_tags);
+  print $ofh $comment_line;
 	close($ofh);
 	
 	$options->{'commentfile'} = $comment_file unless($first_file->fastq);
@@ -342,10 +359,9 @@ sub process_star_params {
 sub prog_version {
 	my $options = shift;
 	my $star_path = $options->{'starpath'};
-
-	if(! defined $options->{'starpath'} || $options->{'starpath'} eq ''){
+  if(! defined $star_path || $star_path eq ''){
 		$star_path = _which('STAR');
-		$options->{'starath'} = $star_path;
+		$options->{'starpath'} = $star_path;
 	}
 
 	my $star_version;
@@ -471,6 +487,10 @@ sub star {
 				
 			}
 		}
+	}
+	
+	if(! defined $options->{'starpath'} || $options->{'starpath'} eq ''){
+	  my $version = prog_version($options);
 	}
 	
 	my $star_command = sprintf $STAR,	$options->{'starpath'},
