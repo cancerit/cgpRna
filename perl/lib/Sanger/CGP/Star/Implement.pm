@@ -345,7 +345,7 @@ sub prog_version {
 
 	if(! defined $options->{'starpath'} || $options->{'starpath'} eq ''){
 		$star_path = _which('STAR');
-		$options->{'starath'} = $star_path;
+		$options->{'starpath'} = $star_path;
 	}
 
 	my $star_version;
