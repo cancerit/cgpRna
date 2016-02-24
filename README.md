@@ -40,11 +40,23 @@ and fusion gene detection are included in this codebase but this will be added
 to over time with; differential expression, gene/transcript quantification, splice 
 variant analysis and allele specific expression.
 
-Installation
-============
+### Dependencies/Installation
 
 ./setup.sh path_to_install_to
 
-Installation Dependencies
-=========================
+Please install Perl package [PCAP-core](https://github.com/ICGC-TCGA-PanCancer/PCAP-core/releases) first.
 
+Prerequisites for the [RSeQC](http://rseqc.sourceforge.net/#installation) software are:
+* gcc
+* [python2.7](https://www.python.org/downloads/) (The minimum version the pipeline has been tested with is python-2.7.6
+* [R](https://www.r-project.org/)
+* [numpy](http://www.numpy.org/)
+ 
+Once that is done, run the following to install cgpRna:
+./setup.sh path_to_install_to
+
+### Tools installed by setup.sh
+
+* Some CPAN hosted libraries, see perl/Makefile.PL
+* [STAR](https://github.com/alexdobin/STAR/releases)
+* [RSeQC](http://rseqc.sourceforge.net)
