@@ -42,8 +42,6 @@ variant analysis and allele specific expression.
 
 ### Dependencies/Installation
 
-./setup.sh path_to_install_to
-
 Please install Perl package [PCAP-core](https://github.com/ICGC-TCGA-PanCancer/PCAP-core/releases) first.
 
 Prerequisites for the [RSeQC](http://rseqc.sourceforge.net/#installation) software are:
@@ -53,6 +51,7 @@ Prerequisites for the [RSeQC](http://rseqc.sourceforge.net/#installation) softwa
 * [numpy](http://www.numpy.org/)
  
 Once that is done, run the following to install cgpRna:
+
 ./setup.sh path_to_install_to
 
 ### Tools installed by setup.sh
