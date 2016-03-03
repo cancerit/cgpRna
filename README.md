@@ -50,9 +50,11 @@ Prerequisites for the [RSeQC](http://rseqc.sourceforge.net/#installation) softwa
 * [R](https://www.r-project.org/)
 * [numpy](http://www.numpy.org/)
  
-Once that is done, run the following to install cgpRna:
+Once that is done and your $PATH environment variable has been updated so that newly installed software can be found, run the following to install cgpRna:
 
 ./setup.sh path_to_install_to
+
+N.B. the path_to_install_to should be the same as the install location used for PCAP-Core above.
 
 ### Tools installed by setup.sh
 
