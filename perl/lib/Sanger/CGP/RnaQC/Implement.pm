@@ -52,7 +52,7 @@ sub check_input {
   # Check all the required input files exist
   PCAP::Cli::file_for_reading('bam-stats', File::Spec->catfile($inputdir, "$sample.bas"));
   PCAP::Cli::file_for_reading('bam-stats', File::Spec->catfile($inputdir, "$sample.transcriptome.bas"));
-	PCAP::Cli::file_for_reading('gene-coverage', File::Spec->catfile($inputdir, "$sample.coverage.geneBodyCoverage.r"));
+	PCAP::Cli::file_for_reading('gene-coverage', File::Spec->catfile($inputdir, "$sample.geneBodyCoverage.r"));
 	PCAP::Cli::file_for_reading('rrna-percentage', File::Spec->catfile($inputdir, "$sample.rrna.txt"));
 	PCAP::Cli::file_for_reading('read-distribution', File::Spec->catfile($inputdir, "$sample.read_dist.txt"));
 
@@ -64,8 +64,8 @@ sub gene_coverage {
   
   my $inputdir = $options->{'indir'};
   my $sample = $options->{'sample'};
-  my $gene_coverage_r_file = File::Spec->catfile($inputdir, "$sample.coverage.geneBodyCoverage.r");
-  my $updated_coverage_r_file = File::Spec->catfile($inputdir, "$sample.coverage.geneBodyCoverage_UPDATED.r");
+  my $gene_coverage_r_file = File::Spec->catfile($inputdir, "$sample.geneBodyCoverage.r");
+  my $updated_coverage_r_file = File::Spec->catfile($inputdir, "$sample.geneBodyCoverage_UPDATED.r");
   
   # Modify the R script so that it runs the shapiro-wilk normality test and outputs that test statistic plus p-value to a text file. Also draw the gene body coverage graph with a more distinctly coloured line
   open (my $ifh, $gene_coverage_r_file) or die "Could not open file $gene_coverage_r_file $!";

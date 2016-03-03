@@ -124,10 +124,8 @@ cd $INIT_DIR
 
 # make sure that build is self contained
 unset PERL5LIB
-ARCHNAME=`perl -e 'use Config; print $Config{archname};'`
 PERLROOT=$INST_PATH/lib/perl5
-PERLARCH=$PERLROOT/$ARCHNAME
-export PERL5LIB="$PERLROOT:$PERLARCH"
+export PERL5LIB="$PERLROOT"
 
 # Set PYTHONPATH as well so that RSeQC can be installed
 unset PYTHONPATH
@@ -171,15 +169,12 @@ if [ -e $SETUP_DIR/star.success ]; then
 else
 (
   cd $SETUP_DIR
-  set -x
-  if [ ! -e star ]; then
-    get_distro "star" $SOURCE_STAR
-    mkdir -p star
-    tar --strip-components 1 -C star -zxf star.tar.gz
-  fi
-  cp star/bin/Linux_x86_64/STAR $INST_PATH/bin/.
-  cp star/STAR-Fusion-*/STAR-Fusion $INST_PATH/bin/.
-  cp star/STAR-Fusion-*/lib/* $PERLROOT/.
+  get_distro "star" $SOURCE_STAR &&
+  mkdir -p star && 
+  tar --strip-components 1 -C star -zxf star.tar.gz &&
+  cp star/bin/Linux_x86_64/STAR $INST_PATH/bin/. &&
+  cp star/STAR-Fusion-*/STAR-Fusion $INST_PATH/bin/. &&
+  cp star/STAR-Fusion-*/lib/* $PERLROOT/. &&
   touch $SETUP_DIR/star.success
   )>>$INIT_DIR/setup.log 2>&1
 fi
@@ -193,14 +188,11 @@ if [ -e $SETUP_DIR/rseqc.success ]; then
 else
 (
   cd $SETUP_DIR
-  set -x
-  if [ ! -e rseqc ]; then
-    get_distro "rseqc" $SOURCE_RSEQC
-    mkdir -p rseqc
-    tar --strip-components 1 -C rseqc -zxf rseqc.tar.gz
-  fi
-  cd $SETUP_DIR/rseqc
-  python ./setup.py install --prefix=$INST_PATH
+  get_distro "rseqc" $SOURCE_RSEQC &&
+  mkdir -p rseqc &&
+  tar --strip-components 1 -C rseqc -zxf rseqc.tar.gz &&
+  cd $SETUP_DIR/rseqc &&
+  python ./setup.py install --prefix=$INST_PATH &&
   touch $SETUP_DIR/rseqc.success
   )>>$INIT_DIR/setup.log 2>&1
 fi
@@ -227,11 +219,11 @@ done_message "" "Failed during installation of core dependencies."
 # Install cgpRna code
 echo -n "Installing cgpRna..."
 (
-  cd $INIT_DIR/perl
-  perl Makefile.PL INSTALL_BASE=$INST_PATH
-  make
-  make test
-  make install
+  cd $INIT_DIR/perl &&
+  perl Makefile.PL INSTALL_BASE=$INST_PATH &&
+  make &&
+  make test &&
+  make install &&
   cp $INIT_DIR/perl/config/star.ini $INST_PATH/config/
 ) >>$INIT_DIR/setup.log 2>&1
 done_message "" "cgpRna install failed."
