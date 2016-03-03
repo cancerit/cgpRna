@@ -54,7 +54,7 @@ Once that is done and your $PATH environment variable has been updated so that n
 
 ./setup.sh path_to_install_to
 
-N.B. the path_to_install_to should be the same as the install location used for PCAP-Core above.
+N.B. the path_to_install_to should be the same as the install location used for PCAP-core above.
 
 ### Tools installed by setup.sh
 
