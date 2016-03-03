@@ -33,7 +33,6 @@
 
 
 use ExtUtils::MakeMaker;
-use File::ShareDir::Install;
 
 WriteMakefile(
   NAME          => 'cgpRna',
@@ -50,6 +49,3 @@ WriteMakefile(
                      'File::Which' => 1.09,
                    }
 );
-
-package MY;
-use File::ShareDir::Install qw( postamble );
