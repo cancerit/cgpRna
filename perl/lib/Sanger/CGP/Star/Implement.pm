@@ -62,6 +62,7 @@ const my $STAR => q{ %s %s --readFilesIn %s };
 const my $STAR_FUSION => q{ %s --chimeric_out_sam %s --chimeric_junction %s --ref_GTF %s --min_novel_junction_support 10 --min_alt_pct_junction 10.0 --out_prefix %s };
 const my $SAMTOBAM => q{ view -bS %s > %s };
 const my $BAMSORT => q{ I=%s fixmate=1 inputformat=bam level=1 tmpfile=%s/tmp O=%s inputthreads=%s outputthreads=%s};
+const my $HD_LINE => '@HD	VN:1.4	SO:unsorted';
 
 sub check_input {
 	my $options = shift;
@@ -332,6 +333,7 @@ sub process_star_params {
 	$cfg->setval($STAR_DEFAULTS_SECTION, 'outSAMattrRGline', $options->{'rgline'}) if(defined $options->{'rgline'});
 	$cfg->setval($STAR_DEFAULTS_SECTION, 'outSAMheaderCommentFile', $options->{'commentfile'}) if(defined $options->{'commentfile'});
 	$cfg->setval($STAR_DEFAULTS_SECTION, 'quantMode', 'TranscriptomeSAM') unless(defined $fusion_mode);
+	$cfg->setval($STAR_DEFAULTS_SECTION, 'outSAMheaderHD', $HD_LINE);
 	
 	my @star_command;
 	my @star_defaults = $cfg->Parameters($STAR_DEFAULTS_SECTION);
