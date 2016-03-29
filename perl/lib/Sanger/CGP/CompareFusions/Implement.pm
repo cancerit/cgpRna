@@ -38,21 +38,27 @@ use autodie qw(:all);
 use English qw( -no_match_vars );
 use Const::Fast qw(const);
 use File::Which qw(which);
+use File::Basename;
 use FindBin qw($Bin);
 use File::Spec;
 use PCAP::Cli;
 use PCAP::Threaded;
 use Sanger::CGP::CompareFusions::FusionAnnotation;
 use Sanger::CGP::CgpRna;
+use Sanger::CGP::Vagrent::TranscriptSource::FileBasedTranscriptSource;
+use Sanger::CGP::Vagrent::Data::GenomicRegion;
+use Sanger::CGP::Vagrent::Data::Transcript;
 
 use Data::Dumper;
 
-const my $BEDTOOLS_CLOSEST => q{ closest -d -a %s -b %s | sort -k4,5 > %s};
-const my $BEDTOOLS_PAIRTOPAIR => q{ pairtopair -a %s -b %s -f 1.0 > %s};
+const my $BEDTOOLS_CLOSEST => q{ closest -s -a %s -b %s | sort -k4,4 > %s};
+const my $BEDTOOLS_PAIRTOPAIR => q{ pairtopair -a %s -b %s -slop 5 > %s};
+const my $SORT => q{ sort -k%d,%d %s > %s};
+const my $TRI_SORT => q{ sort -k%d,%d -k%d,%dr -k%d,%dr %s > %s};
+const my $JOIN => q{ join -1 8 -2 8 %s %s > %s };
+const my $OUTPUT_HEADER => "sample\tfusion_name\talgorithm\tconfidence_score\tstar_junction\ttophat_junction\tdefuse_junction\tdefuse_cluster_id\tstar_junction_reads\tstar_spanning_frags\ttophat_junction_reads\ttophat_spanning_frags\tdefuse_splitr_count\tdefuse_span_count\t5'_gene\t5'_gene_id\t5'_chr\t5'_pos\t5'_strand\t3'_gene\t3'_gene_id\t3'_chr\t3'_pos\t3'_strand\t5'_transcript_id\t5'_transcript_src\t5'_exon_num\t5'_exon_start\t5'_exon_end\t3'_transcript_id\t3'_transcript_src\t3'_exon_num\t3'_exon_start\t3'_exon_end\tdefuse_splitr_sequence\ttophat_splitr_sequence\tcgp_defuse_filter\n";
 
-const my $OUTPUT_GENE_HEADER => "genes\tbreakpoints\tcalled_by\tchr1\tstrand1\tgene1\tgene1_start\tgene1_end\tchr2\tstrand2\tgene2\tgene2_start\tgene2_end\n";
-const my $OUTPUT_EXON_HEADER => "exons\tbreakpoints\tcalled_by\tchr1\tstrand1\tgene1\ttranscript1_id\texon1_num\texon1_start\texon1_end\tchr2\tstrand2\tgene2\ttranscript2_id\texon2_num\texon2_start\texon2_end\n";
-
+# This filter on biotypes is currently not used in subroutine filter_gtf (uncomment the line to switch on).
 my %ALLOWED_BIOTYPES = (
 	antisense => 1,
 	IG_C_gene => 1,
@@ -75,14 +81,30 @@ my %ALLOWED_BIOTYPES = (
 	TR_V_gene => 1,
 );
 
+my %CONFIDENCE_SCORES = (
+  STD => '76%',
+  SD => '77%',
+  ST => '48%',
+  TD => '25%',
+  D => '58%',
+  T => '50%',
+  S => '22%',
+);
+
 # Position of the columns in the tophat-fusion filtered file used to format the bed file.
 const my $TOPHAT_SPLIT_CHAR => '\t';
+const my $TOPHAT_GENE1 => 3;
 const my $TOPHAT_CHR1 => 4;
 const my $TOPHAT_POS1 => 5;
 const my $TOPHAT_STRAND1 => 13;
+const my $TOPHAT_GENE2 => 6;
 const my $TOPHAT_CHR2 => 7;
 const my $TOPHAT_POS2 => 8;
 const my $TOPHAT_STRAND2 => 14;
+const my $TOPHAT_SPAN_READS => 9;
+const my $TOPHAT_SPAN_MATE_PAIRS => 10;
+const my $TOPHAT_SPAN_MATE_PAIRS2 => 11;
+const my $TOPHAT_SCORE => 12;
 const my $TOPHAT_BREAKREF => 1;
 const my $TOPHAT_HEADER_PATTERN => 'num_spanning_reads';
 
@@ -91,14 +113,26 @@ const my $DEFUSE_SPLIT_CHAR => '\t';
 const my $DEFUSE_CHR1 => 26;
 const my $DEFUSE_POS1 => 39;
 const my $DEFUSE_STRAND1 => 36;
+const my $DEFUSE_GENENAME1 => 32;
+const my $DEFUSE_GENEID1 => 22;
 const my $DEFUSE_CHR2 => 27;
 const my $DEFUSE_POS2 => 40;
 const my $DEFUSE_STRAND2 => 37;
+const my $DEFUSE_GENENAME2 => 33;
+const my $DEFUSE_GENEID2 => 23;
 const my $DEFUSE_BREAKREF => 1;
+const my $DEFUSE_CLUSTER_ID => 2;
+const my $DEFUSE_SEQUENCE => 3;
+const my $DEFUSE_SPLIT_READS => 4;
+const my $DEFUSE_SPAN_READS => 62;
+const my $DEFUSE_CGP_FILTER => 73;
 const my $DEFUSE_HEADER_PATTERN => 'cluster_id';
 
 # Position of the columns in the star-fusion output file used to format fusion breakpoint references.
 const my $STAR_SPLIT_CHAR => '\t';
+const my $STAR_FUSION_NAME => 2;
+const my $STAR_JUNCTION_READS => 3;
+const my $STAR_SPANNING_FRAGS => 4;
 const my $STAR_CHR1 => 7;
 const my $STAR_POS1 => 8;
 const my $STAR_STRAND1 => 9;
@@ -106,37 +140,30 @@ const my $STAR_CHR2 => 13;
 const my $STAR_POS2 => 14;
 const my $STAR_STRAND2 => 15;
 const my $STAR_BREAKREF => 1;
+const my $STAR_GENENAME1 => 5;
+const my $STAR_GENEID1 => 6;
+const my $STAR_GENENAME2 => 11;
+const my $STAR_GENEID2 => 12;
+const my $STAR_DIS_EXON1 => 10;
+const my $STAR_DIS_EXON2 => 16;
 const my $STAR_HEADER_PATTERN => 'fusion_name';
 
-# Position of the columns in the SOAPfuse output file used to format fusion breakpoint references.
-const my $SOAP_SPLIT_CHAR => '\t';
-const my $SOAP_CHR1 => 3;
-const my $SOAP_POS1 => 5;
-const my $SOAP_STRAND1 => 4;
-const my $SOAP_CHR2 => 8;
-const my $SOAP_POS2 => 10;
-const my $SOAP_STRAND2 => 9;
-const my $SOAP_BREAKREF => 1;
-const my $SOAP_HEADER_PATTERN => 'up_chr';
-
 sub annotate_bed {
-  my ($index, $options) = @_;
-  return 1 if(exists $options->{'index'} && $index != $options->{'index'});
+  my $options = shift;
   
   my $tmp = $options->{'tmp'};
-  return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), $index);
+  return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
 
   my $sample = $options->{'sample'};
-  my $exon_gtf = filter_gtf($options->{'gtf'}, $tmp, 'exon');
-  my $gene_gtf = filter_gtf($options->{'gtf'}, $tmp, 'gene');
+  my $exon_gtf = filter_gtf($options, 'exon');
 
   my $break1_file;
   my $break2_file;
 	
   opendir(my $dh, $tmp);
   while(my $file = readdir $dh) {
-    $break1_file = File::Spec->catfile($tmp, $file) if($file =~ m/^$index.*1.bed/);
-    $break2_file = File::Spec->catfile($tmp, $file) if($file =~ m/^$index.*2.bed/);
+    $break1_file = File::Spec->catfile($tmp, $file) if($file =~ m/^$sample.1.bed/);
+    $break2_file = File::Spec->catfile($tmp, $file) if($file =~ m/^$sample.2.bed/);
   }
   closedir($dh);
 	
@@ -152,29 +179,34 @@ sub annotate_bed {
 	
   my @commands = ($command1,$command2);
 
-  PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), \@commands, $index);
-  PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), $index);
+  PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), \@commands, 0);
+  PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
 
   return 1;
 }
 
-sub check_gene_boundaries {
-  my $gene_line = shift;
-  
-  my @gene_fields = split "\t", $gene_line;
-  my $return_value = 1;
-  
-  $gene_fields[7] =~ m/^.*:([0-9]+)-.*:([0-9]+)/;
-  my $pos1 = $1;
-  my $pos2 = $2;
-  my $gene1_start = $gene_fields[1];
-  my $gene1_end = $gene_fields[2];
-  my $gene2_start = $gene_fields[4];
-  my $gene2_end = $gene_fields[5];
-
-  $return_value = 0 if(($pos1 < $gene1_start || $pos1 > $gene1_end) || ($pos2 < $gene2_start || $pos2 > $gene2_end));
-  
-  return $return_value;
+sub annotation_sort {
+        my $a_ccds = 0;
+        my $b_ccds = 0;
+        if(defined($a->getCCDS) && $a->getCCDS ne ''){
+                $a_ccds = 1;
+        }
+        if(defined($b->getCCDS) && $b->getCCDS ne ''){
+                $b_ccds = 1;
+        }
+        my $ccds_cmp = $b_ccds <=> $a_ccds;
+        if($ccds_cmp == 0){
+                my $a_cds_len = $a->getCdsLength;
+                my $b_cds_len = $b->getCdsLength;
+                my $cds_len_cmp = $b_cds_len <=> $a_cds_len;
+                if($cds_len_cmp == 0){
+                        return $b->getmRNALength <=> $a->getmRNALength;
+                } else {
+                        return $cds_len_cmp;
+                }
+        } else {
+                return $ccds_cmp;
+        }
 }
 
 sub check_input {
@@ -201,10 +233,6 @@ sub check_input {
   elsif($firstLine =~ m/$STAR_HEADER_PATTERN/){
     $source = "star";
   }
-  # SOAPfuse check
-  elsif($firstLine =~ m/$SOAP_HEADER_PATTERN/){
-    $source = "soap";
-  }
   else{
     die "Unrecognised file type or the file is missing the header record\n";
   }
@@ -212,171 +240,69 @@ sub check_input {
   return $source;
 }
 
-sub compare_overlaps {
+sub collate_annotation {
   my $options = shift;
   
   my $tmp = $options->{'tmp'};
   return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
   
   my $sample = $options->{'sample'};
+  my $annot_file1 = File::Spec->catfile($tmp, "$sample.1.ann_final");
+  my $annot_file2 = File::Spec->catfile($tmp, "$sample.2.ann_final");
+  my $annot_file_full = File::Spec->catfile($tmp, "$sample.final");
   
-  # There will always be a 1_2 comparison file so deal with that first and build the fusions object.
-  
-  # Establish the source of 1 and 2 respectively
-  my $source1 = $options->{'fusion_files'}->{'1'}->{'format'};
-  my $source2 = $options->{'fusion_files'}->{'2'}->{'format'};
-  
-  my $gene_overlap_file1_2;
-  my $exon_overlap_file1_2;
-  
-  opendir(my $dh, $tmp);
-  while(my $file = readdir $dh) {
-    $gene_overlap_file1_2 = File::Spec->catfile($tmp, $file) if($file =~ m/^1_2.$sample.gene.bedpe_overlap/);
-    $exon_overlap_file1_2 = File::Spec->catfile($tmp, $file) if($file =~ m/^1_2.$sample.exon.bedpe_overlap/);
-  }
-  closedir($dh);
-	
-  my %gene_list;
-  my %feature_source;
-  my %exon_list;
-	
-  process_gene_overlaps($gene_overlap_file1_2, \%gene_list, \%feature_source, $source1, $source2);
-  process_exon_overlaps($exon_overlap_file1_2, \%exon_list, \%feature_source, $source1, $source2);
-		
-  if($options->{'num'} == 3){
-    my $gene_overlap_file1_3;
-    my $exon_overlap_file1_3;
-    my $gene_overlap_file2_3;
-    my $exon_overlap_file2_3;
-    
-    my $source3 = $options->{'fusion_files'}->{'3'}->{'format'};
-    
-    opendir(my $dh2, $tmp);
-    while(my $file = readdir $dh2) {
-      $gene_overlap_file1_3 = File::Spec->catfile($tmp, $file) if($file =~ m/^1_3.$sample.gene.bedpe_overlap/);
-      $exon_overlap_file1_3 = File::Spec->catfile($tmp, $file) if($file =~ m/^1_3.$sample.exon.bedpe_overlap/);
-      $gene_overlap_file2_3 = File::Spec->catfile($tmp, $file) if($file =~ m/^2_3.$sample.gene.bedpe_overlap/);
-      $exon_overlap_file2_3 = File::Spec->catfile($tmp, $file) if($file =~ m/^2_3.$sample.exon.bedpe_overlap/);
+  open (my $ifh1, $annot_file1) or die "Could not open file '$annot_file1' $!";
+  open(my $ofh1, '>>', $annot_file_full) or die "Could not open file $annot_file_full $!";
+  while (<$ifh1>) {
+    chomp;
+    my $line = $_;
+    my @fields = split "\t", $line;
+    my @fields2;
+    #pop @fields;
+    my $breakpoint_id = $fields[0];
+    open (my $ifh2, $annot_file2) or die "Could not open file '$annot_file2' $!";
+    while (<$ifh2>) {
+      chomp;
+      my $line2 = $_;
+      if($line2 =~ m/^$breakpoint_id\s/){
+        @fields2 = split "\t", $line2;
+        shift(@fields2);
+				shift(@fields2);
+				shift(@fields2);
+				#push(@fields, @fields2);
+				last;
+      }
     }
-    closedir($dh2);
-	  
-    process_gene_overlaps($gene_overlap_file1_3, \%gene_list, \%feature_source, $source1, $source3);
-    process_exon_overlaps($exon_overlap_file1_3, \%exon_list, \%feature_source, $source1, $source3);
-    process_gene_overlaps($gene_overlap_file2_3, \%gene_list, \%feature_source, $source2, $source3);
-    process_exon_overlaps($exon_overlap_file2_3, \%exon_list, \%feature_source, $source2, $source3);
-  
-  }
-
-  my $gene_output_file = File::Spec->catfile($tmp, "$sample.gene-fusions.txt");
-  open(my $ofh1, '>', $gene_output_file) or die "Could not open file $gene_output_file $!";
-  print $ofh1 $OUTPUT_GENE_HEADER;
-  for my $gene (keys %gene_list){
-    my @brk_list;
-    for my $brk (keys %{ $gene_list{$gene}}){
-      push @brk_list, $brk;
+    if(scalar @fields2 > 0){
+      pop @fields;
     }
-  	
-    my @brks;
-    for my $brkl (keys %{ $feature_source{$gene}{'breakpoints'}}){
-      push @brks, $brkl;
-    }
-
-    my $tophat = "";
-    my $defuse = "";
-    my $star = "";
-    my $soap = "";
-  	
-    $tophat = "T" if(exists $feature_source{$gene}->{'tophat'});
-    $defuse = "D" if(exists $feature_source{$gene}->{'defuse'});
-    $star = "S" if(exists $feature_source{$gene}->{'star'});
-    $soap = "O" if(exists $feature_source{$gene}->{'soap'});
-    my $gene_source_string = $tophat.$defuse.$star.$soap;  	
-  	
-    my $chr1 = $gene_list{$gene}{$brk_list[0]}->{'chr1'};
-    my $strand1 = $gene_list{$gene}{$brk_list[0]}->{'strand1'};
-    my $gene1 = $gene_list{$gene}{$brk_list[0]}->{'gene1'};
-    my $gene1_start = $gene_list{$gene}{$brk_list[0]}->{'gene1_start'};
-    my $gene1_end = $gene_list{$gene}{$brk_list[0]}->{'gene1_end'};
-    my $chr2 = $gene_list{$gene}{$brk_list[0]}->{'chr2'};
-    my $strand2 = $gene_list{$gene}{$brk_list[0]}->{'strand2'};
-    my $gene2 = $gene_list{$gene}{$brk_list[0]}->{'gene2'};
-    my $gene2_start = $gene_list{$gene}{$brk_list[0]}->{'gene2_start'};
-    my $gene2_end = $gene_list{$gene}{$brk_list[0]}->{'gene2_end'};
-  	  
-    my $breaks = join(",",@brks);
-    print $ofh1 "$gene\t$breaks\t$gene_source_string\t$chr1\t$strand1\t$gene1\t$gene1_start\t$gene1_end\t$chr2\t$strand2\t$gene2\t$gene2_start\t$gene2_end\n";
+    push(@fields, @fields2);
+    close($ifh2);
+    print $ofh1 join("\t", @fields)."\n";
   }
   close($ofh1);
-    
-  my $exon_output_file = File::Spec->catfile($tmp, "$sample.exon-fusions.txt");
-  open(my $ofh2, '>', $exon_output_file) or die "Could not open file $exon_output_file $!";
-  print $ofh2 $OUTPUT_EXON_HEADER;
-    
-  for my $exon (keys %exon_list){
-    my @brk_list;
-    for my $brk (keys %{ $exon_list{$exon}}){
-      push @brk_list, $brk;
-    }
-    
-    my @brks;
-      for my $brkl (keys %{ $feature_source{$exon}{'breakpoints'}}){
-      push @brks, $brkl;
-    }
-
-    my $tophat = "";
-    my $defuse = "";
-    my $star = "";
-    my $soap = "";
-    $tophat = "T" if(exists $feature_source{$exon}->{'tophat'});
-    $defuse = "D" if(exists $feature_source{$exon}->{'defuse'});
-    $star = "S" if(exists $feature_source{$exon}->{'star'});
-    $soap = "O" if(exists $feature_source{$exon}->{'soap'});
-    my $exon_source_string = $tophat.$defuse.$star.$soap;   
-    
-    my $chr1 = $exon_list{$exon}{$brk_list[0]}->{'chr1'};
-    my $strand1 = $exon_list{$exon}{$brk_list[0]}->{'strand1'};
-    my $gene1 = $exon_list{$exon}{$brk_list[0]}->{'gene1'};
-    my $transcript1_id = $exon_list{$exon}{$brk_list[0]}->{'transcript1_id'};
-    my $exon1_num = $exon_list{$exon}{$brk_list[0]}->{'exon1_num'};
-    my $exon1_start = $exon_list{$exon}{$brk_list[0]}->{'feature1_start'};
-    my $exon1_end = $exon_list{$exon}{$brk_list[0]}->{'feature1_end'};
-    my $chr2 = $exon_list{$exon}{$brk_list[0]}->{'chr2'};
-    my $strand2 = $exon_list{$exon}{$brk_list[0]}->{'strand2'};
-    my $gene2 = $exon_list{$exon}{$brk_list[0]}->{'gene2'};
-    my $transcript2_id = $exon_list{$exon}{$brk_list[0]}->{'transcript2_id'};
-    my $exon2_num = $exon_list{$exon}{$brk_list[0]}->{'exon2_num'};
-    my $exon2_start = $exon_list{$exon}{$brk_list[0]}->{'feature2_start'};
-    my $exon2_end = $exon_list{$exon}{$brk_list[0]}->{'feature2_end'};
-  	  
-    my $breaks = join(",",@brks);
-    print $ofh2 "$exon\t$breaks\t$exon_source_string\t$chr1\t$strand1\t$gene1\t$transcript1_id\t$exon1_num\t$exon1_start\t$exon1_end\t$chr2\t$strand2\t$gene2\t$transcript2_id\t$exon2_num\t$exon2_start\t$exon2_end\n";
-  }
-  close($ofh2);
-
+  close($ifh1);
+  
   PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
-
+  
   return 1;
 }
 
-sub create_bed {
+sub create_junction_bedpe {
   my ($index, $options) = @_;
-
+  
   my $tmp = $options->{'tmp'};
   return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), $index);
 	
   my $sample = $options->{'sample'};
-	
+  
   my $file = $options->{'fusion_files'}->{$index}->{'name'};
   my $filetype = $options->{'fusion_files'}->{$index}->{'format'};
-  my $output1 = File::Spec->catfile($tmp, "$index.$sample.$filetype.1.bed");
-  my $output2 = File::Spec->catfile($tmp, "$index.$sample.$filetype.2.bed");
-  my $output3 = File::Spec->catfile($tmp, "$index.$sample.$filetype.list");
+  my $output1 = File::Spec->catfile($tmp, "$index.$sample.bedpe");
 	
   open (my $ifh, $file) or die "Could not open file '$file' $!";
   open(my $ofh1, '>', $output1) or die "Could not open file '$output1' $!";
-  open(my $ofh2, '>', $output2) or die "Could not open file '$output2' $!";
-  open(my $ofh3, '>', $output3) or die "Could not open file '$output3' $!";
-		
+  
   while (<$ifh>) {
     chomp;
     my $line = $_;
@@ -390,27 +316,9 @@ sub create_bed {
     my $chr2;
     my $pos2_start;
     my $pos2_end;
-    my $strand2;	  
+    my $strand2; 
 		  
-    if($filetype eq 'tophat'){
-      next if($line =~ m/$TOPHAT_HEADER_PATTERN/);
-		    
-      @fields = split $TOPHAT_SPLIT_CHAR, $line;
-      $name = $fields[$TOPHAT_BREAKREF - 1];
-      $chr1 = $fields[$TOPHAT_CHR1 - 1];
-      $pos1_start = $fields[$TOPHAT_POS1 - 1]-1;
-      $pos1_end = $fields[$TOPHAT_POS1 - 1];
-      $strand1 = $fields[$TOPHAT_STRAND1 - 1];
-      $chr2 = $fields[$TOPHAT_CHR2 - 1];
-      $pos2_start = $fields[$TOPHAT_POS2 - 1]-1;
-      $pos2_end = $fields[$TOPHAT_POS2- 1];
-      $strand2 = $fields[$TOPHAT_STRAND2 - 1];
-		    		    
-      print $ofh1 $chr1."\t".$pos1_start."\t".$pos1_end."\t".$name."\t".$strand1."\n";
-      print $ofh2 $chr2."\t".$pos2_start."\t".$pos2_end."\t".$name."\t".$strand2."\n";
-      print $ofh3 $name."\n";
-    }
-    elsif($filetype eq 'star'){
+    if($filetype eq 'star'){
       next if($line =~ m/$STAR_HEADER_PATTERN/);
 		  	
       @fields = split $STAR_SPLIT_CHAR, $line;
@@ -424,34 +332,31 @@ sub create_bed {
       $pos2_end = $fields[$STAR_POS2- 1];
       $strand2 = $fields[$STAR_STRAND2 - 1];
 		    		    
-      print $ofh1 $chr1."\t".$pos1_start."\t".$pos1_end."\t".$name."\t".$strand1."\n";
-      print $ofh2 $chr2."\t".$pos2_start."\t".$pos2_end."\t".$name."\t".$strand2."\n";
-      print $ofh3 $name."\n";
+      print $ofh1 $chr1."\t".$pos1_start."\t".$pos1_end."\t".$chr2."\t".$pos2_start."\t".$pos2_end."\t".$filetype."\t".$name."\t".$strand1."\t".$strand2."\n";
     }
-    elsif($filetype eq 'soap'){
-      next if($line =~ m/$SOAP_HEADER_PATTERN/);
-		  	
-      @fields = split $SOAP_SPLIT_CHAR, $line;
-      $name = $fields[$SOAP_BREAKREF - 1];
-      $chr1 = $fields[$SOAP_CHR1 - 1];
-      $pos1_start = $fields[$SOAP_POS1 - 1]-1;
-      $pos1_end = $fields[$SOAP_POS1 - 1];
-      $strand1 = $fields[$SOAP_STRAND1 - 1];
-      $chr2 = $fields[$SOAP_CHR2 - 1];
-      $pos2_start = $fields[$SOAP_POS2 - 1]-1;
-      $pos2_end = $fields[$SOAP_POS2- 1];
-      $strand2 = $fields[$SOAP_STRAND2 - 1];
+    elsif($filetype eq 'tophat'){
+      next if($line =~ m/$TOPHAT_HEADER_PATTERN/);
+		    
+      @fields = split $TOPHAT_SPLIT_CHAR, $line;
+      $name = $fields[$TOPHAT_BREAKREF - 1];
+      $chr1 = $fields[$TOPHAT_CHR1 - 1];
+      $pos1_start = $fields[$TOPHAT_POS1 - 1]-1;
+      $pos1_end = $fields[$TOPHAT_POS1 - 1];
+      $strand1 = $fields[$TOPHAT_STRAND1 - 1];
+      $chr2 = $fields[$TOPHAT_CHR2 - 1];
+      $pos2_start = $fields[$TOPHAT_POS2 - 1]-1;
+      $pos2_end = $fields[$TOPHAT_POS2- 1];
+      $strand2 = $fields[$TOPHAT_STRAND2 - 1];
 		    		    
-      print $ofh1 $chr1."\t".$pos1_start."\t".$pos1_end."\t".$name."\t".$strand1."\n";
-      print $ofh2 $chr2."\t".$pos2_start."\t".$pos2_end."\t".$name."\t".$strand2."\n";
-      print $ofh3 $name."\n";
+      print $ofh1 $chr1."\t".$pos1_start."\t".$pos1_end."\t".$chr2."\t".$pos2_start."\t".$pos2_end."\t".$filetype."\t".$name."\t".$strand1."\t".$strand2."\n";
     }
+    
     # It must be defuse format
     else{
       next if($line =~ m/$DEFUSE_HEADER_PATTERN/);
 		  	
       @fields = split $DEFUSE_SPLIT_CHAR, $line;
-      $name = $fields[$DEFUSE_BREAKREF - 1];
+      $name = $fields[$DEFUSE_BREAKREF - 1]."_".$fields[$DEFUSE_CLUSTER_ID - 1];
       $chr1 = $fields[$DEFUSE_CHR1 - 1];
       $pos1_start = $fields[$DEFUSE_POS1 - 1]-1;
       $pos1_end = $fields[$DEFUSE_POS1 - 1];
@@ -461,161 +366,107 @@ sub create_bed {
       $pos2_end = $fields[$DEFUSE_POS2- 1];
       $strand2 = $fields[$DEFUSE_STRAND2 - 1];
 		    		    
-      print $ofh1 $chr1."\t".$pos1_start."\t".$pos1_end."\t".$name."\t".$strand1."\n";
-      print $ofh2 $chr2."\t".$pos2_start."\t".$pos2_end."\t".$name."\t".$strand2."\n";
-      print $ofh3 $name."\n";
+      print $ofh1 $chr1."\t".$pos1_start."\t".$pos1_end."\t".$chr2."\t".$pos2_start."\t".$pos2_end."\t".$filetype."\t".$name."\t".$strand1."\t".$strand2."\n";
     }
-		  
   }
   close ($ifh);
   close ($ofh1);
-  close ($ofh2);
 	
   PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), $index);
 	
-  return 1;
+  return 1;  
+  
 }
 
-sub create_bedpe {
-  my ($index, $options) = @_;
-  return 1 if(exists $options->{'index'} && $index != $options->{'index'});
+sub deduplicate_fusions {
+  my $options = shift;
   
   my $tmp = $options->{'tmp'};
-  return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), $index);
-  
   my $sample = $options->{'sample'};
-
-  my $annot_file1;
-  my $annot_file2;
-  my $gene_bedpe_file = File::Spec->catfile($tmp, "$index.$sample.gene.bedpe");
-  my $exon_bedpe_file = File::Spec->catfile($tmp, "$index.$sample.exon.bedpe");
-  my $gene_gtf = File::Spec->catfile($tmp, "filtered_gene.gtf");
-	
-  opendir(my $dh, $tmp);
-  while(my $file = readdir $dh) {
-    $annot_file1 = File::Spec->catfile($tmp, $file) if($file =~ m/^$index.$sample.*.1.ann_final$/);
-    $annot_file2 = File::Spec->catfile($tmp, $file) if($file =~ m/^$index.$sample.*.2.ann_final$/);
-  }
-  closedir($dh);
-
-  my %gene_info;
-
-  open (my $ifh1, $gene_gtf) or die "Could not open file '$gene_gtf' $!";
-  while (<$ifh1>) {
+  
+  my $input_file = File::Spec->catfile($tmp, "$sample.final");
+  my $temp_file = File::Spec->catfile($tmp, "$sample.final.2");
+  
+  # Open the file, read through and add a sort key based on the source algorithm. STD should be 1 and everything else 2.  
+  open(my $ifh1, $input_file) or die "Could not open file $input_file $!";
+  open(my $ofh1, '>', $temp_file) or die "Could not open file $temp_file $!";
+  while(<$ifh1>){
     chomp;
     my $line = $_;
-    my $gene_annot = parse_gene_info($line);
-    if(!exists $gene_info{$gene_annot->{'gene_name'}}){
-      $gene_info{$gene_annot->{'gene_name'}}{'feature_start'} = $gene_annot->{'start'};
-      $gene_info{$gene_annot->{'gene_name'}}{'feature_end'} = $gene_annot->{'end'};
-     }
+    if($line =~ m/STD$/){
+      print $ofh1 "1\t".$line."\n";
     }
-    close ($ifh1);
-	
-    my %break1;
-    open (my $ifh2, $annot_file1) or die "Could not open file '$annot_file1' $!";
-    while (<$ifh2>) {
-      chomp;
-      my $line1 = $_;
-      my $break_annotation1 = parse_annotation($line1);
-      my $gene1 = $break_annotation1->{'gene_name'};
-      my $gene1_start = $gene_info{$gene1}{'feature_start'};
-      my $gene1_end = $gene_info{$gene1}{'feature_end'};
-		
-      $break_annotation1->{'gene_start'} = $gene1_start;
-      $break_annotation1->{'gene_end'} = $gene1_end;
-      $break1{$break_annotation1->{'breakpoint'}} = $break_annotation1;
+    else{
+      print $ofh1 "2\t".$line."\n";
     }
-    close ($ifh2);
-		
-    my %break2;
-    open (my $ifh3, $annot_file2) or die "Could not open file '$annot_file2' $!";
-    while (<$ifh3>) {
-      chomp;
-      my $line2 = $_;
-		
-      my $break_annotation2 = parse_annotation($line2);
-      my $gene2 = $break_annotation2->{'gene_name'};
-      my $gene2_start = $gene_info{$gene2}{'feature_start'};
-      my $gene2_end = $gene_info{$gene2}{'feature_end'};
-	
-      $break_annotation2->{'gene_start'} = $gene2_start;
-      $break_annotation2->{'gene_end'} = $gene2_end;
-      $break2{$break_annotation2->{'breakpoint'}} = $break_annotation2;
-    }
-    close ($ifh3);
-	
-    my $fusion;
-    my $formatted_gene_line;
-    my $formatted_exon_line;
-	
-    open(my $ofh1, '>', $gene_bedpe_file) or die "Could not open file $gene_bedpe_file $!";
-    open(my $ofh2, '>', $exon_bedpe_file) or die "Could not open file $exon_bedpe_file $!";
-	
-    for my $brk (keys %break1){
-	
-      $fusion = new Sanger::CGP::CompareFusions::FusionAnnotation(
-      -breakpoint  	=> $brk,
-      -chr1		=> $break1{$brk}->{'chr'},
-      -pos1_start	=> $break1{$brk}->{'pos_start'},
-      -pos1_end		=> $break1{$brk}->{'pos_end'},
-      -strand1		=> $break1{$brk}->{'strand'},
-      -feature1		=> $break1{$brk}->{'feature'},
-      -feature1_start	=> $break1{$brk}->{'feature_start'},
-      -feature1_end	=> $break1{$brk}->{'feature_end'},
-      -gene1		=> $break1{$brk}->{'gene_name'},
-      -gene1_id		=> $break1{$brk}->{'gene_id'},
-      -gene1_start	=> $break1{$brk}->{'gene_start'},
-      -gene1_end	=> $break1{$brk}->{'gene_end'},
-      -chr2		=> $break2{$brk}->{'chr'},
-      -pos2_start	=> $break2{$brk}->{'pos_start'},
-      -pos2_end		=> $break2{$brk}->{'pos_end'},
-      -strand2		=> $break2{$brk}->{'strand'},
-      -feature2		=> $break2{$brk}->{'feature'},
-      -feature2_start	=> $break2{$brk}->{'feature_start'},
-      -feature2_end	=> $break2{$brk}->{'feature_end'},
-      -gene2		=> $break2{$brk}->{'gene_name'},
-      -gene2_id		=> $break2{$brk}->{'gene_id'},
-      -gene2_start	=> $break2{$brk}->{'gene_start'},
-      -gene2_end	=> $break2{$brk}->{'gene_end'});
-
-    if($break1{$brk}->{'feature'} eq "exon"){
-      $fusion->exon1_num($break1{$brk}->{'exon_number'});
-      $fusion->exon1_id($break1{$brk}->{'exon_id'});
-      $fusion->transcript1_id($break1{$brk}->{'transcript_id'});
-      $fusion->distance1($break1{$brk}->{'distance'});
-    }
-
-    if($break2{$brk}->{'feature'} eq "exon"){
-      $fusion->exon2_num($break2{$brk}->{'exon_number'});
-      $fusion->exon2_id($break2{$brk}->{'exon_id'});
-      $fusion->transcript2_id($break2{$brk}->{'transcript_id'});
-      $fusion->distance2($break2{$brk}->{'distance'});
-    }
-			
-    $formatted_gene_line = $fusion->format_bedpe_line('gene');
-    my $within_gene = check_gene_boundaries($formatted_gene_line);
-    print $ofh1 $formatted_gene_line."\n" if($within_gene);
-    if(defined $fusion->exon1_num && $fusion->exon2_num){
-      if($fusion->distance1 <= 10 && $fusion->distance2 <= 10){
-        $formatted_exon_line = $fusion->format_bedpe_line('exon');
-        print $ofh2 $formatted_exon_line."\n";
-      }
-    }      
   }
-  close ($ofh1);
-  close ($ofh2);
-	
-  PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), $index);
- 	
+  close($ofh1);
+  close($ifh1);
+  
+  my $sorted_file = File::Spec->catfile($tmp, "$sample.final.2.sorted");
+  my $sort_command = sprintf $TRI_SORT, 1, 1,8,8,15,15, $temp_file, $sorted_file;
+  system($sort_command);
+  
+  my %seen;
+  my $output_file = File::Spec->catfile($tmp, "$sample.final.deduped");
+  
+  # Read through the sorted file and check there are no duplicate tophat breakpoints (sometimes star and tophat breakpoints differ). 
+  open(my $ifh2, $sorted_file) or die "Could not open file $sorted_file $!";
+  open(my $ofh2, '>', $output_file) or die "Could not open file $output_file $!";
+  while(<$ifh2>){
+    chomp;
+    my $line = $_;
+    my @fields = split "\t", $line;
+    my $length = scalar @fields;
+    my $sort_key = $fields[0];
+    my $source = $fields[$length-1];
+    if(defined $sort_key){
+      if($sort_key == 1 ){
+        $seen{$fields[2]} = $fields[3];
+        shift @fields;
+        print $ofh2 join("\t", @fields)."\n";
+      }
+      elsif($source eq 'ST'){
+        if(!exists $seen{$fields[2]}){
+          $seen{$fields[2]} = $fields[3];
+          shift @fields;
+          print $ofh2 join("\t", @fields)."\n";
+        }
+      }     
+      elsif($source eq 'D'){
+        $fields[1] =~ m/^(.*)_[0-9]+$/;
+        my $junction = $1;
+        if(!exists $seen{$junction}){
+          $seen{$junction} = $fields[1];
+          shift @fields;
+          print $ofh2 join("\t", @fields)."\n";
+        }
+      }
+      else{
+        if(!exists $seen{$fields[1]}){
+          $seen{$fields[1]} = $fields[2];
+          shift @fields;
+          print $ofh2 join("\t", @fields)."\n";
+        }
+      }
+    }
+  }
+  close($ofh2);
+  close($ifh2);
+  
   return 1;
 }
 
 sub filter_gtf {
-  my ($gtf, $tmp, $feature) = @_;
-
+  my ($options, $feature) = @_;
+	
+	my $tmp = $options->{'tmp'};
+	
+	my $gtf = $options->{'gtf'};
+	
   my $filtered_gtf = File::Spec->catfile($tmp, "filtered_$feature.gtf");
   
+  unless (-e $filtered_gtf){
   open (my $ifh, $gtf) or die "Could not open file '$gtf' $!";
   open(my $ofh, '>', $filtered_gtf) or die "Could not open file '$filtered_gtf' $!";
 
@@ -635,11 +486,12 @@ sub filter_gtf {
       my ($type,$value)= split / /, $item;
       $annotation{$type} = $value;
     }
-    print $ofh $line."\n" if(exists $ALLOWED_BIOTYPES{$annotation{'gene_biotype'}});
+    #print $ofh $line."\n" if(exists $ALLOWED_BIOTYPES{$annotation{'gene_biotype'}}); # UNCOMMENT THIS LINE TO FILTER ON BIOTYPE AND COMMENT OUT LINE BELOE   
+    print $ofh $line."\n"
   }
   close($ifh);
   close($ofh);
-  
+  }
   return $filtered_gtf;
 }
 
@@ -654,6 +506,139 @@ sub find_closest_boundary {
   return $distance;
 }
 
+sub generate_output {
+  my $options = shift;
+  
+  my $tmp = $options->{'tmp'};
+  return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
+  
+  my $sample = $options->{'sample'};
+
+  my $star_file = $options->{'fusion_files'}->{'1'}->{'name'};
+  my $tophat_file = $options->{'fusion_files'}->{'2'}->{'name'};
+  my $defuse_file = $options->{'fusion_files'}->{'3'}->{'name'};
+
+  my $star_data = parse_star_file($star_file);
+  my $tophat_data = parse_tophat_file($tophat_file);
+  my $defuse_data = parse_defuse_file($defuse_file);
+  
+  my $annot_file = File::Spec->catfile($tmp, "$sample.final.deduped");
+  my $output_file = File::Spec->catfile($tmp, "$sample.detected.fusions.txt");
+  open(my $ofh1, '>', $output_file) or die "Could not open file $output_file $!";
+  
+  if(-s $annot_file){
+  
+  open(my $ifh1, $annot_file) or die "Could not open file $annot_file $!";
+  print $ofh1 $OUTPUT_HEADER;
+  while(<$ifh1>){
+    chomp;
+    my $line = $_;
+    my @fields = split "\t", $line;
+    
+  	my $length = scalar @fields;
+  	my $source = $fields[$length-1];
+  	my $confidence = $CONFIDENCE_SCORES{$source};
+  	
+  	my $star_pos = index($source,'S') if($source =~ m/S/);
+  	my $tophat_pos = index($source,'T') if($source =~ m/T/);
+  	my $defuse_pos = index($source,'D') if($source =~ m/D/);
+  	
+  	my $star_breakpoint = 'NA';
+  	my $tophat_breakpoint = 'NA';
+  	my $defuse_breakpoint = 'NA';
+  	my $defuse_junction = 'NA';
+  	my $defuse_clusterid = 'NA';	
+  	my $chr1 = 'NA';
+  	my $pos1 = 'NA';
+  	my $strand1 = 'NA';
+  	my $chr2 = 'NA';
+  	my $pos2 = 'NA';
+  	my $strand2 = 'NA';
+   	my $star_junction_reads = 'NA';
+  	my $star_spanning_frags = 'NA';
+  	my $tophat_junction_reads = 'NA';
+  	my $tophat_spanning_frags = 'NA';
+  	my $tophat_splitr_seq = 'NA';
+  	my $defuse_splitr_count = 'NA';
+  	my $defuse_span_count = 'NA';
+  	my $defuse_splitr_seq = 'NA';
+  	my $defuse_cgp_filter = 'NA';
+  	  
+  	if(defined $tophat_pos){
+  	  $tophat_breakpoint = $fields[$tophat_pos];
+  	  $tophat_junction_reads = $tophat_data->{$tophat_breakpoint}{'num_spanning_reads'};
+  	  $tophat_spanning_frags = $tophat_data->{$tophat_breakpoint}{'num_spanning_mate_pairs'};
+  	  $chr1 = $tophat_data->{$tophat_breakpoint}{'chr1'};
+  	  $pos1 = $tophat_data->{$tophat_breakpoint}{'pos1'};
+  	  $strand1 = $tophat_data->{$tophat_breakpoint}{'strand1'};
+  	  $chr2 = $tophat_data->{$tophat_breakpoint}{'chr2'};
+  	  $pos2 = $tophat_data->{$tophat_breakpoint}{'pos2'};
+  	  $strand2 = $tophat_data->{$tophat_breakpoint}{'strand2'};
+  	} 	  
+  	if(defined $star_pos){
+  	  $star_breakpoint = $fields[$star_pos];  
+  	  $star_junction_reads = $star_data->{$star_breakpoint}{'junction_reads'};
+  	  $star_spanning_frags = $star_data->{$star_breakpoint}{'spanning_frags'};
+  	  $chr1 = $star_data->{$star_breakpoint}{'chr1'};
+  	  $pos1 = $star_data->{$star_breakpoint}{'pos1'};
+  	  $strand1 = $star_data->{$star_breakpoint}{'strand1'};
+  	  $chr2 = $star_data->{$star_breakpoint}{'chr2'};
+  	  $pos2 = $star_data->{$star_breakpoint}{'pos2'};
+  	  $strand2 = $star_data->{$star_breakpoint}{'strand2'};
+  	}
+  	if(defined $defuse_pos){
+  	  $defuse_breakpoint = $fields[$defuse_pos];
+  	  $defuse_splitr_count = $defuse_data->{$defuse_breakpoint}{'split_reads'};
+  	  $defuse_span_count = $defuse_data->{$defuse_breakpoint}{'span_reads'};
+  	  # If we already have the chr-pos-strand info we don't want to pick it up from deFuse in case the orientation is reported differently
+  	  if(!defined $star_pos && !defined $tophat_pos){
+ 	      $chr1 = $defuse_data->{$defuse_breakpoint}{'chr1'};
+  	    $pos1 = $defuse_data->{$defuse_breakpoint}{'pos1'};
+  	    $strand1 = $defuse_data->{$defuse_breakpoint}{'strand1'};
+  	    $chr2 = $defuse_data->{$defuse_breakpoint}{'chr2'};
+  	    $pos2 = $defuse_data->{$defuse_breakpoint}{'pos2'};
+  	    $strand2 = $defuse_data->{$defuse_breakpoint}{'strand2'};
+  	  }
+  	  $defuse_splitr_seq = $defuse_data->{$defuse_breakpoint}{'sequence'};
+  	  my @defuse_temp = split "_", $defuse_breakpoint;
+  	  $defuse_junction = $defuse_temp[0];
+  	  $defuse_clusterid = $defuse_temp[1];
+  	  $defuse_cgp_filter = $defuse_data->{$defuse_breakpoint}{'cgp_filter'};
+  	}
+    if($length > 11){
+  	  my $gene1_name = $fields[3];
+  	  my $gene1_id = $fields[4];
+  	  my $gene2_name = $fields[10];
+  	  my $gene2_id = $fields[11];
+      my $fusion_name = $gene1_name."--".$gene2_name;
+      my $transcript1_id = $fields[5];
+      my $transcript1_src = $fields[6];
+      my $exon1_number = $fields[7];
+      my $exon1_start = $fields[8];
+      my $exon1_end = $fields[9];
+      my $transcript2_id = $fields[12];
+      my $transcript2_src = $fields[13];
+      my $exon2_number = $fields[14];
+      my $exon2_start = $fields[15];
+      my $exon2_end = $fields[16];
+      
+      $source = reverse $source;
+      
+      print $ofh1 "$sample\t$fusion_name\t$source\t$confidence\t$star_breakpoint\t$tophat_breakpoint\t$defuse_junction\t$defuse_clusterid\t$star_junction_reads\t$star_spanning_frags\t$tophat_junction_reads\t$tophat_spanning_frags\t$defuse_splitr_count\t$defuse_span_count\t$gene1_name\t$gene1_id\t$chr1\t$pos1\t$strand1\t$gene2_name\t$gene2_id\t$chr2\t$pos2\t$strand2\t$transcript1_id\t$transcript1_src\t$exon1_number\t$exon1_start\t$exon1_end\t$transcript2_id\t$transcript2_src\t$exon2_number\t$exon2_start\t$exon2_end\t$defuse_splitr_seq\t$tophat_splitr_seq\t$defuse_cgp_filter\n";
+    }
+    else{
+      $source = reverse $source;
+      print $ofh1 "$sample\tFUSION COULD NOT BE ANNOTATED\t$source\t$confidence\t$star_breakpoint\t$tophat_breakpoint\t$defuse_junction\t$defuse_clusterid\t$star_junction_reads\t$star_spanning_frags\t$tophat_junction_reads\t$tophat_spanning_frags\t$defuse_splitr_count\t$defuse_span_count\t\t\t$chr1\t$pos1\t$strand1\t\t\t$chr2\t$pos2\t$strand2\t\t\t\t\t\t\t\t\t\t\t$defuse_splitr_seq\t$tophat_splitr_seq\t$defuse_cgp_filter\n";
+    }
+  }
+  close($ifh1);
+  }
+  
+  close($ofh1);
+  
+  return 1;
+}
+
 sub parse_annotation {
   my $line = shift;
   $line =~ s/"//g;
@@ -662,24 +647,180 @@ sub parse_annotation {
   my @fields = split "\t", $line;
   
   $annotation{'breakpoint'} = $fields[3];
+  $annotation{'alt_breakpoint'} = $fields[4];
+  $annotation{'alt_breakpoint2'} = $fields[8];
   $annotation{'chr'} = $fields[0];
   $annotation{'pos_start'} = $fields[1];
   $annotation{'pos_end'} = $fields[2];
-  $annotation{'strand'} = $fields[4];
-  $annotation{'feature'} = $fields[7];
-  $annotation{'feature_start'} = $fields[8];
-  $annotation{'feature_end'} = $fields[9];
-  
-  my $annot_column = scalar @fields;
-  $annotation{'distance'} = $fields[$annot_column-1];
-	
-  my @annot_fields = split /; /, $fields[$annot_column-2];
+  $annotation{'strand'} = $fields[5];
+  $annotation{'feature'} = $fields[12];
+  $annotation{'feature_start'} = $fields[13];
+  $annotation{'feature_end'} = $fields[14];
+  $annotation{'genename'} = $fields[6];
+  $annotation{'source'} = $fields[9];
+
+	my $annot_column = scalar @fields;
+  my @annot_fields = split /; /, $fields[$annot_column-1];
   foreach my $item(@annot_fields) {
     my ($type,$value)= split / /, $item;
     $annotation{$type} = $value;
   }
 
   return \%annotation;
+}
+
+sub parse_bed_file {
+  my ($line, $breaknum) = @_;
+  
+  my @fields = split "\t", $line; 
+  my $fusion;
+  
+  if($breaknum == 1){
+  
+    $fusion = new Sanger::CGP::CompareFusions::FusionAnnotation(
+    -breakpoint	=> $fields[3],
+    -alt_breakpoint	=> $fields[4],
+    -alt_breakpoint2	=> $fields[8],
+    -chr1	=> $fields[0],
+    -pos1_start	=> $fields[1],
+    -pos1_end	=> $fields[2],
+    -strand1	=> $fields[5],
+    -gene1	=> $fields[6],
+    -gene1_id	=> $fields[7],
+    -feature1 => $fields[9]);
+  }
+  else{
+    $fusion = new Sanger::CGP::CompareFusions::FusionAnnotation(
+    -breakpoint	=> $fields[3],
+    -alt_breakpoint	=> $fields[4],
+    -alt_breakpoint2	=> $fields[8],
+    -chr2	=> $fields[0],
+    -pos2_start	=> $fields[1],
+    -pos2_end	=> $fields[2],
+    -strand2	=> $fields[5],
+    -gene2	=> $fields[6],
+    -gene2_id	=> $fields[7],
+    -feature1 => $fields[9]);    
+  }
+  
+  return $fusion;
+}
+
+sub parse_break_data {
+  my $line = shift;
+  
+  my %break;
+  my @fields = split "\t", $line;
+  
+  my @breakpoint = split "_", $fields[0];
+  $break{'breakpoint'} = $breakpoint[0];
+  $break{'alt_breakpoint'} = $fields[1];
+  $break{'gene_name'} = $fields[2];
+  $break{'gene_id'} = $fields[3];
+  $break{'strand'} = $fields[4];
+  $break{'feature'} = $fields[5];
+  $break{'exon_id'} = $fields[6];
+  $break{'exon_number'} = $fields[7];
+  $break{'exon_start'} = $fields[8];
+  $break{'exon_end'} = $fields[9];
+  $break{'transcript_id'} = $fields[10];
+  $break{'transcript_src'} = $fields[11];
+  $break{'gene_biotype'} = $fields[12];
+  
+  return \%break;
+}
+
+sub parse_defuse_file {
+  
+  my $defuse_file = shift;
+  
+  my %defuse_data;
+  open (my $ifh1, $defuse_file) or die "Could not open file '$defuse_file' $!";
+  while (<$ifh1>) {
+    chomp;
+    my $line = $_;
+    next if($line =~ m/$DEFUSE_HEADER_PATTERN/);
+    my @fields = split $DEFUSE_SPLIT_CHAR, $line;
+    my $break_ref = $fields[$DEFUSE_BREAKREF-1];
+    my $cluster_id = $fields[$DEFUSE_CLUSTER_ID-1];
+    my $breakpoint = $break_ref."_".$cluster_id;
+    $defuse_data{$breakpoint}{'breakpoint'} = $break_ref;
+    $defuse_data{$breakpoint}{'cluster_id'} = $cluster_id;
+    $defuse_data{$breakpoint}{'chr1'} = $fields[$DEFUSE_CHR1-1];
+    $defuse_data{$breakpoint}{'pos1'} = $fields[$DEFUSE_POS1-1];
+    $defuse_data{$breakpoint}{'strand1'} = $fields[$DEFUSE_STRAND1-1];
+    $defuse_data{$breakpoint}{'gene1_name'} = $fields[$DEFUSE_GENENAME1-1];
+    $defuse_data{$breakpoint}{'gene1_id'} = $fields[$DEFUSE_GENEID1-1];
+    $defuse_data{$breakpoint}{'chr2'} = $fields[$DEFUSE_CHR2-1];
+    $defuse_data{$breakpoint}{'pos2'} = $fields[$DEFUSE_POS2-1];
+    $defuse_data{$breakpoint}{'strand2'} = $fields[$DEFUSE_STRAND2-1];
+    $defuse_data{$breakpoint}{'gene2_name'} = $fields[$DEFUSE_GENENAME2-1];
+    $defuse_data{$breakpoint}{'gene2_id'} = $fields[$DEFUSE_GENEID2-1];
+    $defuse_data{$breakpoint}{'sequence'} = $fields[$DEFUSE_SEQUENCE-1];
+    $defuse_data{$breakpoint}{'split_reads'} = $fields[$DEFUSE_SPLIT_READS-1];
+    $defuse_data{$breakpoint}{'span_reads'} = $fields[$DEFUSE_SPAN_READS-1];
+    $defuse_data{$breakpoint}{'cgp_filter'} = $fields[$DEFUSE_CGP_FILTER-1];
+  }
+  close ($ifh1);
+
+  return \%defuse_data;
+}
+
+sub parse_exon_data {
+  my ($fusion, $breaknum, $exons) = @_;
+
+	my $exon_number;
+	my $exon_start;
+	my $exon_end;
+	my $transcript_id;
+	my $gene_biotype;
+	my $found_exon_boundary = 0;
+	my $found_exon = 0;
+	my $curr_distance = 10000000;
+
+  my $break_pos = $fusion->{'pos'.$breaknum.'_end'};
+
+  for my $e (keys $exons){
+    my $exon = $exons->{$e};
+    if($break_pos == $exon->{'feature_start'} || $break_pos == $exon->{'feature_end'}){
+      $found_exon_boundary = 1;
+      $transcript_id = $exon->{'transcript_id'};
+		  $gene_biotype = $exon->{'gene_biotype'};
+		  $exon_start = $exon->{'feature_start'};
+		  $exon_end = $exon->{'feature_end'};
+		  $exon_number = $exon->{'exon_number'};
+      last;
+    }
+    elsif($break_pos > $exon->{'feature_start'} && $break_pos < $exon->{'feature_end'}){
+      my $distance = find_closest_boundary($break_pos, $exon->{'feature_start'}, $exon->{'feature_end'});
+      if ($distance < $curr_distance){
+		    $found_exon = 1;
+        $transcript_id = $exon->{'transcript_id'};
+		    $gene_biotype = $exon->{'gene_biotype'};
+		    $exon_start = $exon->{'feature_start'};
+		    $exon_end = $exon->{'feature_end'};
+		    $exon_number = $exon->{'exon_number'};
+		  }
+    }
+    last if($found_exon_boundary);
+  }
+	if ($found_exon_boundary || $found_exon){
+	  if($breaknum == 1){
+	    $fusion->transcript1_id($transcript_id);
+		  $fusion->gene1_biotype($gene_biotype);
+		  $fusion->exon1_num($exon_number);
+		  $fusion->feature1_start($exon_start);
+		  $fusion->feature1_end($exon_end);
+	  }
+	  else{
+	    $fusion->transcript2_id($transcript_id);
+		  $fusion->gene2_biotype($gene_biotype);
+		  $fusion->exon2_num($exon_number);
+		  $fusion->feature2_start($exon_start);
+		  $fusion->feature2_end($exon_end);
+    }
+  }
+  return $fusion;
 }
 
 sub parse_gene_info {
@@ -702,110 +843,623 @@ sub parse_gene_info {
   return \%gene_annotation;
 }
 
-sub parse_overlap {
-  my ($line, $cols, $type) = @_;
+sub parse_intersection {
+  my ($line) = @_;
   
-  my @fields = split "\t", $line;
+  my @fields = split " ", $line;
   
-  my $row_length = scalar @fields;
-  my $start = 0;
-  $start = $row_length / 2  if($cols == 2);
+  my $fusion = new Sanger::CGP::CompareFusions::FusionAnnotation();
   
-  my $fusion = new Sanger::CGP::CompareFusions::FusionAnnotation(
-    -breakpoint	=> $fields[$start + 7],
-    -chr1	=> $fields[$start],
-    -strand1	=> $fields[$start + 8],
-    -gene1	=> $fields[$start + 10],
-    -gene1_id	=> $fields[$start + 11],
-    -chr2	=> $fields[$start + 3],
-    -strand2	=> $fields[$start + 9],
-    -gene2	=> $fields[$start + 12],
-    -gene2_id	=> $fields[$start + 13],
-    -feature1	=> $fields[$start + 6]);
-      
-  if($type eq 'gene'){
-    $fusion->gene1_start($fields[$start + 1]);
-    $fusion->gene1_end($fields[$start + 2]);
-    $fusion->gene2_start($fields[$start + 4]);
-    $fusion->gene2_end($fields[$start + 5]);    
-  }
-      
-  if($type eq 'exon'){
-    $fusion->feature1_start($fields[$start + 1]);
-    $fusion->feature1_end($fields[$start + 2]);
-    $fusion->exon1_num($fields[$start + 14]);
-    $fusion->exon1_id($fields[$start + 15]);
-    $fusion->transcript1_id($fields[$start + 16]);
-    $fusion->feature2_start($fields[$start + 4]);
-    $fusion->feature2_end($fields[$start + 5]);
-    $fusion->exon2_num($fields[$start + 17]);
-    $fusion->exon2_id($fields[$start + 18]);
-    $fusion->transcript2_id($fields[$start + 19]);
-  }
+  $fusion->breakpoint($fields[0]);
+  $fusion->chr1($fields[1]);
+  $fusion->pos1_start($fields[2]);
+  $fusion->pos1_end($fields[3]);
+  $fusion->strand1($fields[8]);
+  $fusion->chr2($fields[4]);
+  $fusion->pos2_start($fields[5]);
+  $fusion->pos2_end($fields[6]);
+  $fusion->strand2($fields[9]);
+  $fusion->alt_breakpoint($fields[17]);
+  $fusion->alt_breakpoint2($fields[36]);
   
   return $fusion;
 }
 
-sub process_exon_overlaps {
-  my ($exon_overlap_file, $exon_list, $feature_source, $source1, $source2) = @_;
+sub parse_overlap {
+  my ($line) = @_;
   
-  # The fusion will be represented twice in the overlapping file, use the first set of columns by default
-  my $col_set = 1;
+  my @fields = split "\t", $line;
   
-  # If the first set of columns come from a defuse bedpe, use the second set of columns.
-  # This is because star and tophat are consistent in terms of strand orientation. If we use
-  # defuse data we would need to flip some of the gene and exon data
-  $col_set = 2 if($source1 eq 'defuse');
+  my $fusion = new Sanger::CGP::CompareFusions::FusionAnnotation(
+    -breakpoint	=> $fields[7],
+    -chr1	=> $fields[0],
+    -pos1_start	=> $fields[1],
+    -pos1_end	=> $fields[2],
+    -strand1	=> $fields[8],
+    -chr2	=> $fields[3],
+    -pos2_start	=> $fields[4],
+    -pos2_end	=> $fields[5],
+    -strand2	=> $fields[9],
+    -alt_breakpoint => $fields[17],
+    -alt_breakpoint2 => 'NA');
   
-  open (my $ifh, $exon_overlap_file) or die "Could not open file '$exon_overlap_file' $!";
-  while (<$ifh>) {
+  return $fusion;
+}
+
+sub parse_star_file {
+  
+  my $star_file = shift;
+  
+  my %star_data;
+  open (my $ifh1, $star_file) or die "Could not open file '$star_file' $!";
+  while (<$ifh1>) {
+    chomp;
+    my $line = $_;
+    next if($line =~ m/$STAR_HEADER_PATTERN/);
+    my @fields = split $STAR_SPLIT_CHAR, $line;
+    my $breakpoint = $fields[0];
+    $star_data{$breakpoint}{'fusion_name'} = $fields[$STAR_FUSION_NAME-1];
+    $star_data{$breakpoint}{'junction_reads'} = $fields[$STAR_JUNCTION_READS-1];
+    $star_data{$breakpoint}{'spanning_frags'} = $fields[$STAR_SPANNING_FRAGS-1];
+    $star_data{$breakpoint}{'gene1_name'} = $fields[$STAR_GENENAME1-1];
+    $star_data{$breakpoint}{'gene1_id'} = $fields[$STAR_GENEID1-1];
+    $star_data{$breakpoint}{'chr1'} = $fields[$STAR_CHR1-1];
+    $star_data{$breakpoint}{'pos1'} = $fields[$STAR_POS1-1];
+    $star_data{$breakpoint}{'strand1'} = $fields[$STAR_STRAND1-1];
+    $star_data{$breakpoint}{'dis_exon_1'} = $fields[$STAR_DIS_EXON1-1];
+    $star_data{$breakpoint}{'gene2_name'} = $fields[$STAR_GENENAME2-1];
+    $star_data{$breakpoint}{'gene2_id'} = $fields[$STAR_GENEID2-1];
+    $star_data{$breakpoint}{'chr2'} = $fields[$STAR_CHR2-1];
+    $star_data{$breakpoint}{'pos2'} = $fields[$STAR_POS2-1];
+    $star_data{$breakpoint}{'strand2'} = $fields[$STAR_STRAND2-1];
+    $star_data{$breakpoint}{'dis_exon_2'} = $fields[$STAR_DIS_EXON2-1];
+  }
+  close ($ifh1);
+
+  return \%star_data;
+}
+
+sub parse_tophat_file {
+  
+  my $tophat_file = shift;
+  
+  my %tophat_data;
+  open (my $ifh1, $tophat_file) or die "Could not open file '$tophat_file' $!";
+  while (<$ifh1>) {
+    chomp;
+    my $line = $_;
+    next if($line =~ m/$TOPHAT_HEADER_PATTERN/);
+    my @fields = split $TOPHAT_SPLIT_CHAR, $line;
+    my $breakpoint = $fields[$TOPHAT_BREAKREF-1];
+    $tophat_data{$breakpoint}{'gene1_name'} = $fields[$TOPHAT_GENE1-1];
+    $tophat_data{$breakpoint}{'chr1'} = $fields[$TOPHAT_CHR1-1];
+    $tophat_data{$breakpoint}{'pos1'} = $fields[$TOPHAT_POS1-1];
+    $tophat_data{$breakpoint}{'gene2_name'} = $fields[$TOPHAT_GENE2-1];
+    $tophat_data{$breakpoint}{'chr2'} = $fields[$TOPHAT_CHR2-1];
+    $tophat_data{$breakpoint}{'pos2'} = $fields[$TOPHAT_POS2-1];
+    $tophat_data{$breakpoint}{'num_spanning_reads'} = $fields[$TOPHAT_SPAN_READS-1];
+    $tophat_data{$breakpoint}{'num_spanning_mate_pairs'} = $fields[$TOPHAT_SPAN_MATE_PAIRS-1];
+    $tophat_data{$breakpoint}{'num_spanning_mates_2'} = $fields[$TOPHAT_SPAN_MATE_PAIRS2-1];
+    $tophat_data{$breakpoint}{'score'} = $fields[$TOPHAT_SCORE];
+    $tophat_data{$breakpoint}{'strand1'} = $fields[$TOPHAT_STRAND1-1];
+    $tophat_data{$breakpoint}{'strand2'} = $fields[$TOPHAT_STRAND2-1];
+  }
+  close ($ifh1);
+
+  return \%tophat_data;
+}
+
+sub parse_transcript_data {
+  my ($fusion, $breaknum, $transcripts) = @_;
+  my @filteredTrans;
+  foreach my $t(@{$transcripts}){
+		push(@filteredTrans, $t) if ($fusion->{'pos'.$breaknum.'_end'} >= $t->getGenomicMinPos && $fusion->{'pos'.$breaknum.'_end'} <= $t->getGenomicMaxPos);
+	}
+	my @sortedTrans = sort{&annotation_sort} @filteredTrans;
+	
+	if(defined $sortedTrans[0]){
+    my $vagrent_genename;
+	  my $exon_number;
+		my $exon_start;
+		my $exon_end;
+		my $transcript_id;
+		my $gene_biotype;
+		my $found_exon_boundary = 0;
+		my $found_exon = 0;
+		my $curr_distance = 10000000;
+		my $num_transcripts = scalar @sortedTrans;
+		for (my $x=0;$x<$num_transcripts; $x++){
+		  my @exons = $sortedTrans[$x]->getExons;
+		  my $num_exons = scalar @exons;
+		  for (my $y=0;$y<$num_exons; $y++){
+		    my $e = $exons[$y];
+		    if($fusion->{'pos'.$breaknum.'_end'} == $e->getMinPos || $fusion->{'pos'.$breaknum.'_end'} == $e->getMaxPos){
+		      $found_exon_boundary = 1;
+		      $transcript_id = $sortedTrans[$x]->getAccession;
+		      $gene_biotype = $sortedTrans[$x]->{'_genetype'};
+		      $exon_start = $e->getMinPos;
+		      $exon_end = $e->getMaxPos;
+		      $exon_number = $y+1;
+					$vagrent_genename = $sortedTrans[$x]->{'_genename'};
+		      last;
+		    }elsif($fusion->{'pos'.$breaknum.'_end'} > $e->getMinPos && $fusion->{'pos'.$breaknum.'_end'} < $e->getMaxPos){
+		       my $distance = find_closest_boundary($fusion->{'pos'.$breaknum.'_end'}, $e->getMinPos, $e->getMaxPos);
+		       if ($distance < $curr_distance){
+		         $found_exon = 1;
+		         $transcript_id = $sortedTrans[$x]->getAccession;
+		         $gene_biotype = $sortedTrans[$x]->{'_genetype'};
+		         $exon_start = $e->getMinPos;
+		         $exon_end = $e->getMaxPos;
+		         $exon_number = $y+1;
+		  			 $vagrent_genename = $sortedTrans[$x]->{'_genename'};
+		       }
+		    }
+		  }
+		  last if($found_exon_boundary);
+		}
+
+  if(defined $vagrent_genename){
+    if($vagrent_genename eq $fusion->{'gene'.$breaknum} && ($found_exon_boundary || $found_exon)){
+		    if($breaknum == 1){
+		      $fusion->transcript1_id($transcript_id);
+		      $fusion->gene1_biotype($gene_biotype);
+		      $fusion->exon1_num($exon_number);
+		      $fusion->feature1_start($exon_start);
+		      $fusion->feature1_end($exon_end);
+		    }
+		    else{
+			    $fusion->transcript2_id($transcript_id);
+		      $fusion->gene2_biotype($gene_biotype);
+		      $fusion->exon2_num($exon_number);
+		      $fusion->feature2_start($exon_start);
+		      $fusion->feature2_end($exon_end);
+        }
+	    }
+    }	
+  }
+  return $fusion;
+}
+
+sub parse_vagrent_query_file {
+  my ($line) = @_;
+  
+  my @fields = split "\t", $line;
+  
+  my $fusion = new Sanger::CGP::CompareFusions::FusionAnnotation(
+    -breakpoint	=> $fields[0],
+    -alt_breakpoint	=> $fields[1],
+    -alt_breakpoint2	=> $fields[2],
+    -chr1	=> $fields[3],
+    -pos1_start	=> $fields[4],
+    -pos1_end	=> $fields[5],
+    -strand1	=> $fields[6],
+    -chr2	=> $fields[7],
+    -pos2_start	=> $fields[8],
+    -pos2_end	=> $fields[9],
+    -strand2	=> $fields[10],
+    -feature1 => $fields[11]);
+  
+  return $fusion;
+}
+
+sub process_annotation_file {
+  my ($input) = @_;
+
+  my %exon_annotation;
+  
+  open (my $ifh1, $input) or die "Could not open file '$input' $!";
+  while (<$ifh1>){
+    chomp;
+    my $line = $_;
+    my $annotation = parse_annotation($line);
+    if($annotation->{'gene_name'} eq $annotation->{'genename'}){
+      my $break = $annotation->{'breakpoint'};
+      my $exon = $annotation->{'exon_id'};
+      $exon_annotation{$break}{$exon} = $annotation;
+    }
+  }
+  close ($ifh1);
+
+  return \%exon_annotation;
+}
+
+sub process_overlap_files {
+  my $options = shift;
+
+  my $tmp = $options->{'tmp'};
+  return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
+  
+  my $sample = $options->{'sample'};
+  
+  # Establish the source of 1 and 2 respectively
+  my $source_comb;
+  my $source1 = $options->{'fusion_files'}->{'1'}->{'format'};
+  my $source2 = $options->{'fusion_files'}->{'2'}->{'format'};
+  
+  my $output_file = File::Spec->catfile($tmp, "$sample.vagrent.query.list");
+  my %all_fusions;
+  my $cols;
+  
+  if($options->{'num'} == 3){
+    my $source3 = $options->{'fusion_files'}->{'3'}->{'format'};
+    $source_comb = uc(substr($source1,0,1).substr($source2,0,1).substr($source3,0,1));
+    my $overlap_file1_2_3 = File::Spec->catfile($tmp, "1_2_3.$sample.bedpe_overlap");
+    open (my $ifh1, $overlap_file1_2_3) or die "Could not open file '$overlap_file1_2_3' $!";
+    while (<$ifh1>) {
+      chomp;
+      my $line = $_;
+      my $fusion = parse_intersection($line);
+      my $breakpoint = $fusion->breakpoint();
+      
+      if(!exists $all_fusions{$breakpoint}){
+        $all_fusions{$breakpoint} = $fusion;
+        $all_fusions{$breakpoint}{'source'} = $source_comb;
+      }
+    }
+    close($ifh1);
+    
+    $source_comb = uc(substr($source1,0,1).substr($source3,0,1));
+    my $overlap_file1_3 = File::Spec->catfile($tmp, "1_3.$sample.bedpe_overlap");
+    open (my $ifh2, $overlap_file1_3) or die "Could not open file '$overlap_file1_3' $!";
+    while (<$ifh2>) {
+      chomp;
+      my $line = $_;
+      my $fusion = parse_overlap($line);
+      my $breakpoint = $fusion->breakpoint();
+      
+      if(!exists $all_fusions{$breakpoint}){
+        $all_fusions{$breakpoint} = $fusion;
+        $all_fusions{$breakpoint}{'source'} = $source_comb;
+      }
+    }
+    close($ifh2); 
+    
+    $source_comb = uc(substr($source2,0,1).substr($source3,0,1));
+    my $overlap_file2_3 = File::Spec->catfile($tmp, "2_3.$sample.bedpe_overlap");
+    open (my $ifh3, $overlap_file2_3) or die "Could not open file '$overlap_file2_3' $!";
+    while (<$ifh3>) {
+      chomp;
+      my $line = $_;
+      my $fusion = parse_overlap($line);
+      my $breakpoint = $fusion->breakpoint();
+      
+      if(!exists $all_fusions{$breakpoint}){
+        $all_fusions{$breakpoint} = $fusion;
+        $all_fusions{$breakpoint}{'source'} = $source_comb;
+      }
+    }
+    close($ifh3);    
+  }
+  
+  my $overlap_file1_2 = File::Spec->catfile($tmp, "1_2.$sample.bedpe_overlap");
+  $source_comb = uc(substr($source1,0,1).substr($source2,0,1));
+  open (my $ifh4, $overlap_file1_2) or die "Could not open file '$overlap_file1_2' $!";
+  while (<$ifh4>) {
+    chomp;
+    my $line = $_;
+    my $fusion = parse_overlap($line);
+    my $breakpoint = $fusion->breakpoint();
+      
+    if(!exists $all_fusions{$breakpoint}){
+      $all_fusions{$breakpoint} = $fusion;
+      $all_fusions{$breakpoint}{'source'} = $source_comb;
+    }
+  }
+  close($ifh4);
+  
+  open(my $ofh1, '>', $output_file) or die "Could not open file '$output_file' $!";
+  for my $brk (keys %all_fusions){
+    my $output_line = $all_fusions{$brk}->format_fusion_line($all_fusions{$brk}{'source'});
+    print $ofh1 $output_line."\n";
+  
+  }
+  close($ofh1);
+  
+  PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
+  return 1;
+}
+
+sub process_singletons {
+  my $options = shift;
+
+  my $tmp = $options->{'tmp'};
+  return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
+  my $sample = $options->{'sample'};
+  
+  my %star_ids;
+  my %tophat_ids;
+  my %defuse_ids;
+  
+  my $overlaps_file = File::Spec->catfile($tmp, "$sample.vagrent.query.list");
+  open (my $ifh1, $overlaps_file) or die "Could not open file '$overlaps_file' $!";
+  while (<$ifh1>) {
     chomp;
     my $line = $_;
     my @fields = split "\t", $line;
-    next if(($fields[15] ne $fields[37] && $fields[15] ne $fields[40]) || ($fields[18] ne $fields[37] && $fields[18] ne $fields[40]));
-    my $exon_fusion = parse_overlap($line, $col_set, 'exon');
-    $exon_list->{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}} = $exon_fusion if(!exists $exon_list->{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$exon_fusion->{'breakpoint'}});
-    my $brk1 = $fields[7];
-    my $brk2 = $fields[29];
-    $feature_source->{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{'breakpoints'}{$brk1} = 1 if(!exists $feature_source->{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{'breakpoints'}{$brk1});
-    $feature_source->{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{'breakpoints'}{$brk2} = 1 if(!exists $feature_source->{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{'breakpoints'}{$brk2});
-    $feature_source->{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$source1} = 1 if(!exists $feature_source->{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$source1});
-   $feature_source->{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$source2} = 1 if(!exists $feature_source->{$exon_fusion->{'exon1_id'}.':'.$exon_fusion->{'exon2_id'}}{$source2});
-		
+    my $length = scalar @fields;
+    my $source = $fields[$length-1];
+    
+    if($source eq 'STD'){
+      $star_ids{$fields[0]} = 'STD';
+      $tophat_ids{$fields[1]} = 'STD';
+      my $defuse_brk_id = $fields[2];    
+      my @defuse_id_split = split "_", $defuse_brk_id;
+      my $defuse_junction = $defuse_id_split[0];
+      $defuse_ids{$defuse_junction} = 'STD';
+    }
+    elsif($source eq 'SD'){
+      $star_ids{$fields[0]} = 'SD';
+      my $defuse_brk_id = $fields[1];    
+      my @defuse_id_split = split "_", $defuse_brk_id;
+      my $defuse_junction = $defuse_id_split[0];
+      $defuse_ids{$defuse_junction} = 'SD';
+    }
+    elsif($source eq 'ST'){
+      $star_ids{$fields[0]} = 'ST';
+      $tophat_ids{$fields[1]} = 'ST';
+    }
+    elsif($source eq 'TD'){
+      $tophat_ids{$fields[0]} = 'TD';
+      $defuse_ids{$fields[1]} = 'TD';
+      my $defuse_brk_id = $fields[1];    
+      my @defuse_id_split = split "_", $defuse_brk_id;
+      my $defuse_junction = $defuse_id_split[0];
+      $defuse_ids{$defuse_junction} = 'TD';
+    }
+    else{
+      die "Fusion does not have recognised source algorithms\n"; 
+    }
   }
-  close ($ifh);
+  close($ifh1);
+
+  my $star_file = $options->{'fusion_files'}->{'1'}->{'name'};
+  my $tophat_file = $options->{'fusion_files'}->{'2'}->{'name'};
+  my $defuse_file = $options->{'fusion_files'}->{'3'}->{'name'};
+  my $star_data = parse_star_file($star_file);
+  my $tophat_data = parse_tophat_file($tophat_file);
+  my $defuse_data = parse_defuse_file($defuse_file);
+  my %all_singletons;
+  
+  for my $star_brk (keys $star_data){
+    if(!exists $star_ids{$star_brk}){
+    
+      $star_ids{$star_brk} = 'S';
+    
+      my $pos_start1 = $star_data->{$star_brk}{'pos1'} -1;
+      my $pos_start2 = $star_data->{$star_brk}{'pos2'} -1;
+    
+      my $fusion = new Sanger::CGP::CompareFusions::FusionAnnotation(
+      -breakpoint	=> $star_brk,
+      -chr1	=> $star_data->{$star_brk}{'chr1'},
+      -pos1_start	=> $star_data->{$star_brk}{'pos1'}-1,
+      -pos1_end	=> $star_data->{$star_brk}{'pos1'},
+      -strand1	=> $star_data->{$star_brk}{'strand1'},
+      -chr2	=> $star_data->{$star_brk}{'chr2'},
+      -pos2_start	=> $star_data->{$star_brk}{'pos2'}-1,
+      -pos2_end	=> $star_data->{$star_brk}{'pos2'},
+      -strand2	=> $star_data->{$star_brk}{'strand2'},
+      -alt_breakpoint => 'NA',
+      -alt_breakpoint2 => 'NA');
+      
+      if(!exists $all_singletons{$star_brk}){
+        $all_singletons{$star_brk} = $fusion;
+        $all_singletons{$star_brk}{'source'} = 'S';
+      }
+    }
+  }
+
+  for my $tophat_brk (keys $tophat_data){
+    if(!exists $tophat_ids{$tophat_brk}){
+    
+      $tophat_ids{$tophat_brk} = 'T';
+    
+      my $fusion = new Sanger::CGP::CompareFusions::FusionAnnotation(
+      -breakpoint	=> $tophat_brk,
+      -chr1	=> $tophat_data->{$tophat_brk}{'chr1'},
+      -pos1_start	=> $tophat_data->{$tophat_brk}{'pos1'}-1,
+      -pos1_end	=> $tophat_data->{$tophat_brk}{'pos1'},
+      -strand1	=> $tophat_data->{$tophat_brk}{'strand1'},
+      -chr2	=> $tophat_data->{$tophat_brk}{'chr2'},
+      -pos2_start	=> $tophat_data->{$tophat_brk}{'pos2'}-1,
+      -pos2_end	=> $tophat_data->{$tophat_brk}{'pos2'},
+      -strand2	=> $tophat_data->{$tophat_brk}{'strand2'},
+      -alt_breakpoint => 'NA',
+      -alt_breakpoint2 => 'NA');
+      
+      if(!exists $all_singletons{$tophat_brk}){
+        $all_singletons{$tophat_brk} = $fusion;
+        $all_singletons{$tophat_brk}{'source'} = 'T';
+      }
+    }
+  }
+  
+  for my $defuse_brk (keys $defuse_data){
+    my @defuse_ids = split "_", $defuse_brk;
+    my $breakpoint = $defuse_ids[0];
+    if(!exists $defuse_ids{$breakpoint}){
+      $defuse_ids{$breakpoint} = 'D';
+    
+      my $fusion = new Sanger::CGP::CompareFusions::FusionAnnotation(
+      -breakpoint	=> $defuse_brk,
+      -chr1	=> $defuse_data->{$defuse_brk}{'chr1'},
+      -pos1_start	=> $defuse_data->{$defuse_brk}{'pos1'}-1,
+      -pos1_end	=> $defuse_data->{$defuse_brk}{'pos1'},
+      -strand1	=> $defuse_data->{$defuse_brk}{'strand1'},
+      -chr2	=> $defuse_data->{$defuse_brk}{'chr2'},
+      -pos2_start	=> $defuse_data->{$defuse_brk}{'pos2'}-1,
+      -pos2_end	=> $defuse_data->{$defuse_brk}{'pos2'},
+      -strand2	=> $defuse_data->{$defuse_brk}{'strand2'},
+      -alt_breakpoint => 'NA',
+      -alt_breakpoint2 => 'NA');
+      
+      if(!exists $all_singletons{$defuse_brk}){
+        $all_singletons{$defuse_brk} = $fusion;
+        $all_singletons{$defuse_brk}{'source'} = 'D';
+      }
+    }
+  }
+  open(my $ofh1, '>>', $overlaps_file) or die "Could not open file '$overlaps_file' $!";
+  for my $brk (keys %all_singletons){
+    my $output_line = $all_singletons{$brk}->format_fusion_line($all_singletons{$brk}{'source'});
+    print $ofh1 $output_line."\n";
+  }
+  close($ofh1);
+  
+  PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
   
   return 1;
 }
 
-sub process_gene_overlaps {
-  my ($gene_overlap_file, $gene_list, $feature_source, $source1, $source2) = @_;
-  
-  # The fusion will be represented twice in the overlapping file, use the first set of columns by default
-  my $col_set = 1;
-  
-  # If the first set of columns come from a defuse bedpe, use the second set of columns.
-  # This is because star and tophat are consistent in terms of strand orientation. If we use
-  # defuse data we would need to flip some of the gene and exon data
-  $col_set = 2 if($source1 eq 'defuse');
-  
-  open (my $ifh, $gene_overlap_file) or die "Could not open file '$gene_overlap_file' $!";
-  while (<$ifh>) {
+sub query_vagrent {
+  my $options = shift;
+
+  my $tmp = $options->{'tmp'};
+  return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
+	
+  my $sample = $options->{'sample'};
+
+  my $star_file = $options->{'fusion_files'}->{'1'}->{'name'};
+  my $tophat_file = $options->{'fusion_files'}->{'2'}->{'name'};
+  my $defuse_file = $options->{'fusion_files'}->{'3'}->{'name'};
+ 
+  my $gene_list = parse_star_file($star_file);
+  my $gene_gtf = filter_gtf($options, 'gene');
+
+  my %gene_info;
+  open (my $ifh1, $gene_gtf) or die "Could not open file '$gene_gtf' $!";
+  while (<$ifh1>) {
     chomp;
     my $line = $_;
-    my @fields = split "\t", $line;
-    next if(($fields[10] ne $fields[24] && $fields[10] ne $fields[26]) || ($fields[12] ne $fields[24] && $fields[12] ne $fields[26]));
-    my $gene_fusion = parse_overlap($line, $col_set, 'gene');
-    $gene_list->{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}} = $gene_fusion if(!exists $gene_list->{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$gene_fusion->{'breakpoint'}});
-    my $brk1 = $fields[7];
-    my $brk2 = $fields[21];
-    $feature_source->{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{'breakpoints'}{$brk1} = 1 if(!exists $feature_source->{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{'breakpoints'}{$brk1});
-    $feature_source->{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{'breakpoints'}{$brk2} = 1 if(!exists $feature_source->{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{'breakpoints'}{$brk2});
-    $feature_source->{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$source1} = 1 if(!exists $feature_source->{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$source1});
-    $feature_source->{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$source2} = 1 if(!exists $feature_source->{$gene_fusion->{'gene1_id'}.':'.$gene_fusion->{'gene2_id'}}{$source2});
+    my $gene_annot = parse_gene_info($line);
+    if(!exists $gene_info{$gene_annot->{'gene_name'}}){
+      $gene_info{$gene_annot->{'gene_name'}} = $gene_annot->{'gene_id'};
+    }
   }
-  close ($ifh);
+  close ($ifh1);
   
+  my %rev_gene_info = reverse %gene_info;
+  
+  my $tophat_data = parse_tophat_file($tophat_file);
+  
+  for my $brk (keys $tophat_data){
+    if(!exists $gene_list->{$brk}){
+      my $gene1_name = $tophat_data->{$brk}{'gene1_name'};
+      my $gene2_name = $tophat_data->{$brk}{'gene2_name'};
+      $gene_list->{$brk}{'gene1_name'} = $gene1_name;
+      if(defined $gene_info{$gene1_name}){
+        $gene_list->{$brk}{'gene1_id'} = $gene_info{$gene1_name};
+			}
+			elsif(defined $rev_gene_info{$gene1_name}){
+			  $gene_list->{$brk}{'gene1_id'} = $gene1_name;
+			  $gene_list->{$brk}{'gene1_name'} = $rev_gene_info{$gene1_name};
+			}
+			else{
+			  $gene_list->{$brk}{'gene1_id'} = $gene1_name;
+			}
+      $gene_list->{$brk}{'gene2_name'} = $gene2_name;
+      if(defined $gene_info{$gene2_name}){
+        $gene_list->{$brk}{'gene2_id'} = $gene_info{$gene2_name};
+			}
+			elsif(defined $rev_gene_info{$gene2_name}){
+			  $gene_list->{$brk}{'gene2_id'} = $gene2_name;
+			  $gene_list->{$brk}{'gene2_name'} = $rev_gene_info{$gene2_name};
+			}
+			else{
+			  $gene_list->{$brk}{'gene2_id'} = $gene1_name;
+			}
+    }
+  }
+  
+  my $defuse_data = parse_defuse_file($defuse_file);
+  
+  for my $defuse_brk (keys $defuse_data){
+    if(!exists $gene_list->{$defuse_brk}){
+      my $gene1_name = $defuse_data->{$defuse_brk}{'gene1_name'};
+      my $gene2_name = $defuse_data->{$defuse_brk}{'gene2_name'};
+      $gene_list->{$defuse_brk}{'gene1_name'} = $gene1_name;
+      $gene_list->{$defuse_brk}{'gene1_id'} = $gene_info{$gene1_name};
+      $gene_list->{$defuse_brk}{'gene1_id'} = $gene1_name if(!defined $gene_list->{$defuse_brk}{'gene1_id'});
+      $gene_list->{$defuse_brk}{'gene2_name'} = $gene2_name;
+      $gene_list->{$defuse_brk}{'gene2_id'} = $gene_info{$gene2_name};
+      $gene_list->{$defuse_brk}{'gene2_id'} = $gene2_name if(!defined $gene_list->{$defuse_brk}{'gene2_id'});
+    }
+  }
+  
+	my $vagrent_version = "VAGrENT_".Sanger::CGP::Vagrent->VERSION;
+	
+	my $ts = Sanger::CGP::Vagrent::TranscriptSource::FileBasedTranscriptSource->new('cache' => $options->{'cache'});	
+	my %breaklist;
+	
+	my $vagrent_query_file = File::Spec->catfile($tmp, "$sample.vagrent.query.list");
+
+  open (my $ifh2, $vagrent_query_file) or die "Could not open file '$vagrent_query_file' $!";
+  while (<$ifh2>) {
+    chomp;
+    my $line = $_;
+    my $fusion = parse_vagrent_query_file($line);
+    $fusion->gene1($gene_list->{$fusion->{'breakpoint'}}{'gene1_name'});
+    $fusion->gene2($gene_list->{$fusion->{'breakpoint'}}{'gene2_name'});
+    $fusion->gene1_id($gene_list->{$fusion->{'breakpoint'}}{'gene1_id'});
+    $fusion->gene2_id($gene_list->{$fusion->{'breakpoint'}}{'gene2_id'});
+    
+    my $genomic_pos1 = Sanger::CGP::Vagrent::Data::GenomicRegion->new('species' => 'human', 'genomeVersion' => 'GRCh38', 'chr' => $fusion->{'chr1'}, 'minpos' => $fusion->{'pos1_start'}, 'maxpos' => $fusion->{'pos1_end'}, 'id' => $fusion->{'breakpoint'});
+    my $genomic_pos2 = Sanger::CGP::Vagrent::Data::GenomicRegion->new('species' => 'human', 'genomeVersion' => 'GRCh38', 'chr' => $fusion->{'chr2'}, 'minpos' => $fusion->{'pos2_start'}, 'maxpos' => $fusion->{'pos2_end'}, 'id' => $fusion->{'breakpoint'});
+	  
+	  unless($genomic_pos1->{'_chr'} eq 'GL000219.1' || $genomic_pos2->{'_chr'} eq 'GL000219.1' || $genomic_pos1->{'_chr'} eq 'KI270726.1' || $genomic_pos2->{'_chr'} eq 'KI270726.1'){
+	  
+      my @trans1 = $ts->getTranscripts($genomic_pos1);
+      my @trans2 = $ts->getTranscripts($genomic_pos2);
+   
+      $fusion = parse_transcript_data($fusion, 1, \@trans1);
+      $fusion = parse_transcript_data($fusion, 2, \@trans2);
+    }
+    
+		$breaklist{$fusion->{'breakpoint'}} = $fusion if(!exists $breaklist{$fusion->{'breakpoint'}});
+  }
+  close ($ifh2);
+	
+	my $final_annot_file1 = File::Spec->catfile($tmp, "$sample.1.ann_final");
+	my $final_annot_file2 = File::Spec->catfile($tmp, "$sample.2.ann_final");
+	my $bed_file1 = File::Spec->catfile($tmp, "$sample.1.bed");
+	my $bed_file2 = File::Spec->catfile($tmp, "$sample.2.bed");
+	my $final_annotation_file = File::Spec->catfile($tmp, "$sample.final");
+	open(my $ofh1, '>', $final_annotation_file) or die "Could not open file '$final_annotation_file' $!";
+	open(my $ofh2, '>', $final_annot_file1) or die "Could not open file '$final_annot_file1' $!";
+	open(my $ofh3, '>', $final_annot_file2) or die "Could not open file '$final_annot_file2' $!";
+	open(my $ofh4, '>', $bed_file1) or die "Could not open file '$bed_file1' $!";
+	open(my $ofh5, '>', $bed_file2) or die "Could not open file '$bed_file2' $!";
+	for my $brk (keys %breaklist){
+	  if(defined $breaklist{$brk}->{'transcript1_id'} && defined $breaklist{$brk}->{'transcript2_id'}){
+		  my $output_line = $breaklist{$brk}->format_annotation_line($vagrent_version);
+		  print $ofh1 $output_line."\n";
+		}
+		else{
+		  if(!defined $breaklist{$brk}->{'transcript1_id'}){
+		    my $output_line = $breaklist{$brk}->format_bed_line(1);
+		    print $ofh4 $output_line."\n";
+		  }
+		  else{
+		    my $output_line = $breaklist{$brk}->format_break_line(1, $vagrent_version);
+		    print $ofh2 $output_line."\n";
+		  }
+		  if(!defined $breaklist{$brk}->{'transcript2_id'}){
+		    my $output_line = $breaklist{$brk}->format_bed_line(2);
+		    print $ofh5 $output_line."\n";
+		  }
+		  else{
+		    my $output_line = $breaklist{$brk}->format_break_line(2, $vagrent_version);
+		    print $ofh3 $output_line."\n";
+		  }
+		}
+  }
+	close($ofh5);
+	close($ofh4);
+	close($ofh3);
+	close($ofh2);
+	close($ofh1);
+
+  PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
+	
   return 1;
 }
 
@@ -818,34 +1472,33 @@ sub run_bed_pairtopair {
   my $sample = $options->{'sample'};
   
   my $prog = _which('bedtools');
+  my @commands;
   
   # There will always be at least two input files so build the command for the first comparison
-  my $command1 = $prog . sprintf $BEDTOOLS_PAIRTOPAIR, 	File::Spec->catfile($tmp, "1.$sample.gene.bedpe"),
-  						 	File::Spec->catfile($tmp, "2.$sample.gene.bedpe"),									 	File::Spec->catfile($tmp, "1_2.$sample.gene.bedpe_overlap");
-  														 
-  my $command2 = $prog . sprintf $BEDTOOLS_PAIRTOPAIR, 	File::Spec->catfile($tmp, "1.$sample.exon.bedpe"),
-  						 	File::Spec->catfile($tmp, "2.$sample.exon.bedpe"), 
-  							File::Spec->catfile($tmp, "1_2.$sample.exon.bedpe_overlap");
-  my @commands = ($command1, $command2);
-  
+  my $overlap_file1 = File::Spec->catfile($tmp, "1_2.$sample.bedpe_overlap");
+  push @commands, $prog . sprintf $BEDTOOLS_PAIRTOPAIR, 	File::Spec->catfile($tmp, "1.$sample.bedpe"),
+  						 	File::Spec->catfile($tmp, "2.$sample.bedpe"),
+  						 	$overlap_file1;
+  						 	
   if($options->{'num'} == 3){
-    my $command3 = $prog . sprintf $BEDTOOLS_PAIRTOPAIR, File::Spec->catfile($tmp, "1.$sample.gene.bedpe"),
-  						 	 File::Spec->catfile($tmp, "3.$sample.gene.bedpe"), 
-  							 File::Spec->catfile($tmp, "1_3.$sample.gene.bedpe_overlap");
-  													 
-    my $command4 = $prog . sprintf $BEDTOOLS_PAIRTOPAIR, File::Spec->catfile($tmp, "1.$sample.exon.bedpe"),
-  						 	 File::Spec->catfile($tmp, "3.$sample.exon.bedpe"),
-  							 File::Spec->catfile($tmp, "1_3.$sample.exon.bedpe_overlap");
-  																											 
-    my $command5 = $prog . sprintf $BEDTOOLS_PAIRTOPAIR, File::Spec->catfile($tmp, "2.$sample.gene.bedpe"),
-  						 	 File::Spec->catfile($tmp, "3.$sample.gene.bedpe"),
-  						 	 File::Spec->catfile($tmp, "2_3.$sample.gene.bedpe_overlap");
     
-    my $command6 = $prog . sprintf $BEDTOOLS_PAIRTOPAIR, File::Spec->catfile($tmp, "2.$sample.exon.bedpe"),
-  							 File::Spec->catfile($tmp, "3.$sample.exon.bedpe"),
-  							 File::Spec->catfile($tmp, "2_3.$sample.exon.bedpe_overlap");	
-
-    push @commands, ($command3, $command4, $command5, $command6);
+    my $overlap_file2 = File::Spec->catfile($tmp, "1_3.$sample.bedpe_overlap");
+    push @commands, $prog . sprintf $BEDTOOLS_PAIRTOPAIR, 	File::Spec->catfile($tmp, "1.$sample.bedpe"),
+  						 	File::Spec->catfile($tmp, "3.$sample.bedpe"),
+  						 	$overlap_file2;
+  	
+  	my $overlap_file3 = File::Spec->catfile($tmp, "2_3.$sample.bedpe_overlap");				 	
+  	push @commands, $prog . sprintf $BEDTOOLS_PAIRTOPAIR, 	File::Spec->catfile($tmp, "2.$sample.bedpe"),
+  						 	File::Spec->catfile($tmp, "3.$sample.bedpe"),
+  						 	$overlap_file3;
+  						 	
+  	 # Also find the intersection between all three algorithms using Unix sort and join commands.
+  	 my $sorted_file1 = File::Spec->catfile($tmp, "1_2.$sample.bedpe_overlap.sorted");
+  	 my $sorted_file2 = File::Spec->catfile($tmp, "1_3.$sample.bedpe_overlap.sorted");
+  	 my $overlap_file123 = File::Spec->catfile($tmp, "1_2_3.$sample.bedpe_overlap");
+  	 push @commands, sprintf $SORT, 8, 8, $overlap_file1, $sorted_file1;
+  	 push @commands, sprintf $SORT, 8,8, $overlap_file2, $sorted_file2;
+     push @commands, sprintf $JOIN, $sorted_file1,$sorted_file2, $overlap_file123;
   }
   
   PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), \@commands, 0);
@@ -857,93 +1510,129 @@ sub run_bed_pairtopair {
 sub select_annotation {
 
   # All possible exon annotations have been retrieved for each breakpoint, we need to select annotation for the nearest.
-  my ($index, $options) = @_;
-  return 1 if(exists $options->{'index'} && $index != $options->{'index'});
+  my $options = shift;
   
   my $tmp = $options->{'tmp'};
-  return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), $index);
+  return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
   
   my $sample = $options->{'sample'};
-  my $annot_file1;
-  my $annot_file2;
-  my $final_annot_file1;
-  my $final_annot_file2;
+  
+  my ($gtf, $path) = fileparse($options->{'gtf'});
 	
-  opendir(my $dh, $tmp);
-  while(my $file = readdir $dh) {
-    $annot_file1 = File::Spec->catfile($tmp, $file) if($file =~ m/^$index.$sample.*.1.ann$/);
-    $annot_file2 = File::Spec->catfile($tmp, $file) if($file =~ m/^$index.$sample.*.2.ann$/);
-  }
-  closedir($dh);
+  my $annot_file1 = File::Spec->catfile($tmp, "$sample.1.ann");
+  my $annot_file2 = File::Spec->catfile($tmp, "$sample.2.ann");
+  my $bed_file1 = File::Spec->catfile($tmp, "$sample.1.bed");
+  my $bed_file2 = File::Spec->catfile($tmp, "$sample.2.bed");
+  my $final_annot_file1 = $annot_file1."_final";
+  my $final_annot_file2 = $annot_file2."_final";
+  
+  my $exon_annotation1;
+  my $exon_annotation2;
+
+	if(-s $annot_file1){
+    $exon_annotation1 = process_annotation_file($annot_file1);
+	}
+	if(-s $annot_file2){
+    $exon_annotation2 = process_annotation_file($annot_file2);
+	}
 	
-  $final_annot_file1 = $annot_file1."_final";
-  $final_annot_file2 = $annot_file2."_final";
-	
-  my $curr_distance = 10000000;
-  my $curr_line = "";
-  my $curr_break = "";
-		
-  # Process the first annotation file
-  open(my $ofh1, '>', $final_annot_file1) or die "Could not open file $final_annot_file1 $!";
-  open (my $ifh1, $annot_file1) or die "Could not open file '$annot_file1' $!";
+	my $gene_gtf = File::Spec->catfile($tmp, "filtered_gene.gtf");
+  my %gene_info;
+
+  open (my $ifh1, $gene_gtf) or die "Could not open file '$gene_gtf' $!";
   while (<$ifh1>) {
     chomp;
     my $line = $_;
-    my @fields = split "\t", $line;
-    my $break = $fields[3].$fields[4];
-		
-    if($break ne $curr_break){
-      print $ofh1 $curr_line."\n" unless($curr_break eq "");
-      $curr_break = $break;
-      $curr_distance = 10000000;
-    }
-    my $pos = $fields[2];
-    my $exon_start = $fields[8];
-    my $exon_end = $fields[9];
-
-    my $distance = find_closest_boundary($pos, $exon_start, $exon_end);
-
-    if($distance < $curr_distance){
-      $curr_distance = $distance;
-      $curr_line = $line;
+    my $gene_annot = parse_gene_info($line);
+    if(!exists $gene_info{$gene_annot->{'gene_name'}}){
+      $gene_info{$gene_annot->{'gene_name'}}{'feature_start'} = $gene_annot->{'start'};
+      $gene_info{$gene_annot->{'gene_name'}}{'feature_end'} = $gene_annot->{'end'};
     }
   }
-  print $ofh1 $curr_line."\n";
   close ($ifh1);
-  close ($ofh1);
 	
-  $curr_distance = 10000000;
-  $curr_line = "";
-  $curr_break = "";
+	my $bed1;
+  my $bed2;
+  
+  if(-s $bed_file1){
+    open(my $ofh1, '>>', $final_annot_file1) or die "Could not open file '$final_annot_file1' $!";
+    open (my $ifh2, $bed_file1) or die "Could not open file '$bed_file1' $!";
+    while (<$ifh2>) {
+      chomp;
+      my $line = $_;
+      my $fusion = parse_bed_file($line, 1);
+      if(exists $exon_annotation1->{$fusion->breakpoint}){
+        $fusion = parse_exon_data($fusion, 1, $exon_annotation1->{$fusion->breakpoint});
+      }
+      if(!exists $fusion->{'transcript1_id'}){
+        $fusion->{'exon1_num'} = 'NA';
+        $fusion->{'feature1_start'} = 'NA';
+        $fusion->{'feature1_end'} = 'NA';
+        # Check whether the breakpoint falls within the footprint of the gene.
+        my $gene_start = $gene_info{$fusion->{'gene1'}}{'feature_start'};
+			  my $gene_end = $gene_info{$fusion->{'gene1'}}{'feature_end'};
+			  my $break_pos = $fusion->{'pos1_end'};
+			  if(defined $gene_start && defined $gene_end){
+			    if($break_pos >= $gene_start && $break_pos <= $gene_end){
+			      $fusion->{'transcript1_id'} = 'Intronic';
+			    }
+			    else{
+			      my $location = 'upstream';
+			      $location = 'downstream' if($break_pos > $gene_end);
+			  		$fusion->{'transcript1_id'} = $location;
+			    }
+			  }
+			  else{
+			    $fusion->{'transcript1_id'} = 'Unannotated';
+			  }
+      }
+      my $output_line = $fusion->format_break_line(1, $gtf);
+		  print $ofh1 $output_line."\n";
+    }
+    close($ifh2);
+    close($ofh1);
+	}
 	
-  # Process the second annotation file
-  open(my $ofh2, '>', $final_annot_file2) or die "Could not open file $final_annot_file2 $!";
-  open (my $ifh2, $annot_file2) or die "Could not open file '$annot_file2' $!";
-  while (<$ifh2>) {
-    chomp;
-    my $line = $_;
-    my @fields = split "\t", $line;
-    my $break = $fields[3].$fields[4];
-		
-    if($break ne $curr_break){
-      print $ofh2 $curr_line."\n" unless($curr_break eq "");
-      $curr_break = $break;
-      $curr_distance = 10000000;
+	if(-s $bed_file2){
+	  open(my $ofh2, '>>', $final_annot_file2) or die "Could not open file '$final_annot_file2' $!";
+    open (my $ifh3, $bed_file2) or die "Could not open file '$bed_file2' $!";
+    while (<$ifh3>) {
+      chomp;
+      my $line = $_;
+      my $fusion = parse_bed_file($line, 2);
+      if(exists $exon_annotation1->{$fusion->breakpoint}){
+        $fusion = parse_exon_data($fusion, 2, $exon_annotation1->{$fusion->breakpoint});
+      }
+      if(!exists $fusion->{'transcript2_id'}){
+        $fusion->{'exon2_num'} = 'NA';
+        $fusion->{'feature2_start'} = 'NA';
+        $fusion->{'feature2_end'} = 'NA';
+        # Check whether the breakpoint falls within the footprint of the gene.
+        my $gene_start = $gene_info{$fusion->{'gene2'}}{'feature_start'};
+			  my $gene_end = $gene_info{$fusion->{'gene2'}}{'feature_end'};
+			  my $break_pos = $fusion->{'pos2_end'};
+			  if(defined $gene_start && defined $gene_end){
+			    if($break_pos >= $gene_start && $break_pos <= $gene_end){
+			      $fusion->{'transcript2_id'} = 'Intronic';
+			    }
+			    else{
+			      my $location = 'upstream';
+			      $location = 'downstream' if($break_pos > $gene_end);
+			  		$fusion->{'transcript2_id'} = $location;
+			    }
+			  }
+			  else{
+			    $fusion->{'transcript2_id'} = 'Unannotated';
+			  }
+      }
+      my $output_line = $fusion->format_break_line(2, $gtf);
+		  print $ofh2 $output_line."\n";
     }
-    my $pos = $fields[2];
-    my $exon_start = $fields[8];
-    my $exon_end = $fields[9];
-    my $distance = find_closest_boundary($pos, $exon_start, $exon_end);
+    close($ifh3);
+    close($ofh2);
+	}
 
-    if($distance < $curr_distance){
-      $curr_distance = $distance;
-      $curr_line = $line;
-    }
-
-  }
-  print $ofh2 $curr_line."\n";
-  close ($ifh2);
-  close ($ofh2);
+  #PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
 	
   return 1;
 }
