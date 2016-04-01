@@ -151,6 +151,12 @@ if [[ "x$CHK" == "x" ]] ; then
   exit 1;
 fi
 
+CHK2=`perl -le 'eval "require $ARGV[0]" and print $ARGV[0]->VERSION' Sanger::CGP::Vagrent`
+if [[ "x$CHK2" == "x" ]] ; then
+  echo "PREREQUISITE: Please install VAGrENT before proceeding: https://github.com/cancerit/VAGrENT/releases"
+  exit 1;
+fi
+
 #create a location to build dependencies
 SETUP_DIR=$INIT_DIR/install_tmp
 mkdir -p $SETUP_DIR
