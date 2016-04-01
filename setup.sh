@@ -33,6 +33,18 @@
 
 SOURCE_STAR="https://github.com/alexdobin/STAR/archive/STAR_2.4.1c.tar.gz"
 SOURCE_RSEQC="http://sourceforge.net/projects/rseqc/files/RSeQC-2.6.3.tar.gz/download"
+SOURCE_BOWTIE1="https://sourceforge.net/projects/bowtie-bio/files/bowtie/1.1.1/bowtie-1.1.1-linux-x86_64.zip/download"
+VERSION_BOWTIE1="1.1.1"
+SOURCE_BOWTIE2="https://sourceforge.net/projects/bowtie-bio/files/bowtie2/2.2.3/bowtie2-2.2.3-linux-x86_64.zip/download"
+VERSION_BOWTIE2="2.2.3"
+SOURCE_TOPHAT="http://ccb.jhu.edu/software/tophat/downloads/tophat-2.0.13.Linux_x86_64.tar.gz"
+SOURCE_BLASTN="ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.2.30/ncbi-blast-2.2.30+-x64-linux.tar.gz"
+SOURCE_DEFUSE="https://bitbucket.org/dranew/defuse/get/v0.7.0.tar.gz"
+VERSION_DEFUSE="0.7.0"
+SOURCE_GMAP="http://research-pub.gene.com/gmap/src/gmap-gsnap-2015-09-10.tar.gz"
+SOURCE_BLAT="http://users.soe.ucsc.edu/~kent/src/blatSrc35.zip"
+SOURCE_FATOTWOBIT="http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/faToTwoBit"
+SOURCE_BEDTOOLS="https://github.com/arq5x/bedtools2/releases/download/v2.21.0/bedtools-2.21.0.tar.gz"
 
 
 done_message () {
@@ -169,18 +181,174 @@ if [ -e $SETUP_DIR/star.success ]; then
 else
 (
   cd $SETUP_DIR
-  get_distro "star" $SOURCE_STAR &&
-  mkdir -p star && 
-  tar --strip-components 1 -C star -zxf star.tar.gz &&
-  cp star/bin/Linux_x86_64/STAR $INST_PATH/bin/. &&
-  cp star/STAR-Fusion-*/STAR-Fusion $INST_PATH/bin/. &&
-  cp star/STAR-Fusion-*/lib/* $PERLROOT/. &&
+  get_distro "star" $SOURCE_STAR
+  mkdir -p star
+  tar --strip-components 1 -C star -zxf star.tar.gz
+  cp star/bin/Linux_x86_64/STAR $INST_PATH/bin/.
+  cp star/STAR-Fusion-*/STAR-Fusion $INST_PATH/bin/.
+  cp star/STAR-Fusion-*/lib/* $PERLROOT/.
   touch $SETUP_DIR/star.success
   )>>$INIT_DIR/setup.log 2>&1
 fi
 done_message "" "Failed to build STAR."
   
-  
+# Install bowtie1
+echo -n "Installing bowtie1 ..."
+if [ -e $SETUP_DIR/bowtie1.success ]; then
+  echo -n " previously installed ...";
+else
+(
+  cd $SETUP_DIR
+  get_distro "bowtie1" $SOURCE_BOWTIE1
+  unzip -qu bowtie1.zip
+  cd $SETUP_DIR/bowtie-$VERSION_BOWTIE1
+  cp bowtie* $INST_PATH/bin/.
+  touch $SETUP_DIR/bowtie1.success
+  )>>$INIT_DIR/setup.log 2>&1
+fi
+done_message "" "Failed to build bowtie1."
+
+# Install bowtie2
+echo -n "Installing bowtie2 ..."
+if [ -e $SETUP_DIR/bowtie2.success ]; then
+  echo -n " previously installed ...";
+else
+(
+  cd $SETUP_DIR
+  get_distro "bowtie2" $SOURCE_BOWTIE2
+  unzip -qu bowtie2.zip
+  cd $SETUP_DIR/bowtie2-$VERSION_BOWTIE2
+  cp bowtie2* $INST_PATH/bin/.
+  touch $SETUP_DIR/bowtie2.success
+  )>>$INIT_DIR/setup.log 2>&1
+fi
+done_message "" "Failed to build bowtie2."
+
+# Install tophat
+echo -n "Installing tophat ..."
+if [ -e $SETUP_DIR/tophat.success ]; then
+  echo -n " previously installed ...";
+else
+(
+  cd $SETUP_DIR
+  get_distro "tophat" $SOURCE_TOPHAT
+  mkdir -p tophat
+  tar --strip-components 1 -C tophat -zxf tophat.tar.gz
+  cd tophat
+  rm ./AUTHORS ./COPYING ./README 
+  cp ./* $INST_PATH/bin/.
+  touch $SETUP_DIR/tophat.success
+  )>>$INIT_DIR/setup.log 2>&1
+fi
+done_message "" "Failed to build tophat."
+
+# Install blastn
+echo -n "Installing blastn ..."
+if [ -e $SETUP_DIR/blastn.success ]; then
+  echo -n " previously installed ...";
+else
+(
+  cd $SETUP_DIR
+  get_distro "blastn" $SOURCE_BLASTN
+  mkdir -p blastn
+  tar --strip-components 1 -C blastn -zxf blastn.tar.gz
+  cp blastn/bin/blastn $INST_PATH/bin/.
+  touch $SETUP_DIR/blastn.success
+  )>>$INIT_DIR/setup.log 2>&1
+fi
+done_message "" "Failed to build blastn."
+
+# Install defuse
+echo -n "Installing defuse ..."
+if [ -e $SETUP_DIR/defuse.success ]; then
+  echo -n " previously installed ...";
+else
+(
+  cd $SETUP_DIR
+  get_distro "defuse" $SOURCE_DEFUSE
+  mkdir -p defuse
+  tar --strip-components 1 -C defuse -zxf defuse.tar.gz
+  mkdir -p $INST_PATH/bin/defuse_install
+  cp -r defuse/* $INST_PATH/bin/defuse_install
+  cp defuse/scripts/*pm $INST_PATH/lib/perl5
+  ln -s $INST_PATH/bin/defuse_install/scripts/defuse.pl $INST_PATH/bin/defuse.pl
+  touch $SETUP_DIR/defuse.success
+  )>>$INIT_DIR/setup.log 2>&1
+fi
+done_message "" "Failed to build defuse."
+
+# Install faToTwoBit
+echo -n "Installing faToTwoBit ..."
+if [ -e $SETUP_DIR/faToTwoBit.success ]; then
+  echo -n " previously installed ...";
+else
+(
+  cd $SETUP_DIR
+  wget $SOURCE_FATOTWOBIT
+  chmod +x faToTwoBit
+  cp faToTwoBit $INST_PATH/bin/.
+  touch $SETUP_DIR/faToTwoBit.success
+  )>>$INIT_DIR/setup.log 2>&1
+fi
+done_message "" "Failed to install faToTwoBit."
+
+# Install blat
+echo -n "Installing blat ..."
+if [ -e $SETUP_DIR/blat.success ] || [ -e $INST_PATH/bin/blat ]; then
+  echo -n " previously installed ...";
+else
+(
+  cd $SETUP_DIR
+  get_distro "blat" $SOURCE_BLAT
+  unzip -qu blat.zip
+  cd $SETUP_DIR/blatSrc
+	BINDIR=$SETUP_DIR/blat/bin
+  export BINDIR
+  export MACHTYPE
+  mkdir -p $BINDIR
+  make -j$CPU
+  cp $BINDIR/blat $INST_PATH/bin/.
+  touch $SETUP_DIR/blat.success
+  )>>$INIT_DIR/setup.log 2>&1
+fi
+done_message "" "Failed to build blat."
+
+# Install bedtools
+echo -n "Installing bedtools ..."
+if [ -e $SETUP_DIR/bedtools.success ] || [ -e $INST_PATH/bin/bedtools ]; then
+  echo -n " previously installed ...";
+else
+(
+  cd $SETUP_DIR
+  get_distro "bedtools2" $SOURCE_BEDTOOLS
+  mkdir -p bedtools2
+  tar --strip-components 1 -C bedtools2 -zxf bedtools2.tar.gz
+  make -C bedtools2 -j$CPU
+  cp bedtools2/bin/* $INST_PATH/bin/.
+  touch $SETUP_DIR/bedtools.success
+)>>$INIT_DIR/setup.log 2>&1
+fi
+done_message "" "Failed to build bedtools."
+
+# Install gmap
+echo -n "Installing gmap ..."
+if [ -e $SETUP_DIR/gmap.success ]; then
+  echo -n " previously installed ...";
+else
+(
+  cd $SETUP_DIR
+  get_distro "gmap" $SOURCE_GMAP
+  mkdir -p gmap
+  tar --strip-components 1 -C gmap -zxf gmap.tar.gz
+  cd gmap
+  ./configure --prefix=$INST_PATH --with-gmapdb=$INST_PATH
+  make
+  make install
+  touch $SETUP_DIR/gmap.success
+  )>>$INIT_DIR/setup.log 2>&1
+fi
+done_message "" "Failed to build gmap."
+
 # Install RSeQC using PYTHONPATH location set above
 echo -n "Installing RSeQC ..."
 if [ -e $SETUP_DIR/rseqc.success ]; then
@@ -188,11 +356,11 @@ if [ -e $SETUP_DIR/rseqc.success ]; then
 else
 (
   cd $SETUP_DIR
-  get_distro "rseqc" $SOURCE_RSEQC &&
-  mkdir -p rseqc &&
-  tar --strip-components 1 -C rseqc -zxf rseqc.tar.gz &&
+  get_distro "rseqc" $SOURCE_RSEQC
+  mkdir -p rseqc
+  tar --strip-components 1 -C rseqc -zxf rseqc.tar.gz
   cd $SETUP_DIR/rseqc &&
-  python ./setup.py install --prefix=$INST_PATH &&
+  python ./setup.py install --prefix=$INST_PATH
   touch $SETUP_DIR/rseqc.success
   )>>$INIT_DIR/setup.log 2>&1
 fi
@@ -219,12 +387,12 @@ done_message "" "Failed during installation of core dependencies."
 # Install cgpRna code
 echo -n "Installing cgpRna..."
 (
-  cd $INIT_DIR/perl &&
-  perl Makefile.PL INSTALL_BASE=$INST_PATH &&
-  make &&
-  make test &&
-  make install &&
-  cp $INIT_DIR/perl/config/star.ini $INST_PATH/config/
+  cd $INIT_DIR/perl
+  perl Makefile.PL INSTALL_BASE=$INST_PATH
+  make
+  make test
+  make install
+  cp $INIT_DIR/perl/config/*.ini $INST_PATH/config/
 ) >>$INIT_DIR/setup.log 2>&1
 done_message "" "cgpRna install failed."
 
@@ -240,5 +408,20 @@ echo "  $PERLROOT"
 echo "Please add the following to beginning of PYTHONPATH:"
 echo "  $PYTHONROOT"
 echo
+echo "If you intend to use the fusion pipeline, open the defuse config file: $INST_PATH/bin/defuse_install/scripts/config.txt and update the following values..."
+echo "source_directory = $INST_PATH/bin/defuse_install"
+echo "Then further down in the section titled # Paths to external tools..."
+echo "samtools_bin = $INST_PATH/bin/samtools"
+echo "bowtie_bin = $INST_PATH/bin/bowtie"
+echo "bowtie_build_bin = $INST_PATH/bin/bowtie-build"
+echo "blat_bin = $INST_PATH/bin/blat"
+echo "fatotwobit_bin = $INST_PATH/bin/faToTwoBit"
+echo "r_bin = <full path to where the R executable is installed in your environment>"
+echo "rscript_bin = <full path to where the Rscript executable is installed in your environment>"
+echo "gmap_bin = $INST_PATH/bin/gmap"
+echo "gmap_build_bin = $INST_PATH/bin/gmap_build"
+echo
+echo "Finally, open the file: $INST_PATH/config/defuse.ini and update the following parameter to..."
+echo "defuseversion=$VERSION_DEFUSE"
 
 exit 0
