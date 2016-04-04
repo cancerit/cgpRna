@@ -517,6 +517,12 @@ sub tophatfusion_post {
 	# Ensure the correct version of bowtie is on the path along with blastn
 	my $bwtpath = dirname($options->{'bowtiepath'} );
 	my $blastnpath = $options->{'blastn'};
+	
+	if(! defined $options->{'blastn'} || $options->{'blastn'} eq ''){
+	  $blastnpath = _which('blastn');
+	  $options->{'blastn'} = $blastnpath;
+	}
+	
 	$ENV{PATH} = "$bwtpath:$ENV{PATH}" if($ENV{'PATH'} !~ /$bwtpath/);
 	$ENV{PATH} = "$blastnpath:$ENV{PATH}" if($ENV{'PATH'} !~ /$blastnpath/);
 	_which('bowtie');
