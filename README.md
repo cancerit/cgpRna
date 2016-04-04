@@ -68,7 +68,7 @@ N.B. the path_to_install_to should be the same as the install location used for 
 * [gmap](http://research-pub.gene.com/gmap/) The aligner used by deFuse
 * [faToTwoBit](http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/) deFuse dependency
 * [bedtools](https://github.com/arq5x/bedtools2/) Unless already in the install location bin directory
-* [blastn](ftp://ftp.ncbi.nlm.nih.gov/blast/) Used by tophat-fusion post
+* [blastn](http://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&PAGE_TYPE=BlastDocs&DOC_TYPE=Download) Used by tophat-fusion post
 
 N.B. samtools is also a dependency but this is installed by PCAP-Core which should have already been installed (see above).
 
