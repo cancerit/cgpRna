@@ -42,7 +42,7 @@ variant analysis and allele specific expression.
 
 ### Dependencies/Installation
 
-Please install Perl package [PCAP-core](https://github.com/ICGC-TCGA-PanCancer/PCAP-core/releases) first.
+Please install Perl packages [PCAP-core](https://github.com/ICGC-TCGA-PanCancer/PCAP-core/releases) and [VAGrENT](https://github.com/cancerit/VAGrENT/releases) first.
 
 Prerequisites for the [RSeQC](http://rseqc.sourceforge.net/#installation) software are:
 * gcc
@@ -54,10 +54,23 @@ Once that is done and your $PATH environment variable has been updated so that n
 
 ./setup.sh path_to_install_to
 
-N.B. the path_to_install_to should be the same as the install location used for PCAP-core above.
+N.B. the path_to_install_to should be the same as the install location used for PCAP-core and VAGrENT above.
 
 ### Tools installed by setup.sh
 
 * Some CPAN hosted libraries, see perl/Makefile.PL
 * [STAR](https://github.com/alexdobin/STAR/releases)
+* [Tophat](https://ccb.jhu.edu/software/tophat/index.shtml)
+* [deFuse](https://bitbucket.org/dranew/defuse)
 * [RSeQC](http://rseqc.sourceforge.net)
+* [bowtie](http://bowtie-bio.sourceforge.net/index.shtml) N.B. both bowtie and bowtie2 are installed and can be used with Tophat
+* [blat](http://hgwdev.cse.ucsc.edu/~kent/src/) Unless already in the install location bin directory
+* [gmap](http://research-pub.gene.com/gmap/) The aligner used by deFuse
+* [faToTwoBit](http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/) deFuse dependency
+* [bedtools](https://github.com/arq5x/bedtools2/) Unless already in the install location bin directory
+* [blastn](ftp://ftp.ncbi.nlm.nih.gov/blast/) Used by tophat-fusion post
+
+N.B. samtools is also a dependency but this is installed by PCAP-Core which should have already been installed (see above).
+
+If you are planning to use the fusion pipeline, specifically defuse_fusion.pl, the deFuse config.txt file will need to be updated with the installed locations of a number of tools.
+These paths are printed to screen if the setup.sh script completes successfully so make a note of the locations and update the file as instructed.
