@@ -83,7 +83,7 @@ sub check_input {
 	PCAP::Cli::file_for_reading('gtf-file', File::Spec->catfile($ref_build_loc, 'star', $gene_build, $options->{'gtffilename'}));
 
 	if($fusion_mode){
-	  PCAP::Cli::file_for_reading('normals-list',File::Spec->catfile($ref_build_loc,$options->{'normalfusionslist'}));
+	  PCAP::Cli::file_for_reading('normals-list',File::Spec->catfile($ref_build_loc,'cgpRna',$options->{'normalfusionslist'}));
 	}
 	
 	my $input_meta = PCAP::Bwa::Meta::files_to_meta($options->{'tmp'}, $options->{'raw_files'}, $options->{'sample'});

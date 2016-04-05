@@ -66,10 +66,10 @@ sub check_input {
 	my $ref_build_loc = File::Spec->catdir($ref_data, $species, $ref_build);
 
 	# Check the normal fusions file exists for the filtering step
-	PCAP::Cli::file_for_reading('normals-list',File::Spec->catfile($ref_build_loc,$options->{'normalfusionslist'}));
+	PCAP::Cli::file_for_reading('normals-list',File::Spec->catfile($ref_build_loc,'cgpRna',$options->{'normalfusionslist'}));
 	
 	# Check the defuse config file exists for the ref-gene build
-	PCAP::Cli::file_for_reading('defuse-config',File::Spec->catfile($ref_build_loc,$gene_build,$options->{'defuseconfig'}));
+	PCAP::Cli::file_for_reading('defuse-config',File::Spec->catfile($ref_build_loc,'defuse',$gene_build,$options->{'defuseconfig'}));
 	
 	$options->{'meta_set'} = PCAP::Bwa::Meta::files_to_meta($options->{'tmp'}, $options->{'raw_files'}, $options->{'sample'});	
 	
@@ -164,7 +164,7 @@ sub defuse {
 	}
 
 	# Get the relevant defuse config file for the reference and gene builds
-	my $defuse_config = File::Spec->catfile($options->{'refdataloc'}, $options->{'species'}, $options->{'referencebuild'}, $options->{'genebuild'}, $options->{'defuseconfig'} );
+	my $defuse_config = File::Spec->catfile($options->{'refdataloc'}, $options->{'species'}, $options->{'referencebuild'},'defuse',$options->{'genebuild'}, $options->{'defuseconfig'} );
 	my $command = sprintf $DEFUSE,	$defuse,
 					$defuse_config,
 					$threads,

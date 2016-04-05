@@ -260,10 +260,10 @@ tophat_fusion.pl [options] [file(s)...]
     -config   		-c  	Path to config.ini file. Defaults for the reference and transcriptome related parameters are provided in the config.ini file.
     -refbuild 		-rb 	Reference assembly version. Can be UCSC or Ensembl format e.g. GRCh38 or hg38 [GRCh38] 
     -genebuild 		-gb 	Gene build version. This needs to be consistent with the reference build in terms of the version and chromosome name style [77]
-    -refindex   	-ri 	Stem name of the bowtie index files for the reference which need to be compatible with the bowtie version [GRCh38.genome]
-    -transindex		-ti 	Stem name of the bowtie index files for the transcriptome which need to be compatible with the bowtie version [GRCh38.77]
-    -ucscindex		-ui 	Stem name of the bowtie index files for the transcriptome in ucsc format which should be compatible with the bowtie version and ucsc build [hg38.genome]
-    -normals  	  	-n  	File containing list of gene fusions detected in normal samples. It should reside under /refdataloc/species/refbuild/ [normal-fusions-b38]    
+    -refindex   	-ri 	Stem name of the bowtie index files for the reference which need to be compatible with the bowtie version [genome]
+    -transindex		-ti 	Stem name of the bowtie index files for the transcriptome which need to be compatible with the bowtie version [transcriptome]
+    -ucscindex		-ui 	Stem name of the bowtie index files for the transcriptome in ucsc format which should be compatible with the bowtie version and ucsc build [genome]
+    -normals  	  	-n  	File containing list of gene fusions detected in normal samples. It should reside under /refdataloc/species/refbuild/ [normal-fusions]    
     -species  		-sp 	Species [human]
 
   Targeted processing (further detail under OPTIONS):

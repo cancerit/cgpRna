@@ -211,8 +211,8 @@ defuse_fusion.pl [options] [file(s)...]
     -sample   		-s   	Sample name
 
   Optional
-    -defuseconfig 	-d  	Name of the defuse config file. It should reside under /refdataloc/species/refbuild/genebuild/ [defuse-config-GRCh38-77.txt]
-    -normals  	  	-n  	File containing list of gene fusions detected in normal samples. It should reside under /refdataloc/species/refbuild/ [normal-fusions-b38]
+    -defuseconfig 	-d  	Name of the defuse config file. It should reside under /refdataloc/species/refbuild/defuse/genebuild/ [defuse-config.txt]
+    -normals  	  	-n  	File containing list of gene fusions detected in normal samples. It should reside under /refdataloc/species/refbuild/ [normal-fusions]
     -threads   		-t  	Number of cores to use. [1]
     -config   		-c  	Path to config.ini file. The file contains defaults for the reference data and deFuse software installation details [<cgpRna-install-location>/perl/config/defuse.ini]
     -refbuild 		-rb 	Reference assembly version. Can be UCSC or Ensembl format e.g. GRCh38 or hg38 [GRCh38] 
