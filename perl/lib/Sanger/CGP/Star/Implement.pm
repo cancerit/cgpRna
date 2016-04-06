@@ -551,7 +551,12 @@ sub star_fusion {
 	my $sample = $options->{'sample'};
 	my $gtf = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'}, 'star',$options->{'genebuild'}, $options->{'gtffilename'});
 	
-	my $commands = sprintf $STAR_FUSION,	$options->{'starfusionpath'},
+	my $starfusionpath = $options->{'starfusionpath'};
+	if(! defined $starfusionpath || $starfusionpath eq ''){
+	  $starfusionpath = _which('STAR-Fusion');
+	}
+	
+	my $commands = sprintf $STAR_FUSION,	$starfusionpath,
 						$chimeric_sam,
 						$chimeric_junction,
 						$gtf,
