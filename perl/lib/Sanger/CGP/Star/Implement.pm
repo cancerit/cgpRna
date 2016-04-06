@@ -138,7 +138,7 @@ sub filter_fusions {
 	my $fusions_file = File::Spec->catfile($star_outdir, "$sample.fusion_candidates.txt");
 	die "The star fusion output files are missing, please run the starfusion step prior to filter.\n" unless(-e $fusions_file);
 
-	my $normals_file = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},$options->{'normalfusionslist'});
+	my $normals_file = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'cgpRna',$options->{'normalfusionslist'});
 
 	my $command = "$^X ";
 	$command .= _which('filter_fusions.pl');
