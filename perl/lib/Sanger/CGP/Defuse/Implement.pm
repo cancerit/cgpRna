@@ -116,6 +116,10 @@ sub defuse {
 	$threads = $options->{'threads'} if($options->{'threads'} < $DEFUSE_MAX_CORES);
 	my $sample = $options->{'sample'};
 	my $defuse = $options->{'defusepath'};
+	if(! defined $defuse || $defuse eq ''){
+	  $defuse = _which('defuse.pl');
+	}
+	
 	my $outdir = File::Spec->catdir($tmp, "defuse_$sample");
 	my $fastq1;
 	my $fastq2;

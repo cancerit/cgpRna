@@ -520,9 +520,16 @@ sub star {
 														File::Spec->catfile($stardir, 'Aligned.toTranscriptome.sortedByCoord.out.bam'),
 														$threads,
 														$threads;
-  my @commands;
-  push @commands, $bamsort_command1;
-  push @commands, $bamsort_command2;
+														
+	my $fusion_mode;
+	
+	if(exists $options->{'fusion_mode'}){
+	  $fusion_mode = $options->{'fusion_mode'};
+	}
+															
+	my @commands;
+	push @commands, $bamsort_command1;
+	push @commands, $bamsort_command2 unless(defined $fusion_mode);
 
 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), \@commands, 0);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
