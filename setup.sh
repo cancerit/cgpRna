@@ -274,9 +274,16 @@ else
   get_distro "defuse" $SOURCE_DEFUSE
   mkdir -p defuse
   tar --strip-components 1 -C defuse -zxf defuse.tar.gz
+  cd ./defuse/tools
+  include_search=`grep "#include <map>" ./Common.h | wc -l`
+  if [ $include_search -eq 0 ]; then
+    sed -i 's/#include <vector>/#include <map>\n#include <vector>/' ./Common.h
+  fi
+  make
+  cd ../../
   mkdir -p $INST_PATH/bin/defuse_install
-  cp -r defuse/* $INST_PATH/bin/defuse_install
-  cp defuse/scripts/*pm $INST_PATH/lib/perl5
+  cp -r ./defuse/* $INST_PATH/bin/defuse_install
+  cp ./defuse/scripts/*pm $INST_PATH/lib/perl5
   ln -s $INST_PATH/bin/defuse_install/scripts/defuse.pl $INST_PATH/bin/defuse.pl
   touch $SETUP_DIR/defuse.success
   )>>$INIT_DIR/setup.log 2>&1
