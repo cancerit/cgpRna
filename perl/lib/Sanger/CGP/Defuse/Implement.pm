@@ -196,7 +196,7 @@ sub filter_fusions {
 	die "Please run the defuse step prior to filter\n" unless(-d $defuse_outdir);
 	die "One of the deFuse output files is missing, please run the defuse step prior to filter.\n" unless(-e $fusions_file && -e File::Spec->catfile($defuse_outdir, 'cdna.pair.sam'));
 
-	my $normals_file = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},$options->{'normalfusionslist'});
+	my $normals_file = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'cgpRna',$options->{'normalfusionslist'});
 
 	my $command = "$^X ";
 	$command .= _which('filter_fusions.pl');
