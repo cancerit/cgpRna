@@ -385,7 +385,7 @@ sub split_setup {
 
 	my $refgene = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'tophat',$options->{'refgene'});
 	my $ensgene = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'tophat',$options->{'genebuild'},$options->{'ensgene'});
-	my $blast = File::Spec->catdir($options->{'refdataloc'},$options->{'species'},'tophat',$options->{'blastdb'});
+	my $blast = File::Spec->catdir($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'tophat',$options->{'blastdb'});
 	symlink($refgene, $post_rundir.'/refGene.txt') unless(-l File::Spec->catfile($post_rundir,'refGene.txt'));
 	symlink($ensgene, $post_rundir.'/ensGene.txt') unless(-l File::Spec->catfile($post_rundir,'ensGene.txt'));
 	symlink($blast, $post_rundir.'/blast') unless(-l $post_rundir.'/blast');
