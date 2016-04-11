@@ -83,7 +83,7 @@ sub check_input {
 	PCAP::Cli::file_for_reading('gtf-file', File::Spec->catfile($ref_build_loc, 'star', $gene_build, $options->{'gtffilename'}));
 
 	if($fusion_mode){
-	  PCAP::Cli::file_for_reading('normals-list',File::Spec->catfile($ref_build_loc,$options->{'normalfusionslist'}));
+	  PCAP::Cli::file_for_reading('normals-list',File::Spec->catfile($ref_build_loc,'cgpRna',$options->{'normalfusionslist'}));
 	}
 	
 	my $input_meta = PCAP::Bwa::Meta::files_to_meta($options->{'tmp'}, $options->{'raw_files'}, $options->{'sample'});
@@ -138,7 +138,7 @@ sub filter_fusions {
 	my $fusions_file = File::Spec->catfile($star_outdir, "$sample.fusion_candidates.txt");
 	die "The star fusion output files are missing, please run the starfusion step prior to filter.\n" unless(-e $fusions_file);
 
-	my $normals_file = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},$options->{'normalfusionslist'});
+	my $normals_file = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'cgpRna',$options->{'normalfusionslist'});
 
 	my $command = "$^X ";
 	$command .= _which('filter_fusions.pl');
@@ -520,9 +520,16 @@ sub star {
 														File::Spec->catfile($stardir, 'Aligned.toTranscriptome.sortedByCoord.out.bam'),
 														$threads,
 														$threads;
-  my @commands;
-  push @commands, $bamsort_command1;
-  push @commands, $bamsort_command2;
+														
+	my $fusion_mode;
+	
+	if(exists $options->{'fusion_mode'}){
+	  $fusion_mode = $options->{'fusion_mode'};
+	}
+															
+	my @commands;
+	push @commands, $bamsort_command1;
+	push @commands, $bamsort_command2 unless(defined $fusion_mode);
 
 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), \@commands, 0);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
@@ -544,7 +551,12 @@ sub star_fusion {
 	my $sample = $options->{'sample'};
 	my $gtf = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'}, 'star',$options->{'genebuild'}, $options->{'gtffilename'});
 	
-	my $commands = sprintf $STAR_FUSION,	$options->{'starfusionpath'},
+	my $starfusionpath = $options->{'starfusionpath'};
+	if(! defined $starfusionpath || $starfusionpath eq ''){
+	  $starfusionpath = _which('STAR-Fusion');
+	}
+	
+	my $commands = sprintf $STAR_FUSION,	$starfusionpath,
 						$chimeric_sam,
 						$chimeric_junction,
 						$gtf,

@@ -132,33 +132,32 @@ sub check_input {
 	
 	if($options->{'bowtieversion'} == 1){
 		for $suffix(@BOWTIE1_SUFFIXES){
-			PCAP::Cli::file_for_reading('bowtie1-ref-index',File::Spec->catfile($ens_refdata,'bowtie1',$ref_prefix.$suffix));
-			PCAP::Cli::file_for_reading('bowtie1-transcriptome-index',File::Spec->catfile($ens_refdata,$options->{'genebuild'},'bowtie1',$trans_prefix.$suffix));
-			$options->{'referencepath'} = File::Spec->catfile($ens_refdata,'bowtie1',$ref_prefix);
-			$options->{'transcriptomepath'} = File::Spec->catfile($ens_refdata,$options->{'genebuild'},'bowtie1',$trans_prefix);
+			PCAP::Cli::file_for_reading('bowtie1-ref-index',File::Spec->catfile($ens_refdata,'tophat',$ref_prefix.$suffix));
+			PCAP::Cli::file_for_reading('bowtie1-transcriptome-index',File::Spec->catfile($ens_refdata,'tophat',$options->{'genebuild'},$trans_prefix.$suffix));
+			$options->{'referencepath'} = File::Spec->catfile($ens_refdata,'tophat',$ref_prefix);
+			$options->{'transcriptomepath'} = File::Spec->catfile($ens_refdata,'tophat',$options->{'genebuild'},$trans_prefix);
 		}
 	}
 	else{
 		for $suffix(@BOWTIE2_SUFFIXES){
-			PCAP::Cli::file_for_reading('bowtie2-ref-index',File::Spec->catfile($ens_refdata,'bowtie2',$ref_prefix.$suffix));
-			PCAP::Cli::file_for_reading('bowtie2-transcriptome-index',File::Spec->catfile($ens_refdata,$options->{'genebuild'},'bowtie2',$trans_prefix.$suffix));
-			$options->{'referencepath'} = File::Spec->catfile($ens_refdata,'bowtie2',$ref_prefix);
-			$options->{'transcriptomepath'} = File::Spec->catfile($ens_refdata,$options->{'genebuild'},'bowtie2',$trans_prefix);
+			PCAP::Cli::file_for_reading('bowtie2-ref-index',File::Spec->catfile($ens_refdata,'tophat',$ref_prefix.$suffix));
+			PCAP::Cli::file_for_reading('bowtie2-transcriptome-index',File::Spec->catfile($ens_refdata,'tophat',$options->{'genebuild'},$trans_prefix.$suffix));
+			$options->{'referencepath'} = File::Spec->catfile($ens_refdata,'tophat',$ref_prefix);
+			$options->{'transcriptomepath'} = File::Spec->catfile($ens_refdata,'tophat',$options->{'genebuild'},$trans_prefix);
 		}
 	}
 	
 	# Check the TopHat Fusion Post files exist
 	my $ucsc_prefix = $options->{'tophatpostindex'};
-	my $ucsc_refdata = File::Spec->catdir($refdata,$options->{'tophatpostbuild'});
 	for $suffix(@BOWTIE1_SUFFIXES){
-		PCAP::Cli::file_for_reading('bowtie1-tophatpost-index',File::Spec->catfile($ucsc_refdata,'bowtie1',$ucsc_prefix.$suffix));
+		PCAP::Cli::file_for_reading('bowtie1-tophatpost-index',File::Spec->catfile($ens_refdata,'tophat',$ucsc_prefix.$suffix));
 	}
-	$options->{'tophatpostpath'} = File::Spec->catfile($ucsc_refdata,'bowtie1',$ucsc_prefix);
-	PCAP::Cli::file_for_reading('refGene',File::Spec->catfile($ucsc_refdata,$options->{'refgene'}));
-	PCAP::Cli::file_for_reading('ensGene',File::Spec->catfile($ucsc_refdata,$options->{'genebuild'},$options->{'ensgene'}));
+	$options->{'tophatpostpath'} = File::Spec->catfile($ens_refdata,'tophat',$ucsc_prefix);
+	PCAP::Cli::file_for_reading('refGene',File::Spec->catfile($ens_refdata,'tophat',$options->{'refgene'}));
+	PCAP::Cli::file_for_reading('ensGene',File::Spec->catfile($ens_refdata,'tophat',$options->{'genebuild'},$options->{'ensgene'}));
 	
 	# Check the normal fusions file exists for the filtering step
-	PCAP::Cli::file_for_reading('normals-list',File::Spec->catfile($ens_refdata,$options->{'normalfusionslist'}));
+	PCAP::Cli::file_for_reading('normals-list',File::Spec->catfile($ens_refdata,'cgpRna',$options->{'normalfusionslist'}));
 	
 	$options->{'meta_set'} = PCAP::Bwa::Meta::files_to_meta($options->{'tmp'}, $options->{'raw_files'}, $options->{'sample'});
 	
@@ -229,7 +228,7 @@ sub filter_fusions {
 	die "Please run tophatfusion_post step prior to filter\n" unless(-d $post_outdir);
 	die "Please run tophatfusion_post step prior to filter\n" unless(-e $fusions_file);
 
-	my $normals_file = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},$options->{'normalfusionslist'});
+	my $normals_file = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'cgpRna',$options->{'normalfusionslist'});
 	
 	my $command = "$^X ";
 	$command .= _which('filter_fusions.pl');
@@ -384,9 +383,9 @@ sub split_setup {
 	my $post_rundir = File::Spec->catdir($options->{'tmp'}, 'tophatpostrun');
 	make_path($post_rundir) unless(-d $post_rundir);
 
-	my $refgene = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'tophatpostbuild'},$options->{'refgene'});
-	my $ensgene = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'tophatpostbuild'},$options->{'genebuild'},$options->{'ensgene'});
-	my $blast = File::Spec->catdir($options->{'refdataloc'},$options->{'species'},$options->{'blastdb'});
+	my $refgene = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'tophat',$options->{'refgene'});
+	my $ensgene = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'tophat',$options->{'genebuild'},$options->{'ensgene'});
+	my $blast = File::Spec->catdir($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'tophat',$options->{'blastdb'});
 	symlink($refgene, $post_rundir.'/refGene.txt') unless(-l File::Spec->catfile($post_rundir,'refGene.txt'));
 	symlink($ensgene, $post_rundir.'/ensGene.txt') unless(-l File::Spec->catfile($post_rundir,'ensGene.txt'));
 	symlink($blast, $post_rundir.'/blast') unless(-l $post_rundir.'/blast');
@@ -483,6 +482,9 @@ sub tophat_fusion {
 	
 	my $ref_index_stem = $options->{'referencepath'};
 	my $tophat_path = $options->{'tophatpath'};
+	if(! defined $tophat_path || $tophat_path eq ''){
+	  $tophat_path = _which('tophat');
+	}
 	
 	my $command = $tophat_path." ".$tophat_params." ".$ref_index_stem." ".join(",",@input1)." ".join(",",@input2);
 	
@@ -505,6 +507,9 @@ sub tophatfusion_post {
 	
 	my $tophatpost_params = process_tophatpost_params($options);
 	my $tophatpost = $options->{'tophatpath'};
+	if(! defined $tophatpost || $tophatpost eq ''){
+	  $tophatpost = _which('tophat-fusion-post');
+	}
 	my $tophatpostindex = $options->{'tophatpostpath'};
 
 	my $runcommand = $tophatpost.'-fusion-post'." ".$tophatpost_params." ".$tophatpostindex;
@@ -517,6 +522,12 @@ sub tophatfusion_post {
 	# Ensure the correct version of bowtie is on the path along with blastn
 	my $bwtpath = dirname($options->{'bowtiepath'} );
 	my $blastnpath = $options->{'blastn'};
+	
+	if(! defined $options->{'blastn'} || $options->{'blastn'} eq ''){
+	  $blastnpath = _which('blastn');
+	  $options->{'blastn'} = $blastnpath;
+	}
+	
 	$ENV{PATH} = "$bwtpath:$ENV{PATH}" if($ENV{'PATH'} !~ /$bwtpath/);
 	$ENV{PATH} = "$blastnpath:$ENV{PATH}" if($ENV{'PATH'} !~ /$blastnpath/);
 	_which('bowtie');
