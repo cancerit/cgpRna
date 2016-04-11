@@ -41,6 +41,14 @@ WriteMakefile(
   EXE_FILES     => [qw(
                         bin/star_mapping.pl
                         bin/process_qcstats.pl
+                        bin/star_fusion.pl
+                        bin/tophat_fusion.pl
+                        bin/tophat_add_strand.pl
+                        bin/defuse_fusion.pl
+                        bin/defuse_filters.pl
+                        bin/filter_fusions.pl
+                        bin/compare_overlapping_fusions.pl
+                        bin/compare_CN_and_fusion.pl
                         )],
   PREREQ_PM     => {
                      'Capture::Tiny' => 0.30,

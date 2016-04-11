@@ -204,15 +204,15 @@ https://bitbucket.org/dranew/defuse
 
 =head1 SYNOPSIS
 
-defuse.pl [options] [file(s)...]
+defuse_fusion.pl [options] [file(s)...]
 
   Required parameters:
     -outdir    		-o   	Folder to output result to.
     -sample   		-s   	Sample name
 
   Optional
-    -defuseconfig 	-d  	Name of the defuse config file. It should reside under /refdataloc/species/refbuild/genebuild/ [defuse-config-GRCh38-77.txt]
-    -normals  	  	-n  	File containing list of gene fusions detected in normal samples. It should reside under /refdataloc/species/refbuild/ [normal-fusions-b38]
+    -defuseconfig 	-d  	Name of the defuse config file. It should reside under /refdataloc/species/refbuild/defuse/genebuild/ [defuse-config.txt]
+    -normals  	  	-n  	File containing list of gene fusions detected in normal samples. It should reside under /refdataloc/species/refbuild/ [normal-fusions]
     -threads   		-t  	Number of cores to use. [1]
     -config   		-c  	Path to config.ini file. The file contains defaults for the reference data and deFuse software installation details [<cgpRna-install-location>/perl/config/defuse.ini]
     -refbuild 		-rb 	Reference assembly version. Can be UCSC or Ensembl format e.g. GRCh38 or hg38 [GRCh38] 
@@ -230,7 +230,7 @@ defuse.pl [options] [file(s)...]
     -version   		-v   	Version
 
   File list can be full file names or wildcard, e.g.
-    defuse.pl -t 16 -o myout -refbuild GRCh38 -genebuild 77 -s sample input/*.bam
+    defuse_fusion.pl -t 16 -o myout -refbuild GRCh38 -genebuild 77 -s sample input/*.bam
 
   Run with '-m' for possible input file types.
 

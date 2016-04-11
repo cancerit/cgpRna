@@ -119,7 +119,6 @@ sub setup {
 			'r|refdataloc=s' => \$opts{'refdataloc'},
 			'ri|refindex=s' => \$opts{'referenceindex'},
 			'ti|transindex=s' => \$opts{'transcriptomeindex'},
-			'ub|ucscbuild=s' => \$opts{'tophatpostbuild'},
 			'ui|ucscindex=s' => \$opts{'tophatpostindex'},
 			'n|normals=s' => \$opts{'normalfusionslist'},
 			't|threads=i' => \$opts{'threads'},
@@ -144,7 +143,6 @@ sub setup {
 	$opts{'bowtieversion'} = $cfg->val('tophat-config','bowtieversion') unless(defined $opts{'bowtieversion'});
 	$opts{'referenceindex'} = $cfg->val('tophat-config','referenceindex') unless(defined $opts{'referenceindex'});
 	$opts{'transcriptomeindex'} = $cfg->val('tophat-config','transcriptomeindex') unless(defined $opts{'transcriptomeindex'});
-	$opts{'tophatpostbuild'} = $cfg->val('tophat-config','tophatpostbuild') unless(defined $opts{'tophatpostbuild'});
 	$opts{'tophatpostindex'} = $cfg->val('tophat-config','tophatpostindex') unless(defined $opts{'tophatpostindex'});
 	$opts{'ensgene'} = $cfg->val('tophat-config','ensgene') unless(defined $opts{'ensgene'});
 	$opts{'refgene'} = $cfg->val('tophat-config','refgene') unless(defined $opts{'refgene'});
@@ -262,11 +260,10 @@ tophat_fusion.pl [options] [file(s)...]
     -config   		-c  	Path to config.ini file. Defaults for the reference and transcriptome related parameters are provided in the config.ini file.
     -refbuild 		-rb 	Reference assembly version. Can be UCSC or Ensembl format e.g. GRCh38 or hg38 [GRCh38] 
     -genebuild 		-gb 	Gene build version. This needs to be consistent with the reference build in terms of the version and chromosome name style [77]
-    -refindex   	-ri 	Stem name of the bowtie index files for the reference which need to be compatible with the bowtie version [GRCh38.genome]
-    -transindex		-ti 	Stem name of the bowtie index files for the transcriptome which need to be compatible with the bowtie version [GRCh38.77]
-    -ucscbuild   	-ub 	Tophat fusion post requires a reference build in UCSC format which must be equivalent to the refbuild version specified e.g. if refbuild = GRCh37 ucscbuild should be hg19 [hg38]
-    -ucscindex		-ui 	Stem name of the bowtie index files for the transcriptome in ucsc format which should be compatible with the bowtie version and ucsc build [hg38.genome]
-    -normals  	  	-n  	File containing list of gene fusions detected in normal samples. It should reside under /refdataloc/species/refbuild/ [normal-fusions-b38]    
+    -refindex   	-ri 	Stem name of the bowtie index files for the reference which need to be compatible with the bowtie version [genome]
+    -transindex		-ti 	Stem name of the bowtie index files for the transcriptome which need to be compatible with the bowtie version [transcriptome]
+    -ucscindex		-ui 	Stem name of the bowtie index files for the transcriptome in ucsc format which should be compatible with the bowtie version and ucsc build [genome]
+    -normals  	  	-n  	File containing list of gene fusions detected in normal samples. It should reside under /refdataloc/species/refbuild/ [normal-fusions]    
     -species  		-sp 	Species [human]
 
   Targeted processing (further detail under OPTIONS):
