@@ -417,6 +417,7 @@ sub split_setup {
 			make_path($split_dir) unless(-d $split_dir);
 			move($abs_tophat_rundir."/".$_ , $split_dir.'/fusions.out') or die "$!";
 			symlink($abs_tophat_rundir.'/accepted_hits.bam', $split_dir.'/accepted_hits.bam') unless(-l File::Spec->catfile($split_dir,'accepted_hits.bam'));
+			symlink($abs_tophat_rundir.'/junctions.bed', $split_dir.'/junctions.bed') unless(-l File::Spec->catfile($split_dir,'junctions.bed'));
 		}
 	}
 	
