@@ -37,7 +37,7 @@ SOURCE_BOWTIE1="https://sourceforge.net/projects/bowtie-bio/files/bowtie/1.1.1/b
 VERSION_BOWTIE1="1.1.1"
 SOURCE_BOWTIE2="https://sourceforge.net/projects/bowtie-bio/files/bowtie2/2.2.3/bowtie2-2.2.3-linux-x86_64.zip/download"
 VERSION_BOWTIE2="2.2.3"
-SOURCE_TOPHAT="http://ccb.jhu.edu/software/tophat/downloads/tophat-2.0.13.Linux_x86_64.tar.gz"
+SOURCE_TOPHAT="http://ccb.jhu.edu/software/tophat/downloads/tophat-2.1.1.Linux_x86_64.tar.gz"
 SOURCE_BLASTN="ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.2.30/ncbi-blast-2.2.30+-x64-linux.tar.gz"
 SOURCE_DEFUSE="https://bitbucket.org/dranew/defuse/get/v0.7.0.tar.gz"
 VERSION_DEFUSE="0.7.0"
@@ -241,8 +241,8 @@ else
   mkdir -p tophat
   tar --strip-components 1 -C tophat -zxf tophat.tar.gz
   cd tophat
-  rm ./AUTHORS ./COPYING ./README 
-  cp ./* $INST_PATH/bin/.
+  rm ./AUTHORS ./README 
+  cp -r ./* $INST_PATH/bin/.
   touch $SETUP_DIR/tophat.success
   )>>$INIT_DIR/setup.log 2>&1
 fi
