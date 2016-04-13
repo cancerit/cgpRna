@@ -132,17 +132,17 @@ sub check_input {
 	
 	if($options->{'bowtieversion'} == 1){
 		for $suffix(@BOWTIE1_SUFFIXES){
-			PCAP::Cli::file_for_reading('bowtie1-ref-index',File::Spec->catfile($ens_refdata,'tophat',$ref_prefix.$suffix));
+			PCAP::Cli::file_for_reading('bowtie1-ref-index',File::Spec->catfile($ens_refdata,$ref_prefix.$suffix));
 			PCAP::Cli::file_for_reading('bowtie1-transcriptome-index',File::Spec->catfile($ens_refdata,'tophat',$options->{'genebuild'},$trans_prefix.$suffix));
-			$options->{'referencepath'} = File::Spec->catfile($ens_refdata,'tophat',$ref_prefix);
+			$options->{'referencepath'} = File::Spec->catfile($ens_refdata,$ref_prefix);
 			$options->{'transcriptomepath'} = File::Spec->catfile($ens_refdata,'tophat',$options->{'genebuild'},$trans_prefix);
 		}
 	}
 	else{
 		for $suffix(@BOWTIE2_SUFFIXES){
-			PCAP::Cli::file_for_reading('bowtie2-ref-index',File::Spec->catfile($ens_refdata,'tophat',$ref_prefix.$suffix));
+			PCAP::Cli::file_for_reading('bowtie2-ref-index',File::Spec->catfile($ens_refdata,$ref_prefix.$suffix));
 			PCAP::Cli::file_for_reading('bowtie2-transcriptome-index',File::Spec->catfile($ens_refdata,'tophat',$options->{'genebuild'},$trans_prefix.$suffix));
-			$options->{'referencepath'} = File::Spec->catfile($ens_refdata,'tophat',$ref_prefix);
+			$options->{'referencepath'} = File::Spec->catfile($ens_refdata,$ref_prefix);
 			$options->{'transcriptomepath'} = File::Spec->catfile($ens_refdata,'tophat',$options->{'genebuild'},$trans_prefix);
 		}
 	}
