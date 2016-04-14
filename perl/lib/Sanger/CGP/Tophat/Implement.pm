@@ -53,7 +53,7 @@ use Sanger::CGP::CgpRna;
 
 const my @BOWTIE1_SUFFIXES => qw(.1.ebwt .2.ebwt .3.ebwt .4.ebwt .rev.1.ebwt .rev.2.ebwt .fa .fa.fai);
 const my @BOWTIE2_SUFFIXES => qw(.1.bt2 .2.bt2 .3.bt2 .4.bt2 .rev.1.bt2 .rev.2.bt2 .fa .fa.fai);
-const my $BAMFASTQ => q{ exclude=QCFAIL,SECONDARY,SUPPLEMENTARY T=%s S=%s O=%s O2=%s gz=1 level=1 F=%s F2=%s filename=%s};
+const my $BAMFASTQ => q{ exclude=SECONDARY,SUPPLEMENTARY T=%s S=%s O=%s O2=%s gz=1 level=1 F=%s F2=%s filename=%s};
 const my $FUSIONS_FILTER => q{ -i %s -s %s -n %s -o %s -p tophat};
 const my $ADD_STRAND => q{ -i %s -s %s -p %s -o %s};
 const my $FUSIONS_SPLIT => 50000;
@@ -132,17 +132,17 @@ sub check_input {
 	
 	if($options->{'bowtieversion'} == 1){
 		for $suffix(@BOWTIE1_SUFFIXES){
-			PCAP::Cli::file_for_reading('bowtie1-ref-index',File::Spec->catfile($ens_refdata,'tophat',$ref_prefix.$suffix));
+			PCAP::Cli::file_for_reading('bowtie1-ref-index',File::Spec->catfile($ens_refdata,$ref_prefix.$suffix));
 			PCAP::Cli::file_for_reading('bowtie1-transcriptome-index',File::Spec->catfile($ens_refdata,'tophat',$options->{'genebuild'},$trans_prefix.$suffix));
-			$options->{'referencepath'} = File::Spec->catfile($ens_refdata,'tophat',$ref_prefix);
+			$options->{'referencepath'} = File::Spec->catfile($ens_refdata,$ref_prefix);
 			$options->{'transcriptomepath'} = File::Spec->catfile($ens_refdata,'tophat',$options->{'genebuild'},$trans_prefix);
 		}
 	}
 	else{
 		for $suffix(@BOWTIE2_SUFFIXES){
-			PCAP::Cli::file_for_reading('bowtie2-ref-index',File::Spec->catfile($ens_refdata,'tophat',$ref_prefix.$suffix));
+			PCAP::Cli::file_for_reading('bowtie2-ref-index',File::Spec->catfile($ens_refdata,$ref_prefix.$suffix));
 			PCAP::Cli::file_for_reading('bowtie2-transcriptome-index',File::Spec->catfile($ens_refdata,'tophat',$options->{'genebuild'},$trans_prefix.$suffix));
-			$options->{'referencepath'} = File::Spec->catfile($ens_refdata,'tophat',$ref_prefix);
+			$options->{'referencepath'} = File::Spec->catfile($ens_refdata,$ref_prefix);
 			$options->{'transcriptomepath'} = File::Spec->catfile($ens_refdata,'tophat',$options->{'genebuild'},$trans_prefix);
 		}
 	}
