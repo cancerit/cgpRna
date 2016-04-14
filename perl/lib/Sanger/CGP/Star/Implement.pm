@@ -54,6 +54,7 @@ use Sanger::CGP::CgpRna;
 use Data::Dumper;
 
 const my $BAMFASTQ => q{ exclude=QCFAIL,SECONDARY,SUPPLEMENTARY T=%s S=%s O=%s O2=%s gz=1 level=1 F=%s F2=%s filename=%s};
+const my $BAMFASTQ_ANALYSIS => q{ exclude=SECONDARY,SUPPLEMENTARY T=%s S=%s O=%s O2=%s gz=1 level=1 F=%s F2=%s filename=%s};
 const my $FUSIONS_FILTER => q{ -i %s -s %s -n %s -o %s -p star};
 const my $STAR_MAX_CORES => 16;
 const my $STAR_DEFAULTS_SECTION => 'star-parameters';
@@ -286,16 +287,36 @@ sub prepare {
 				my $sample = $options->{'sample'};
 				my $rg = $input->{'rg'};
 				
+				my $fusion_mode;
+	
+				if(exists $options->{'fusion_mode'}){
+	  		  $fusion_mode = $options->{'fusion_mode'};
+				}
+				
 				my $command = _which('bamtofastq') || die "Unable to find 'bamtofastq' in path";
-				$command .= sprintf $BAMFASTQ, 	File::Spec->catfile($tmp, "bamtofastq.$sample.$rg"),
+				
+				if($fusion_mode){
+				  # If the BAM has already been mapped and QCed and is being split for downstream analysis we just want to exclude SECONDARy and SUPPLEMENTARY reads
+				  $command .= sprintf $BAMFASTQ_ANALYSIS, 	File::Spec->catfile($tmp, "bamtofastq.$sample.$rg"),
 								File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.s"),
 								File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.o1"),
 								File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.o2"),
 								File::Spec->catfile($inputdir, $sample.'.'.$rg.'_1.fastq.gz'),
 								File::Spec->catfile($inputdir, $sample.'.'.$rg.'_2.fastq.gz'),
 								$input->in;
+				}
+				else{
+				  # Also exclude QCFAIL reads if the BAM is directory from iRODs or externally imported
+				  $command .= sprintf $BAMFASTQ, 	File::Spec->catfile($tmp, "bamtofastq.$sample.$rg"),
+								File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.s"),
+								File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.o1"),
+								File::Spec->catfile($tmp, "bamtofastq.$sample.$rg.o2"),
+								File::Spec->catfile($inputdir, $sample.'.'.$rg.'_1.fastq.gz'),
+								File::Spec->catfile($inputdir, $sample.'.'.$rg.'_2.fastq.gz'),
+								$input->in;
+				}
 																	
-					PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, $index);
+				PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, $index);
 			
 			}
 		}

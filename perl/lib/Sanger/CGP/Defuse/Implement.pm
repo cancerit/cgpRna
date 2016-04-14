@@ -52,7 +52,7 @@ use PCAP::Bam;
 use Sanger::CGP::CgpRna;
 
 const my $DEFUSE => q{ %s -c %s -p %d -o %s -n %s -l %s -s direct -1 %s -2 %s};
-const my $BAMFASTQ => q{ exclude=QCFAIL,SECONDARY,SUPPLEMENTARY T=%s S=%s O=%s O2=%s F=%s F2=%s filename=%s};
+const my $BAMFASTQ => q{ exclude=SECONDARY,SUPPLEMENTARY T=%s S=%s O=%s O2=%s F=%s F2=%s filename=%s};
 const my $FUSIONS_FILTER => q{ -i %s -s %s -n %s -o %s -p defuse};
 const my $DEFUSE_MAX_CORES => 16;
 
