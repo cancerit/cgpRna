@@ -274,12 +274,15 @@ else
   get_distro "defuse" $SOURCE_DEFUSE
   mkdir -p defuse
   tar --strip-components 1 -C defuse -zxf defuse.tar.gz
-  cd ./defuse/tools
+  cd ./defuse/scripts
+  perl_path=`which perl`
+  sed -i "s|^#!/usr/bin/perl|#!${perl_path}|" *.pl
+  cd ../tools
   include_search=`grep "#include <map>" ./Common.h | wc -l`
   if [ $include_search -eq 0 ]; then
     sed -i 's/#include <vector>/#include <map>\n#include <vector>/' ./Common.h
   fi
-  make
+  make -j$CPU
   cd ../../
   mkdir -p $INST_PATH/bin/defuse_install
   cp -r ./defuse/* $INST_PATH/bin/defuse_install
@@ -358,7 +361,7 @@ else
   tar --strip-components 1 -C gmap -zxf gmap.tar.gz
   cd gmap
   ./configure --prefix=$INST_PATH --with-gmapdb=$INST_PATH
-  make
+  make -j$CPU
   make install
   touch $SETUP_DIR/gmap.success
   )>>$INIT_DIR/setup.log 2>&1
