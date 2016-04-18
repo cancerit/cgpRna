@@ -115,10 +115,6 @@ sub defuse {
 	my $threads = $DEFUSE_MAX_CORES;
 	$threads = $options->{'threads'} if($options->{'threads'} < $DEFUSE_MAX_CORES);
 	my $sample = $options->{'sample'};
-	my $defuse = $options->{'defusepath'};
-	if(! defined $defuse || $defuse eq ''){
-	  $defuse = _which('defuse.pl');
-	}
 	
 	my $outdir = File::Spec->catdir($tmp, "defuse_$sample");
 	my $fastq1;
@@ -169,7 +165,15 @@ sub defuse {
 
 	# Get the relevant defuse config file for the reference and gene builds
 	my $defuse_config = File::Spec->catfile($options->{'refdataloc'}, $options->{'species'}, $options->{'referencebuild'},'defuse',$options->{'genebuild'}, $options->{'defuseconfig'} );
-	my $command = sprintf $DEFUSE,	$defuse,
+	
+	# Get the defuse installation path
+	my $defuse = $options->{'defusepath'};
+	if(! defined $defuse || $defuse eq ''){
+	  $defuse = _which('defuse.pl');
+	}
+	
+	my $command = "$^X ";
+	$command .= sprintf $DEFUSE,	$defuse,
 					$defuse_config,
 					$threads,
 					$outdir,
