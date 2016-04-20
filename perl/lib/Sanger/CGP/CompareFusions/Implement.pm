@@ -486,7 +486,8 @@ sub filter_gtf {
       my ($type,$value)= split / /, $item;
       $annotation{$type} = $value;
     }
-    #print $ofh $line."\n" if(exists $ALLOWED_BIOTYPES{$annotation{'gene_biotype'}}); # UNCOMMENT THIS LINE TO FILTER ON BIOTYPE AND COMMENT OUT LINE BELOE   
+    #print $ofh $line."\n" if(exists $ALLOWED_BIOTYPES{$annotation{'gene_biotype'}}); # UNCOMMENT THIS LINE TO FILTER ON BIOTYPE AND COMMENT OUT LINE BELOW
+    $line =~ s/^chr//;
     print $ofh $line."\n"
   }
   close($ifh);
