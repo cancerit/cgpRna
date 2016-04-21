@@ -31,7 +31,8 @@
 # 2009, 2010, 2011, 2012’."
 ########## LICENCE ##########
 
-SOURCE_STAR="https://github.com/alexdobin/STAR/archive/STAR_2.4.1c.tar.gz"
+SOURCE_STAR="https://github.com/alexdobin/STAR/archive/2.5.1b.tar.gz"
+SOURCE_STARFUSION="https://github.com/STAR-Fusion/STAR-Fusion/archive/v0.7.0.tar.gz"
 SOURCE_RSEQC="http://sourceforge.net/projects/rseqc/files/RSeQC-2.6.3.tar.gz/download"
 SOURCE_BOWTIE1="https://sourceforge.net/projects/bowtie-bio/files/bowtie/1.1.1/bowtie-1.1.1-linux-x86_64.zip/download"
 VERSION_BOWTIE1="1.1.1"
@@ -196,14 +197,29 @@ else
   get_distro "star" $SOURCE_STAR
   mkdir -p star
   tar --strip-components 1 -C star -zxf star.tar.gz
-  cp star/bin/Linux_x86_64/STAR $INST_PATH/bin/.
-  cp star/STAR-Fusion-*/STAR-Fusion $INST_PATH/bin/.
-  cp star/STAR-Fusion-*/lib/* $PERLROOT/.
+  cp star/bin/Linux_x86_64_static/STAR $INST_PATH/bin/.
   touch $SETUP_DIR/star.success
   )>>$INIT_DIR/setup.log 2>&1
 fi
 done_message "" "Failed to build STAR."
-  
+
+# Install STAR-Fusion
+echo -n "Installing STAR-Fusion ..."
+if [ -e $SETUP_DIR/starfusion.success ]; then
+  echo -n " previously installed ...";
+else
+(
+  cd $SETUP_DIR
+  get_distro "starfusion" $SOURCE_STARFUSION
+  mkdir -p starfusion
+  tar --strip-components 1 -C starfusion -zxf starfusion.tar.gz
+  cp starfusion/STAR-Fusion $INST_PATH/bin/.
+  cp starfusion/lib/* $PERLROOT/.
+  touch $SETUP_DIR/starfusion.success
+  )>>$INIT_DIR/setup.log 2>&1
+fi
+done_message "" "Failed to build STAR-Fusion."
+
 # Install bowtie1
 echo -n "Installing bowtie1 ..."
 if [ -e $SETUP_DIR/bowtie1.success ]; then
