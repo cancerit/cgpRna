@@ -71,7 +71,6 @@ sub setup {
 			'i|indir=s' => \$opts{'indir'},
 			'o|outdir=s' => \$opts{'outdir'},
 			's|sample=s' => \$opts{'sample'},
-			't|threads=i' => \$opts{'threads'},
 			'p|process=s' => \$opts{'process'},
 	) or pod2usage(1);
 
@@ -120,4 +119,3 @@ process_qcstats.pl [options]
     -outdir    		-o   	Folder to output result to.
     -indir    		-i   	Directory where input RSeQC result files are located.
     -sample   		-s   	Sample name
-    -threads    	-t   	Folder to output result to.
