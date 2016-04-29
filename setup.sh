@@ -31,7 +31,7 @@
 # 2009, 2010, 2011, 2012’."
 ########## LICENCE ##########
 
-SOURCE_STAR="https://github.com/alexdobin/STAR/archive/2.5.1b.tar.gz"
+SOURCE_STAR="https://github.com/alexdobin/STAR/archive/2.5.0c.tar.gz"
 SOURCE_STARFUSION="https://github.com/STAR-Fusion/STAR-Fusion/archive/v0.7.0.tar.gz"
 SOURCE_RSEQC="http://sourceforge.net/projects/rseqc/files/RSeQC-2.6.3.tar.gz/download"
 SOURCE_BOWTIE1="https://sourceforge.net/projects/bowtie-bio/files/bowtie/1.1.1/bowtie-1.1.1-linux-x86_64.zip/download"
