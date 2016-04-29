@@ -198,7 +198,9 @@ __END__
 
 =head1 compare_overlapping_fusions.pl
 
-Produces a report of overlapping fusions that have been called by star-fusion and deFuse.
+Compares fusions that have been called by star-fusion, Tophat-fusion and deFuse as part of the InFuse (Intersecting Fusions) pipeline.
+Each breakpoint in a fusion is annotated, using VAGrENT, with the gene name, gene Id, transcript Id and exon number. If VAGrENT is unable to annotate a breakpoint, then the GTF for the reference-gene build used to call the fusions is used.
+As well as overlapping fusions, singletons called by each of the algorithms are annotated and listed in the output report.
 
 =head1 SYNOPSIS
 
