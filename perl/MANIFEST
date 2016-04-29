@@ -1,6 +1,8 @@
+bin/addGrassFlag.pl
 bin/compare_CN_and_fusion.pl
 bin/compare_overlapping_fusions.pl
-bin/defuse.pl
+bin/defuse_filters.pl
+bin/defuse_fusion.pl
 bin/filter_fusions.pl
 bin/process_qcstats.pl
 bin/star_fusion.pl
@@ -22,8 +24,10 @@ docs/pod_html/_whtgrng.css
 docs/pod_html/_whtnavk.css
 docs/pod_html/_whtprpk.css
 docs/pod_html/_whtpurk.css
+docs/pod_html/addGrassFlag.html
 docs/pod_html/compare_overlapping_fusions.html
-docs/pod_html/defuse.html
+docs/pod_html/defuse_filters.html
+docs/pod_html/defuse_fusion.html
 docs/pod_html/filter_fusions.html
 docs/pod_html/index.html
 docs/pod_html/star_fusion.html
@@ -64,7 +68,5 @@ lib/Sanger/CGP/Star/Implement.pm
 lib/Sanger/CGP/Tophat/Implement.pm
 Makefile.PL
 MANIFEST			This list of files
-perltidy.LOG
 t/1_pm_compile.t
 t/2_pl_compile.t
-t/data/tst.txt
