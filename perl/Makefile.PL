@@ -49,7 +49,6 @@ WriteMakefile(
                         bin/filter_fusions.pl
                         bin/compare_overlapping_fusions.pl
                         bin/compare_CN_and_fusion.pl
-                        bin/addGrassFlag.pl
                         )],
   PREREQ_PM     => {
                      'Capture::Tiny' => 0.30,
