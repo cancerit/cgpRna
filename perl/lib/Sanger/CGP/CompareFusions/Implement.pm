@@ -56,7 +56,8 @@ const my $BEDTOOLS_PAIRTOPAIR => q{ pairtopair -a %s -b %s -slop 5 > %s};
 const my $SORT => q{ sort -k%d,%d %s > %s};
 const my $TRI_SORT => q{ sort -k%d,%d -k%d,%dr -k%d,%dr %s > %s};
 const my $JOIN => q{ join -1 8 -2 8 %s %s > %s };
-const my $OUTPUT_HEADER => "sample\tfusion_name\talgorithm\tconfidence_score\tstar_junction\ttophat_junction\tdefuse_junction\tdefuse_cluster_id\tstar_junction_reads\tstar_spanning_frags\ttophat_junction_reads\ttophat_spanning_frags\tdefuse_splitr_count\tdefuse_span_count\t5'_gene\t5'_gene_id\t5'_chr\t5'_pos\t5'_strand\t3'_gene\t3'_gene_id\t3'_chr\t3'_pos\t3'_strand\t5'_transcript_id\t5'_transcript_src\t5'_exon_num\t5'_exon_start\t5'_exon_end\t3'_transcript_id\t3'_transcript_src\t3'_exon_num\t3'_exon_start\t3'_exon_end\tdefuse_splitr_sequence\ttophat_splitr_sequence\tcgp_defuse_filter\n";
+const my $OUTPUT_HEADER => "sample\tfusion_name\talgorithm\tconfidence_score\tstar_junction\ttophat_junction\tdefuse_junction\tdefuse_cluster_id\tstar_junction_reads\tstar_spanning_frags\ttophat_junction_reads\ttophat_spanning_frags\tdefuse_splitr_count\tdefuse_span_count\t5'_gene\t5'_gene_id\t5'_chr\t5'_pos\t5'_strand\t3'_gene\t3'_gene_id\t3'_chr\t3'_pos\t3'_strand\t5'_transcript_id\t5'_transcript_src\t5'_exon_num\t5'_exon_start\t5'_exon_end\t3'_transcript_id\t3'_transcript_src\t3'_exon_num\t3'_exon_start\t3'_exon_end\tdefuse_splitr_sequence\ttophat_splitr_sequence\tcgp_defuse_filter";
+const my $RUN_GRASS => q{ -genome_cache %s -show_biotype -file %s };
 
 # This filter on biotypes is currently not used in subroutine filter_gtf (uncomment the line to switch on).
 my %ALLOWED_BIOTYPES = (
@@ -147,6 +148,73 @@ const my $STAR_GENEID2 => 12;
 const my $STAR_DIS_EXON1 => 10;
 const my $STAR_DIS_EXON2 => 16;
 const my $STAR_HEADER_PATTERN => 'fusion_name';
+
+sub add_grass_flag {
+  my $options = shift;
+  
+  my $tmp = $options->{'tmp'};
+  my $sample = $options->{'sample'};
+  
+  my $input_file = File::Spec->catfile($tmp, "$sample.detected.fusions.txt");
+  my $temp_file = File::Spec->catfile($tmp, "$sample.grass");
+  
+  # Open the deduplicated file and create a temporary file with fusion coordinates that are valid for Grass to use as an input i.e. chr1:strand1:pos1,chr2:strand2:pos2
+  open(my $ifh1, $input_file) or die "Could not open file $input_file $!";
+  open(my $ofh1, '>', $temp_file) or die "Could not open file $temp_file $!";
+  while(<$ifh1>){
+    chomp;
+    my $line = $_;
+    unless($line =~ /^sample/){
+      my @fields = split "\t", $line;
+      my $outline = $fields[16].":".$fields[18].":".$fields[17].','.$fields[21].":".$fields[23].":".$fields[22];
+      $outline =~ s/M:/MT:/g;
+      $outline .= "\t".$fields[4]."|".$fields[5]."|".$fields[6]."|".$fields[7];
+      print $ofh1 $outline."\n";
+    }
+  }
+  close($ofh1);
+  close($ifh1);
+  
+  my $command = "$^X ";
+	$command .= _which('grass.pl');
+	$command .= sprintf $RUN_GRASS, $options->{'cache'}, $temp_file;
+	
+	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
+	
+	# Open the annotated grass file and store the grass flag in a hash using column 2 as the look-up
+	my $grass_file = File::Spec->catfile($tmp, $sample."_ann.grass");
+	my %grass_flag;
+	open(my $ifh2, $grass_file) or die "Could not open file $grass_file $!";
+	while(<$ifh2>){
+    chomp;
+    my $line = $_;
+    my @fields = split "\t", $line;
+    my $length = scalar @fields;
+	  $grass_flag{$fields[1]} = $fields[$length-1];
+	}
+  close($ifh2);
+  
+  # Create final output file and add grass flag on to the end of each line
+  my $output_file = File::Spec->catfile($tmp, "$sample.infuse.detected.fusions.grass.txt");
+  my $data_file = File::Spec->catfile($tmp, "$sample.detected.fusions.txt");
+  open(my $ifh3, $data_file) or die "Could not open file $data_file $!";
+  open(my $ofh2, '>', $output_file) or die "Could not open file $output_file $!";
+  print $ofh2 $OUTPUT_HEADER."\tgrass_flag\n";
+  
+  while(<$ifh3>){
+    chomp;
+    my $line = $_;
+    unless($line =~ /^sample/){
+      my @fields = split "\t", $line;
+      my $key = $fields[4]."|".$fields[5]."|".$fields[6]."|".$fields[7];
+      print $ofh2 $line."\t".$grass_flag{$key}."\n";
+    }
+  }
+  close($ifh3);
+  close($ofh2);
+  
+  return 1;
+}
 
 sub annotate_bed {
   my $options = shift;
@@ -530,7 +598,7 @@ sub generate_output {
   if(-s $annot_file){
   
   open(my $ifh1, $annot_file) or die "Could not open file $annot_file $!";
-  print $ofh1 $OUTPUT_HEADER;
+  print $ofh1 $OUTPUT_HEADER."\n";
   while(<$ifh1>){
     chomp;
     my $line = $_;
