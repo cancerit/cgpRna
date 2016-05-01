@@ -58,7 +58,7 @@ use Sanger::CGP::CompareFusions::FusionAnnotation;
 use Data::Dumper;
 
 const my @REQUIRED_PARAMS => qw(outdir sample gtf);
-const my @VALID_PROCESS => qw(createjunctionbed runbedpairtopair processoverlaps singletons queryvagrent annotatebed selectannotation collateannotation deduplicate output);
+const my @VALID_PROCESS => qw(createjunctionbed runbedpairtopair processoverlaps singletons queryvagrent annotatebed selectannotation collateannotation deduplicate grassflag output);
 const my %INDEX_FACTOR => (	'createjunctionbed' => -1,
 				'runbedpairtopair' => 1,
 				'processoverlaps' => 1,
@@ -68,6 +68,7 @@ const my %INDEX_FACTOR => (	'createjunctionbed' => -1,
 				'selectannotation' => 1,
 				'collateannotation' => 1,
 				'deduplicate' => 1,
+				'grassflag' => 1,
 				'output' => 1);				
 {
   my $options = setup();
@@ -87,11 +88,13 @@ const my %INDEX_FACTOR => (	'createjunctionbed' => -1,
     Sanger::CGP::CompareFusions::Implement::annotate_bed($options) if(!exists $options->{'process'} || $options->{'process'} eq 'annotatebed');
     Sanger::CGP::CompareFusions::Implement::select_annotation($options) if(!exists $options->{'process'} || $options->{'process'} eq 'selectannotation');
     Sanger::CGP::CompareFusions::Implement::collate_annotation($options) if(!exists $options->{'process'} || $options->{'process'} eq 'collateannotation');
-    Sanger::CGP::CompareFusions::Implement::deduplicate_fusions($options) if(!exists $options->{'process'} || $options->{'process'} eq 'deduplicate');
   }
+  Sanger::CGP::CompareFusions::Implement::deduplicate_fusions($options) if(!exists $options->{'process'} || $options->{'process'} eq 'deduplicate');
+  Sanger::CGP::CompareFusions::Implement::generate_output($options) if(!exists $options->{'process'} || $options->{'process'} eq 'output');
+
   
-  if(!exists $options->{'process'} || $options->{'process'} eq 'output') {
-    Sanger::CGP::CompareFusions::Implement::generate_output($options);
+  if(!exists $options->{'process'} || $options->{'process'} eq 'grassflag') {
+    Sanger::CGP::CompareFusions::Implement::add_grass_flag($options);
     cleanup($options);
   } 
 }
@@ -100,7 +103,7 @@ sub cleanup {
   my $options = shift;
   my $tmpdir = $options->{'tmp'};
   my $sample = $options->{'sample'};
-  move(File::Spec->catfile($tmpdir, "$sample.detected.fusions.txt"), $options->{'outdir'}) || die $!;
+  move(File::Spec->catfile($tmpdir, "$sample.infuse.detected.fusions.grass.txt"), $options->{'outdir'}) || die $!;
   move(File::Spec->catdir($tmpdir, 'logs'), File::Spec->catdir($options->{'outdir'}, 'logs')) || die $!;
   remove_tree $tmpdir if(-e $tmpdir);
   return 0;
@@ -198,7 +201,9 @@ __END__
 
 =head1 compare_overlapping_fusions.pl
 
-Produces a report of overlapping fusions that have been called by star-fusion and deFuse.
+Compares fusions that have been called by star-fusion, Tophat-fusion and deFuse as part of the InFuse (Intersecting Fusions) pipeline.
+Each breakpoint in a fusion is annotated, using VAGrENT, with the gene name, gene Id, transcript Id and exon number. If VAGrENT is unable to annotate a breakpoint, then the GTF for the reference-gene build used to call the fusions is used.
+As well as overlapping fusions, singletons called by each of the algorithms are annotated and listed in the output report.
 
 =head1 SYNOPSIS
 
