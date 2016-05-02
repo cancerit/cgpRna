@@ -199,6 +199,8 @@ else
   tar --strip-components 1 -C star -zxf star.tar.gz
   cp star/bin/Linux_x86_64_static/STAR $INST_PATH/bin/.
   touch $SETUP_DIR/star.success
+  rm -rf $SETUP_DIR/star
+  rm -f $SETUP_DIR/star.tar.gz
   )>>$INIT_DIR/setup.log 2>&1
 fi
 done_message "" "Failed to build STAR."
@@ -216,6 +218,8 @@ else
   cp starfusion/STAR-Fusion $INST_PATH/bin/.
   cp starfusion/lib/* $PERLROOT/.
   touch $SETUP_DIR/starfusion.success
+  rm -rf $SETUP_DIR/starfusion
+  rm -f $SETUP_DIR/starfusion.tar.gz
   )>>$INIT_DIR/setup.log 2>&1
 fi
 done_message "" "Failed to build STAR-Fusion."
@@ -232,6 +236,7 @@ else
   cd $SETUP_DIR/bowtie-$VERSION_BOWTIE1
   cp bowtie* $INST_PATH/bin/.
   touch $SETUP_DIR/bowtie1.success
+  rm -f $SETUP_DIR/bowtie1.zip
   )>>$INIT_DIR/setup.log 2>&1
 fi
 done_message "" "Failed to build bowtie1."
@@ -248,6 +253,7 @@ else
   cd $SETUP_DIR/bowtie2-$VERSION_BOWTIE2
   cp bowtie2* $INST_PATH/bin/.
   touch $SETUP_DIR/bowtie2.success
+  rm -f $SETUP_DIR/bowtie2.zip
   )>>$INIT_DIR/setup.log 2>&1
 fi
 done_message "" "Failed to build bowtie2."
@@ -266,6 +272,8 @@ else
   rm ./AUTHORS ./README 
   cp -r ./* $INST_PATH/bin/.
   touch $SETUP_DIR/tophat.success
+  rm -rf $SETUP_DIR/tophat
+  rm -f $SETUP_DIR/tophat.tar.gz
   )>>$INIT_DIR/setup.log 2>&1
 fi
 done_message "" "Failed to build tophat."
@@ -282,6 +290,8 @@ else
   tar --strip-components 1 -C blastn -zxf blastn.tar.gz
   cp blastn/bin/blastn $INST_PATH/bin/.
   touch $SETUP_DIR/blastn.success
+  rm -rf $SETUP_DIR/blastn
+  rm -f $SETUP_DIR/blastn.tar.gz
   )>>$INIT_DIR/setup.log 2>&1
 fi
 done_message "" "Failed to build blastn."
@@ -314,6 +324,8 @@ else
   fi
   ln -s $INST_PATH/bin/defuse_install/scripts/defuse.pl $INST_PATH/bin/defuse.pl
   touch $SETUP_DIR/defuse.success
+  rm -rf $SETUP_DIR/defuse
+  rm -f $SETUP_DIR/defuse.tar.gz
   )>>$INIT_DIR/setup.log 2>&1
 fi
 done_message "" "Failed to build defuse."
@@ -350,6 +362,7 @@ else
   make -j$CPU
   cp $BINDIR/blat $INST_PATH/bin/.
   touch $SETUP_DIR/blat.success
+  rm -f $SETUP_DIR/blat.zip
   )>>$INIT_DIR/setup.log 2>&1
 fi
 done_message "" "Failed to build blat."
@@ -367,6 +380,8 @@ else
   make -C bedtools2 -j$CPU
   cp bedtools2/bin/* $INST_PATH/bin/.
   touch $SETUP_DIR/bedtools.success
+  rm -rf $SETUP_DIR/bedtools2
+  rm -f $SETUP_DIR/bedtools2.tar.gz
 )>>$INIT_DIR/setup.log 2>&1
 fi
 done_message "" "Failed to build bedtools."
@@ -386,6 +401,8 @@ else
   make -j$CPU
   make install
   touch $SETUP_DIR/gmap.success
+  rm -rf $SETUP_DIR/gmap
+  rm -f $SETUP_DIR/gmap.tar.gz
   )>>$INIT_DIR/setup.log 2>&1
 fi
 done_message "" "Failed to build gmap."
