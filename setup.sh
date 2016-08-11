@@ -47,7 +47,6 @@ SOURCE_BLAT="http://users.soe.ucsc.edu/~kent/src/blatSrc35.zip"
 SOURCE_FATOTWOBIT="http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/faToTwoBit"
 SOURCE_BEDTOOLS="https://github.com/arq5x/bedtools2/releases/download/v2.21.0/bedtools-2.21.0.tar.gz"
 SOURCE_HTSEQ="https://pypi.python.org/packages/3c/6e/f8dc3500933e036993645c3f854c4351c9028b180c6dcececde944022992/HTSeq-0.6.1p1.tar.gz"
-VERSION_HTSEQ="0.6.0"
 
 done_message () {
     if [ $? -eq 0 ]; then
@@ -432,9 +431,9 @@ if [ -e $SETUP_DIR/htseq.success ]; then
 else
 (
   cd $SETUP_DIR
-  get_distro "rseqc" $SOURCE_HTSEQ
+  get_distro "htseq" $SOURCE_HTSEQ
   mkdir -p htseq
-  tar --strip-components 1 -C htseq -zxf HTSeq-0.6.1p1.tar.gz 
+  tar --strip-components 1 -C htseq -zxf htseq.tar.gz 
   cd $SETUP_DIR/htseq &&
   python ./setup.py install --prefix=$INST_PATH
   touch $SETUP_DIR/htseq.success
