@@ -46,7 +46,8 @@ SOURCE_GMAP="http://research-pub.gene.com/gmap/src/gmap-gsnap-2015-09-10.tar.gz"
 SOURCE_BLAT="http://users.soe.ucsc.edu/~kent/src/blatSrc35.zip"
 SOURCE_FATOTWOBIT="http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/faToTwoBit"
 SOURCE_BEDTOOLS="https://github.com/arq5x/bedtools2/releases/download/v2.21.0/bedtools-2.21.0.tar.gz"
-
+SOURCE_HTSEQ="https://pypi.python.org/packages/3c/6e/f8dc3500933e036993645c3f854c4351c9028b180c6dcececde944022992/HTSeq-0.6.1p1.tar.gz"
+VERSION_HTSEQ="0.6.0"
 
 done_message () {
     if [ $? -eq 0 ]; then
@@ -154,14 +155,14 @@ fi
 
 CHK2=`perl -le 'eval "require $ARGV[0]" and print $ARGV[0]->VERSION' Sanger::CGP::Vagrent`
 if [[ "x$CHK2" == "x" ]] ; then
-  echo "PREREQUISITE: Please install VAGrENT before proceeding: https://github.com/cancerit/VAGrENT/releases"
-  exit 1;
+	echo "PREREQUISITE: Please install VAGrENT before proceeding: https://github.com/cancerit/VAGrENT/releases"
+	exit 1;
 fi
 
 CHK3=`perl -le 'eval "require $ARGV[0]" and print $ARGV[0]->VERSION' Sanger::CGP::Grass`
 if [[ "x$CHK3" == "x" ]] ; then
-  echo "PREREQUISITE: Please install Grass before proceeding: https://github.com/cancerit/grass/releases"
-  exit 1;
+	echo "PREREQUISITE: Please install Grass before proceeding: https://github.com/cancerit/grass/releases"
+	exit 1;
 fi
 
 #create a location to build dependencies
@@ -423,6 +424,23 @@ else
   )>>$INIT_DIR/setup.log 2>&1
 fi
 done_message "" "Failed to build RSeQC."
+
+# install HTSeq
+echo -n "Installing HTSeq ..."
+if [ -e $SETUP_DIR/htseq.success ]; then
+  echo -n " previously installed ...";
+else
+(
+  cd $SETUP_DIR
+  get_distro "rseqc" $SOURCE_HTSEQ
+  mkdir -p htseq
+  tar --strip-components 1 -C htseq -zxf HTSeq-0.6.1p1.tar.gz 
+  cd $SETUP_DIR/htseq &&
+  python ./setup.py install --prefix=$INST_PATH
+  touch $SETUP_DIR/htseq.success
+  )>>$INIT_DIR/setup.log 2>&1
+fi
+done_message "" "Failed to build HTSeq."
 
 
 #add bin path for install tests
