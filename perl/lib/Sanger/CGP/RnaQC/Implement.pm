@@ -45,12 +45,12 @@ use Sanger::CGP::CgpRna;
 sub check_input {
 
   my $options = shift;
-  
+
   my $inputdir = $options->{'indir'};
   my $sample = $options->{'sample'};
-  
+
   # Check all the required input files exist
-  PCAP::Cli::file_for_reading('bam-stats', File::Spec->catfile($inputdir, "$sample.bas"));
+  PCAP::Cli::file_for_reading('bam-stats', File::Spec->catfile($inputdir, "$sample.bam.bas"));
   PCAP::Cli::file_for_reading('bam-stats', File::Spec->catfile($inputdir, "$sample.transcriptome.bas"));
 	PCAP::Cli::file_for_reading('gene-coverage', File::Spec->catfile($inputdir, "$sample.geneBodyCoverage.r"));
 	PCAP::Cli::file_for_reading('rrna-percentage', File::Spec->catfile($inputdir, "$sample.rrna.txt"));
@@ -61,16 +61,16 @@ sub check_input {
 
 sub gene_coverage {
   my $options = shift;
-  
+
   my $inputdir = $options->{'indir'};
   my $sample = $options->{'sample'};
   my $gene_coverage_r_file = File::Spec->catfile($inputdir, "$sample.geneBodyCoverage.r");
   my $updated_coverage_r_file = File::Spec->catfile($inputdir, "$sample.geneBodyCoverage_UPDATED.r");
-  
+
   # Modify the R script so that it runs the shapiro-wilk normality test and outputs that test statistic plus p-value to a text file. Also draw the gene body coverage graph with a more distinctly coloured line
   open (my $ifh, $gene_coverage_r_file) or die "Could not open file $gene_coverage_r_file $!";
   open (my $ofh, '>', $updated_coverage_r_file) or die "Could not open file $updated_coverage_r_file $!";
-  
+
   while (<$ifh>){
     chomp;
     my $line = $_;
@@ -83,7 +83,7 @@ sub gene_coverage {
     }
   }
   close($ifh);
-  
+
   my $sample_r = $sample;
   my $output_file = File::Spec->catfile($inputdir, "$sample.gene.cov.bas");
   $sample_r =~ s/-/_/g;
@@ -96,11 +96,11 @@ sub gene_coverage {
   print $ofh "write.table(output,file=\"$output_file\", sep=\"\t\", row.names=FALSE, col.names=TRUE, quote=FALSE)\n";
 
   close($ofh);
-  
-  my $command = _which('Rscript'); 
+
+  my $command = _which('Rscript');
   $command .= " $updated_coverage_r_file";
   system($command);
-  
+
   return 1;
 }
 
@@ -110,11 +110,11 @@ sub junction_saturation {
   my $sample = $options->{'sample'};
   my $saturation_r_file = File::Spec->catfile($inputdir, "$sample.junction_sat.junctionSaturation_plot.r");
   my $updated_saturation_r_file = File::Spec->catfile($inputdir, "$sample.junction_sat.junctionSaturation_plot_UPDATED.r");
-  
+
   # Modify the R script so that it runs R commands to check the 'straightness' of the known junctions line. Capture a statistic for this into a bas file.
   open (my $ifh, $saturation_r_file) or die "Could not open file $saturation_r_file $!";
   open (my $ofh, '>', $updated_saturation_r_file) or die "Could not open file $updated_saturation_r_file $!";
-  
+
   while (<$ifh>){
     chomp;
     my $line = $_;
@@ -123,27 +123,27 @@ sub junction_saturation {
     }
   }
   close($ifh);
-  
+
   my $output_file = File::Spec->catfile($inputdir, "$sample.junction.sat.bas");
   print $ofh "abline(mod <- lm(x ~ y))\n";
   print $ofh "gradient<-coef(mod)[2]\n";
   print $ofh 'output <- data.frame("junction_sat_stat"=gradient)'."\n";
   print $ofh "write.table(output,file=\"$output_file\", row.names=FALSE, col.names=TRUE, quote=FALSE)\n";
   close($ofh);
-  
-  my $command = _which('Rscript'); 
+
+  my $command = _which('Rscript');
   $command .= " $updated_saturation_r_file";
   system($command);
-  
+
   return 1;
 }
 
 sub read_distribution_stats {
   my $options = shift;
-  
+
   my $inputdir = $options->{'indir'};
   my $sample = $options->{'sample'};
-  
+
   my $read_dist_stats_file = File::Spec->catfile($inputdir, "$sample.read_dist.txt");
   my $read_dist_reformatted_file = File::Spec->catfile($inputdir, "$sample.read.dist.bas");
   my $stats_pattern = 'Exons|Introns|TSS_up_10kb|TES_down_10kb';
@@ -151,20 +151,20 @@ sub read_distribution_stats {
   my $exonic_reads = 0;
   my $intronic_reads = 0;
   my $intergenic_reads = 0;
-  
+
   open (my $ifh, $read_dist_stats_file) or die "Could not open file $read_dist_stats_file $!";
   while (<$ifh>) {
 		chomp;
 		my $line = $_;
-	  
+
 	  if($line =~ m/Total Assigned Tags/){
 	    my @fields = split " ", $line;
 	    $total_reads = $fields[3];
 	  }
-	  
+
 		if($line =~ m/$stats_pattern/){
 			my @fields = split " ", $line;
-			
+
 			if($fields[0] =~ m/Exons/){
 			  $exonic_reads += $fields[2];
 			}
@@ -177,62 +177,62 @@ sub read_distribution_stats {
 		}
 	}
   close($ifh);
-  
+
   open(my $ofh, '>', $read_dist_reformatted_file) or die "Could not open file $read_dist_reformatted_file $!";
-	
+
 	print $ofh "#_total_read_dist_reads\t#_exonic_reads\t#_intronic_reads\t#_intergenic_within10kb_reads\n";
   print $ofh "$total_reads\t$exonic_reads\t$intronic_reads\t$intergenic_reads\n";
-  
+
   close($ofh);
-  
+
   return 1;
 }
 
 sub rrna_stats {
   my $options = shift;
-  
+
   my $inputdir = $options->{'indir'};
   my $sample = $options->{'sample'};
-  
+
   my $rrna_stats_file = File::Spec->catfile($inputdir, "$sample.rrna.txt");
   my $rrna_reformatted_file = File::Spec->catfile($inputdir, "$sample.rrna.bas");
   my $total_pattern = 'Total records';
   my $rrna_subset_pattern = "$sample.rRNA.in.bam";
   my $rrna_total_reads;
   my $rrna_subset_reads;
-  
+
   open (my $ifh, $rrna_stats_file) or die "Could not open file $rrna_stats_file $!";
   while (<$ifh>) {
 		chomp;
 		my $line = $_;
 		my @fields = split ":", $line;
 		$fields[1] =~ s/\s+//;
-		
+
 		if($line =~ m/$total_pattern/){
 			$rrna_total_reads = $fields[1];
 		}
 		elsif($line =~ m/$rrna_subset_pattern/){
 		  $rrna_subset_reads = $fields[1];
 		}
-	}  
+	}
   close($ifh);
-  
+
   open(my $ofh, '>', $rrna_reformatted_file) or die "Could not open file $rrna_reformatted_file $!";
-  
+
   print $ofh "#_total_rrna_reads\t#_subset_rrna_reads\n";
   print $ofh "$rrna_total_reads\t$rrna_subset_reads\n";
-  
+
   close($ofh);
-  
+
   return 1;
 }
 
 sub transcriptome_stats {
   my $options = shift;
-  
+
   my $inputdir = $options->{'indir'};
   my $sample = $options->{'sample'};
-  
+
   my $first_bas_col_name = 'bam_filename';
   my $mean_insert_size_col_name = 'mean_insert_size';
   my $insert_size_sd_col_name = 'insert_size_sd';
@@ -243,10 +243,10 @@ sub transcriptome_stats {
   my $mean_insert_size_val;
   my $insert_size_sd_val;
   my $median_insert_size_val;
-  
+
   my $transcriptome_in_bas = File::Spec->catfile($inputdir, "$sample.transcriptome.bas");
   my $transcriptome_out_bas = File::Spec->catfile($inputdir, "$sample.insert.bas");
-  
+
   open (my $ifh, $transcriptome_in_bas) or die "Could not open file $transcriptome_in_bas $!";
   while (<$ifh>) {
 		chomp;
@@ -268,12 +268,12 @@ sub transcriptome_stats {
 		}
 	}
   close($ifh);
-  
+
   open(my $ofh, '>', $transcriptome_out_bas) or die "Could not open file $transcriptome_out_bas $!";
   print $ofh "transcriptome_$mean_insert_size_col_name\ttranscriptome_$insert_size_sd_col_name\ttranscriptome_$median_insert_size_col_name\n";
   print $ofh "$mean_insert_size_val\t$insert_size_sd_val\t$median_insert_size_val\n";
   close($ofh);
-  
+
   return 1;
 }
 
