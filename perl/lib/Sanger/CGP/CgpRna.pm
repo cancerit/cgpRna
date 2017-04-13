@@ -1,7 +1,7 @@
 package Sanger::CGP::CgpRna;
 
 ##########LICENCE ##########
-#Copyright (c) 2015 Genome Research Ltd.
+#Copyright (c) 2015-2017 Genome Research Ltd.
 ###
 #Author: Cancer Genome Project <cgpit@sanger.ac.uk>
 ###
@@ -36,7 +36,7 @@ use strict;
 use Const::Fast qw(const);
 use base 'Exporter';
 
-our $VERSION = '2.1.3';
+our $VERSION = '2.1.4';
 our @EXPORT = qw($VERSION);
 
 1;
