@@ -269,9 +269,12 @@ else
   mkdir -p tophat
   tar --strip-components 1 -C tophat -zxf tophat.tar.gz
   cd tophat
-  rm ./AUTHORS ./README 
-  cp -r ./* $INST_PATH/bin/.
+  autoreconf --install
+  ./configure --prefix="$INST_PATH/"
+  make
+  make install
   touch $SETUP_DIR/tophat.success
+  cd $SETUP_DIR
   rm -rf $SETUP_DIR/tophat
   rm -f $SETUP_DIR/tophat.tar.gz
   )>>$INIT_DIR/setup.log 2>&1
@@ -433,7 +436,7 @@ else
   cd $SETUP_DIR
   get_distro "htseq" $SOURCE_HTSEQ
   mkdir -p htseq
-  tar --strip-components 1 -C htseq -zxf htseq.tar.gz 
+  tar --strip-components 1 -C htseq -zxf htseq.tar.gz
   cd $SETUP_DIR/htseq &&
   python ./setup.py install --prefix=$INST_PATH
   touch $SETUP_DIR/htseq.success
