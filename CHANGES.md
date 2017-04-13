@@ -1,3 +1,6 @@
+### 2.1.4
+* Fixing installation of tophat. Since we no longer use a compiled repository. Bug introduced in 2.1.2.
+
 ### 2.1.3
 * Correct name from sample.bas to sample.bam.bas
 
