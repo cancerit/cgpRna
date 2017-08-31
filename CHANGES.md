@@ -1,3 +1,6 @@
+### 2.1.5
+* updating cpanm source url
+
 ### 2.1.4
 * Fixing installation of tophat. Since we no longer use a compiled repository. Bug introduced in 2.1.2.
 
