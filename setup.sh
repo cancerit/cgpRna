@@ -170,7 +170,7 @@ mkdir -p $SETUP_DIR
 
 ## grab cpanm:
 rm -f $SETUP_DIR/cpanm
-get_file $SETUP_DIR/cpanm http://xrl.us/cpanm
+get_file $SETUP_DIR/cpanm https://cpanmin.us/
 chmod +x $SETUP_DIR/cpanm
 
 perlmods=( "Set::IntervalTree" )
