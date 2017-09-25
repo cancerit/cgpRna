@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 ##########LICENCE ##########
-#Copyright (c) 2015 Genome Research Ltd.
+#Copyright (c) 2015-2017 Genome Research Ltd.
 ###
 #Author: Cancer Genome Project <cgpit@sanger.ac.uk>
 ###
@@ -86,19 +86,22 @@ sub normals_filter {
 	my $fusions_file = File::Spec->catfile($tmp,"$sample.fusions");
 	my $fusions_sorted = File::Spec->catfile($tmp,"$sample.fusions.sorted");
 	PCAP::Cli::file_for_reading('fusions.reformat', $fusions_file.'.reformat');
-	
+
 	# Sort the fusions file prior to joining with the normals file
 	system("sort -k1,1 $fusions_file.reformat > $fusions_file.sorted");
-	
+
 	my $normal_file = $options-> {'normals'};
-	system("join -v 2 $normal_file $fusions_file.sorted > $fusions_file.filtered");
-	
+	system("join -v 2 $normal_file $fusions_file.sorted > $fusions_file.filtered") && die "An error occurred: $!";
+	if(-s "$fusions_file.filtered" == 0) {
+		system("echo '##EOF##' > $fusions_file.filtered") && die "An error occurred: $!";
+	}
+
 	return 1;
 }
 
 sub process_program_params {
 	my $options = shift;
-	
+
 	my $program = lc($options->{'program'});
 	if($program eq 'tophat'){
 		$options->{'split-char'} = $TOPHAT_SPLIT_CHAR;
@@ -129,7 +132,7 @@ sub process_program_params {
 	else{
 		die "An invalid program name has been entered, parameter -p should be tophat, defuse or star.\n"
 	}
-	
+
 	return 1;
 }
 
@@ -144,29 +147,29 @@ sub reformat {
 
 	open (my $ifh, $input) or die "Could not open file '$input' $!";
 	open(my $ofh, '>', $output) or die "Could not open file '$output' $!";
-	
+
 	while (<$ifh>) {
 		chomp;
 		my $line = $_;
-		
+
 		$header_pattern = $options->{'header-pattern'} if(exists $options->{'header-pattern'});
 		if($line =~ m/$header_pattern/){
-		
+
 			if($program eq 'star'){
 				$line =~ s/([Left|Right]+)Gene/$1Gene\t$1GeneId/g;
 				$line =~ s/([Left|Right]+)Breakpoint/$1Chr\t$1Pos\t$1Strand/g;
 				$line =~ s/#//;
 			}
-		
+
 			$options->{'header'} = "breakpoint_ref\t".$line;
 		}
 		else{
 			$line =~ s/\tchr/\t/g;
 			my @fields = split $options->{'split-char'}, $line;
 			my $fusion;
-			
+
 			if($program eq 'star'){
-			
+
 				my @break1 = split $options->{'split-char2'}, $fields[$options->{'chr1'} - 1];
 				my @break2 = split $options->{'split-char2'}, $fields[$options->{'chr2'} - 1];
 				$fields[$options->{'chr1'} - 1] = join("\t",@break1);
@@ -177,10 +180,10 @@ sub reformat {
 				$fields[$options->{'gene2'} - 1] = join("\t",@gene2);
 				$fusion = $break1[0].":".$break1[1]."-".$break2[0].":".$break2[1];
 				$line = join("\t",@fields);
-				
+
 			}
 			elsif($program eq 'tophat'){
-			
+
 				# Fusion positions for TopHat need adjusting by +1 so that they are directly comparable to Star and deFuse
 				my $orig_pos1 = $fields[$options->{'pos1'}-1];
 				my $orig_pos2 = $fields[$options->{'pos2'}-1];
@@ -190,18 +193,18 @@ sub reformat {
 				$fields[$options->{'pos1'}-1] = $adj_pos1;
 				$fields[$options->{'pos2'}-1] = $adj_pos2;
 				$line = join("\t",@fields);
-				
+
 			}
 			else{
 				$fusion = $fields[$options->{'chr1'}-1].":".$fields[$options->{'pos1'}-1]."-".$fields[$options->{'chr2'}-1].":".$fields[$options->{'pos2'}-1];
 			}
-			
+
 			print $ofh "$fusion\t$line\n";
 		}
-	}	
+	}
 	close ($ifh);
 	close ($ofh);
-	
+
 	return 1;
 }
 
@@ -209,28 +212,28 @@ sub setup {
 	my %opts;
 	pod2usage(-msg => "\nERROR: Options must be defined.\n", -verbose => 1, -output => \*STDERR) if(scalar @ARGV == 0);
 	$opts{'cmd'} = join " ", $0, @ARGV;
-	
+
 	GetOptions( 	'h|help' => \$opts{'h'},
 			'm|man' => \$opts{'m'},
 			'i|input=s' => \$opts{'input'},
 			'o|outdir=s' => \$opts{'outdir'},
 			'n|normals=s' => \$opts{'normals'},
 			's|sample=s' => \$opts{'sample'},
-			'p|program=s' => \$opts{'program'},						
+			'p|program=s' => \$opts{'program'},
 	) or pod2usage(2);
 
 	pod2usage(-verbose => 1) if(defined $opts{'h'});
 	pod2usage(-verbose => 2) if(defined $opts{'m'});
-	
+
 	PCAP::Cli::file_for_reading('input', $opts{'input'});
 	PCAP::Cli::file_for_reading('normals', $opts{'normals'});
-	
+
 	# Setup details specific to each fusion detection program output file
 	process_program_params(\%opts);
-		
+
 	# Check the output directory exists and is writeable, create if not
 	PCAP::Cli::out_dir_check('outdir', $opts{'outdir'});
-	
+
 	# Create working directory for storing intermediate files
 	my $tmpdir = File::Spec->catdir($opts{'outdir'}, "tmp_$opts{'program'}Filter");
 	make_path($tmpdir) unless(-d $tmpdir);
@@ -241,7 +244,7 @@ sub setup {
 
 sub write_output {
 	my $options = shift;
-	
+
 	my $tmp = $options->{'tmp'};
 	my $sample = $options-> {'sample'};
 	my $program = $options-> {'program'};
@@ -250,7 +253,7 @@ sub write_output {
 	my $fusions_file = File::Spec->catfile($tmp,"$sample.fusions.filtered");
 	my $output_file = File::Spec->catfile($outdir,"$sample.$program-fusion.normals.filtered.txt");
 	PCAP::Cli::file_for_reading('filtered.fusions', $fusions_file);
-	
+
 	open (my $ifh, $fusions_file) or die "Could not open file $fusions_file $!";
 	open(my $ofh, '>', $output_file) or die "Could not open file $output_file $!";
 	print $ofh $header."\n";
@@ -261,8 +264,12 @@ sub write_output {
 		print $ofh $line."\n";
 	}
 	close ($ifh);
-	close ($ofh);	
-	
+	close ($ofh);
+
+	if(-s $output_file == 0) {
+		system("echo '##EOF##' > $output_file") && die "An error occurred: $!";
+	}
+
 	return 1;
 }
 
