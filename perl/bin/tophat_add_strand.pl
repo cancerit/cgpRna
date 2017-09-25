@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 ##########LICENCE ##########
-#Copyright (c) 2015 Genome Research Ltd.
+#Copyright (c) 2015-2017 Genome Research Ltd.
 ###
 #Author: Cancer Genome Project <cgpit@sanger.ac.uk>
 ###
@@ -47,7 +47,7 @@ const my @TOPHAT_HEADER => qw(breakpoint_ref sample_name gene_1 chr_1 pos_1 gene
 
 {
 	my $options = setup();
-	
+
 	reformat($options);
 	add_strand($options);
 	write_output($options);
@@ -62,12 +62,16 @@ sub add_strand {
 	my $output = File::Spec->catfile($outdir,"$sample.tophat.fusions");
 
 	PCAP::Cli::file_for_reading('filtered.fusions', $fusions_file);
-	
+
 	# Sort both files prior to joining
-	system("sort -k1,1 $fusions_file > $output.sorted");
-	system("sort -k1,1 $strand_file > $strand_file.sorted");
-	system("join $output.sorted $strand_file.sorted > $output.strand");
-	
+	system("sort -k1,1 $fusions_file > $output.sorted") && die "An error occurred: $!";
+	system("sort -k1,1 $strand_file > $strand_file.sorted") && die "An error occurred: $!";
+	system("join $output.sorted $strand_file.sorted > $output.strand") && die "An error occurred: $!";
+
+	if(-s "$output.strand" == 0) {
+		system("echo '##EOF##' > $output.strand") && die "An error occurred: $!";
+	}
+
 	return 1;
 }
 
@@ -80,12 +84,12 @@ sub reformat {
 
 	open (my $ifh, $potential_fusions) or die "Could not open file '$potential_fusions' $!";
 	open(my $ofh, '>', $output) or die "Could not open file '$output' $!";
-	
+
 	while (<$ifh>) {
 		chomp;
 		my $line = $_;
 		if($line =~ m/^$sample/){
-		
+
 			my @fields = split ' ', $line;
 			$fields[1] =~ s/-|chr/ /g;
 			my @strands = split '', $fields[4];
@@ -97,12 +101,16 @@ sub reformat {
 			my $pos1 = $fields_upd[3] + 1;
 			my $pos2 = $fields_upd[4] + 1;
 			print $ofh "$fields_upd[1]:$pos1-$fields_upd[2]:$pos2 $fields_upd[5] $fields_upd[6]\n";
-			
+
 		}
-	}	
+	}
 	close ($ifh);
 	close ($ofh);
-	
+
+	if(-s $output == 0) {
+		system("echo '##EOF##' > $output") && die "An error occurred: $!";
+	}
+
 	return 1;
 }
 
@@ -110,18 +118,18 @@ sub setup {
 	my %opts;
 	pod2usage(-msg => "\nERROR: Options must be defined.\n", -verbose => 1, -output => \*STDERR) if(scalar @ARGV == 0);
 	$opts{'cmd'} = join " ", $0, @ARGV;
-	
+
 	GetOptions( 	'h|help' => \$opts{'h'},
 			'm|man' => \$opts{'m'},
 			'i|input=s' => \$opts{'input'},
 			'o|outdir=s' => \$opts{'outdir'},
 			's|sample=s' => \$opts{'sample'},
-			'p|potfusions=s' => \$opts{'potfusions'},						
+			'p|potfusions=s' => \$opts{'potfusions'},
 	) or pod2usage(2);
 
 	pod2usage(-verbose => 1) if(defined $opts{'h'});
 	pod2usage(-verbose => 2) if(defined $opts{'m'});
-	
+
 	PCAP::Cli::file_for_reading('input', $opts{'input'});
 	PCAP::Cli::file_for_reading('potential_fusions', $opts{'potfusions'});
 
@@ -133,13 +141,13 @@ sub setup {
 
 sub write_output {
 	my $options = shift;
-	
+
 	my $sample = $options-> {'sample'};
 	my $outdir = $options->{'outdir'};
 	my $fusions_file = File::Spec->catfile($outdir,"$sample.tophat.fusions".'.strand');
 	my $output_file = File::Spec->catfile($outdir,"$sample.tophat-fusion.normals.filtered.strand.txt");
 	PCAP::Cli::file_for_reading('filtered.fusions', $fusions_file);
-	
+
 	open (my $ifh, $fusions_file) or die "Could not open file $fusions_file $!";
 	open(my $ofh, '>', $output_file) or die "Could not open file $output_file $!";
 	print $ofh join("\t", @TOPHAT_HEADER)."\n";
@@ -150,8 +158,8 @@ sub write_output {
 		print $ofh $line."\n";
 	}
 	close ($ifh);
-	close ($ofh);	
-	
+	close ($ofh);
+
 	return 1;
 }
 
