@@ -1,6 +1,6 @@
 package Sanger::CGP::CompareFusions::Implement;
 ##########LICENCE ##########
-#Copyright (c) 2015 Genome Research Ltd.
+#Copyright (c) 2015-2017 Genome Research Ltd.
 ###
 #Author: Cancer Genome Project <cgpit@sanger.ac.uk>
 ###
@@ -151,13 +151,13 @@ const my $STAR_HEADER_PATTERN => 'fusion_name';
 
 sub add_grass_flag {
   my $options = shift;
-  
+
   my $tmp = $options->{'tmp'};
   my $sample = $options->{'sample'};
-  
+
   my $input_file = File::Spec->catfile($tmp, "$sample.detected.fusions.txt");
   my $temp_file = File::Spec->catfile($tmp, "$sample.grass");
-  
+
   # Open the deduplicated file and create a temporary file with fusion coordinates that are valid for Grass to use as an input i.e. chr1:strand1:pos1,chr2:strand2:pos2
   open(my $ifh1, $input_file) or die "Could not open file $input_file $!";
   open(my $ofh1, '>', $temp_file) or die "Could not open file $temp_file $!";
@@ -174,13 +174,13 @@ sub add_grass_flag {
   }
   close($ofh1);
   close($ifh1);
-  
+
   my $command = "$^X ";
 	$command .= _which('grass.pl');
 	$command .= sprintf $RUN_GRASS, $options->{'cache'}, $temp_file;
-	
+
 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
-	
+
 	# Open the annotated grass file and store the grass flag in a hash using column 2 as the look-up
 	my $grass_file = File::Spec->catfile($tmp, $sample."_ann.grass");
 	my %grass_flag;
@@ -193,14 +193,14 @@ sub add_grass_flag {
 	  $grass_flag{$fields[1]} = $fields[$length-1];
 	}
   close($ifh2);
-  
+
   # Create final output file and add grass flag on to the end of each line
   my $output_file = File::Spec->catfile($tmp, "$sample.infuse.detected.fusions.grass.txt");
   my $data_file = File::Spec->catfile($tmp, "$sample.detected.fusions.txt");
   open(my $ifh3, $data_file) or die "Could not open file $data_file $!";
   open(my $ofh2, '>', $output_file) or die "Could not open file $output_file $!";
   print $ofh2 $OUTPUT_HEADER."\tgrass_flag\n";
-  
+
   while(<$ifh3>){
     chomp;
     my $line = $_;
@@ -212,13 +212,13 @@ sub add_grass_flag {
   }
   close($ifh3);
   close($ofh2);
-  
+
   return 1;
 }
 
 sub annotate_bed {
   my $options = shift;
-  
+
   my $tmp = $options->{'tmp'};
   return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
 
@@ -227,24 +227,24 @@ sub annotate_bed {
 
   my $break1_file;
   my $break2_file;
-	
+
   opendir(my $dh, $tmp);
   while(my $file = readdir $dh) {
     $break1_file = File::Spec->catfile($tmp, $file) if($file =~ m/^$sample.1.bed/);
     $break2_file = File::Spec->catfile($tmp, $file) if($file =~ m/^$sample.2.bed/);
   }
   closedir($dh);
-	
+
   my $break1_annotated_file = $break1_file;
   my $break2_annotated_file = $break2_file;
   $break1_annotated_file =~ s/bed/ann/;
   $break2_annotated_file =~ s/bed/ann/;
-  
+
   # Format the bedtools closest commands. Use the filtered exon and gene gtf files to ensure we are getting back the relevant features of interest.
   my $prog = _which('bedtools');
   my $command1 = $prog . sprintf $BEDTOOLS_CLOSEST, $break1_file, $exon_gtf, $break1_annotated_file;
   my $command2 = $prog . sprintf $BEDTOOLS_CLOSEST, $break2_file, $exon_gtf, $break2_annotated_file;
-	
+
   my @commands = ($command1,$command2);
 
   PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), \@commands, 0);
@@ -279,15 +279,15 @@ sub annotation_sort {
 
 sub check_input {
   my $fusion_file = shift;
-	
+
   # Check the file exists
   PCAP::Cli::file_for_reading('fusion-file', $fusion_file);
-	
+
   # Read the header and identify the file format
-  open my $file, '<', $fusion_file; 
+  open my $file, '<', $fusion_file;
   my $firstLine = <$file>;
   close $file;
-	
+
   my $source;
   # Check for tophat format
   if($firstLine =~ m/$TOPHAT_HEADER_PATTERN/){
@@ -304,21 +304,21 @@ sub check_input {
   else{
     die "Unrecognised file type or the file is missing the header record\n";
   }
-	
+
   return $source;
 }
 
 sub collate_annotation {
   my $options = shift;
-  
+
   my $tmp = $options->{'tmp'};
   return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
-  
+
   my $sample = $options->{'sample'};
   my $annot_file1 = File::Spec->catfile($tmp, "$sample.1.ann_final");
   my $annot_file2 = File::Spec->catfile($tmp, "$sample.2.ann_final");
   my $annot_file_full = File::Spec->catfile($tmp, "$sample.final");
-  
+
   open (my $ifh1, $annot_file1) or die "Could not open file '$annot_file1' $!";
   open(my $ofh1, '>>', $annot_file_full) or die "Could not open file $annot_file_full $!";
   while (<$ifh1>) {
@@ -350,31 +350,31 @@ sub collate_annotation {
   }
   close($ofh1);
   close($ifh1);
-  
+
   PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
-  
+
   return 1;
 }
 
 sub create_junction_bedpe {
   my ($index, $options) = @_;
-  
+
   my $tmp = $options->{'tmp'};
   return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), $index);
-	
+
   my $sample = $options->{'sample'};
-  
+
   my $file = $options->{'fusion_files'}->{$index}->{'name'};
   my $filetype = $options->{'fusion_files'}->{$index}->{'format'};
   my $output1 = File::Spec->catfile($tmp, "$index.$sample.bedpe");
-	
+
   open (my $ifh, $file) or die "Could not open file '$file' $!";
   open(my $ofh1, '>', $output1) or die "Could not open file '$output1' $!";
-  
+
   while (<$ifh>) {
     chomp;
     my $line = $_;
-		  
+
     my @fields;
     my $name;
     my $chr1;
@@ -384,11 +384,12 @@ sub create_junction_bedpe {
     my $chr2;
     my $pos2_start;
     my $pos2_end;
-    my $strand2; 
-		  
+    my $strand2;
+
     if($filetype eq 'star'){
       next if($line =~ m/$STAR_HEADER_PATTERN/);
-		  	
+			next if($line eq q{##EOF##});
+
       @fields = split $STAR_SPLIT_CHAR, $line;
       $name = $fields[$STAR_BREAKREF - 1];
       $chr1 = $fields[$STAR_CHR1 - 1];
@@ -399,12 +400,13 @@ sub create_junction_bedpe {
       $pos2_start = $fields[$STAR_POS2 - 1]-1;
       $pos2_end = $fields[$STAR_POS2- 1];
       $strand2 = $fields[$STAR_STRAND2 - 1];
-		    		    
+
       print $ofh1 $chr1."\t".$pos1_start."\t".$pos1_end."\t".$chr2."\t".$pos2_start."\t".$pos2_end."\t".$filetype."\t".$name."\t".$strand1."\t".$strand2."\n";
     }
     elsif($filetype eq 'tophat'){
       next if($line =~ m/$TOPHAT_HEADER_PATTERN/);
-		    
+			next if($line eq q{##EOF##});
+
       @fields = split $TOPHAT_SPLIT_CHAR, $line;
       $name = $fields[$TOPHAT_BREAKREF - 1];
       $chr1 = $fields[$TOPHAT_CHR1 - 1];
@@ -415,14 +417,15 @@ sub create_junction_bedpe {
       $pos2_start = $fields[$TOPHAT_POS2 - 1]-1;
       $pos2_end = $fields[$TOPHAT_POS2- 1];
       $strand2 = $fields[$TOPHAT_STRAND2 - 1];
-		    		    
+
       print $ofh1 $chr1."\t".$pos1_start."\t".$pos1_end."\t".$chr2."\t".$pos2_start."\t".$pos2_end."\t".$filetype."\t".$name."\t".$strand1."\t".$strand2."\n";
     }
-    
+
     # It must be defuse format
     else{
       next if($line =~ m/$DEFUSE_HEADER_PATTERN/);
-		  	
+			next if($line eq q{##EOF##});
+
       @fields = split $DEFUSE_SPLIT_CHAR, $line;
       $name = $fields[$DEFUSE_BREAKREF - 1]."_".$fields[$DEFUSE_CLUSTER_ID - 1];
       $chr1 = $fields[$DEFUSE_CHR1 - 1];
@@ -433,29 +436,29 @@ sub create_junction_bedpe {
       $pos2_start = $fields[$DEFUSE_POS2 - 1]-1;
       $pos2_end = $fields[$DEFUSE_POS2- 1];
       $strand2 = $fields[$DEFUSE_STRAND2 - 1];
-		    		    
+
       print $ofh1 $chr1."\t".$pos1_start."\t".$pos1_end."\t".$chr2."\t".$pos2_start."\t".$pos2_end."\t".$filetype."\t".$name."\t".$strand1."\t".$strand2."\n";
     }
   }
   close ($ifh);
   close ($ofh1);
-	
+
   PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), $index);
-	
-  return 1;  
-  
+
+  return 1;
+
 }
 
 sub deduplicate_fusions {
   my $options = shift;
-  
+
   my $tmp = $options->{'tmp'};
   my $sample = $options->{'sample'};
-  
+
   my $input_file = File::Spec->catfile($tmp, "$sample.final");
   my $temp_file = File::Spec->catfile($tmp, "$sample.final.2");
-  
-  # Open the file, read through and add a sort key based on the source algorithm. STD should be 1 and everything else 2.  
+
+  # Open the file, read through and add a sort key based on the source algorithm. STD should be 1 and everything else 2.
   open(my $ifh1, $input_file) or die "Could not open file $input_file $!";
   open(my $ofh1, '>', $temp_file) or die "Could not open file $temp_file $!";
   while(<$ifh1>){
@@ -470,15 +473,15 @@ sub deduplicate_fusions {
   }
   close($ofh1);
   close($ifh1);
-  
+
   my $sorted_file = File::Spec->catfile($tmp, "$sample.final.2.sorted");
   my $sort_command = sprintf $TRI_SORT, 1, 1,8,8,15,15, $temp_file, $sorted_file;
   system($sort_command);
-  
+
   my %seen;
   my $output_file = File::Spec->catfile($tmp, "$sample.final.deduped");
-  
-  # Read through the sorted file and check there are no duplicate tophat breakpoints (sometimes star and tophat breakpoints differ). 
+
+  # Read through the sorted file and check there are no duplicate tophat breakpoints (sometimes star and tophat breakpoints differ).
   open(my $ifh2, $sorted_file) or die "Could not open file $sorted_file $!";
   open(my $ofh2, '>', $output_file) or die "Could not open file $output_file $!";
   while(<$ifh2>){
@@ -500,7 +503,7 @@ sub deduplicate_fusions {
           shift @fields;
           print $ofh2 join("\t", @fields)."\n";
         }
-      }     
+      }
       elsif($source eq 'D'){
         $fields[1] =~ m/^(.*)_[0-9]+$/;
         my $junction = $1;
@@ -521,19 +524,19 @@ sub deduplicate_fusions {
   }
   close($ofh2);
   close($ifh2);
-  
+
   return 1;
 }
 
 sub filter_gtf {
   my ($options, $feature) = @_;
-	
+
 	my $tmp = $options->{'tmp'};
-	
+
 	my $gtf = $options->{'gtf'};
-	
+
   my $filtered_gtf = File::Spec->catfile($tmp, "filtered_$feature.gtf");
-  
+
   unless (-e $filtered_gtf){
   open (my $ifh, $gtf) or die "Could not open file '$gtf' $!";
   open(my $ofh, '>', $filtered_gtf) or die "Could not open file '$filtered_gtf' $!";
@@ -544,7 +547,7 @@ sub filter_gtf {
     $line =~ s/"//g;
     $line =~ s/;$//;
     next if($line =~ m/^#/ );
-		
+
     my %annotation;
     my @fields = split '\t', $line;
     next if($fields[2] ne $feature);
@@ -566,21 +569,21 @@ sub filter_gtf {
 
 sub find_closest_boundary {
   my ($break, $start, $end) = @_;
-  
+
   my $distance = abs($start - $break);
   my $distance2 = abs($end - $break);
-  
+
   $distance = $distance2 if($distance2 < $distance);
-  
+
   return $distance;
 }
 
 sub generate_output {
   my $options = shift;
-  
+
   my $tmp = $options->{'tmp'};
   return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
-  
+
   my $sample = $options->{'sample'};
 
   my $star_file = $options->{'fusion_files'}->{'1'}->{'name'};
@@ -590,33 +593,33 @@ sub generate_output {
   my $star_data = parse_star_file($star_file);
   my $tophat_data = parse_tophat_file($tophat_file);
   my $defuse_data = parse_defuse_file($defuse_file);
-  
+
   my $annot_file = File::Spec->catfile($tmp, "$sample.final.deduped");
   my $output_file = File::Spec->catfile($tmp, "$sample.detected.fusions.txt");
   open(my $ofh1, '>', $output_file) or die "Could not open file $output_file $!";
-  
+
   if(-s $annot_file){
-  
+
   open(my $ifh1, $annot_file) or die "Could not open file $annot_file $!";
   print $ofh1 $OUTPUT_HEADER."\n";
   while(<$ifh1>){
     chomp;
     my $line = $_;
     my @fields = split "\t", $line;
-    
+
   	my $length = scalar @fields;
   	my $source = $fields[$length-1];
   	my $confidence = $CONFIDENCE_SCORES{$source};
-  	
+
   	my $star_pos = index($source,'S') if($source =~ m/S/);
   	my $tophat_pos = index($source,'T') if($source =~ m/T/);
   	my $defuse_pos = index($source,'D') if($source =~ m/D/);
-  	
+
   	my $star_breakpoint = 'NA';
   	my $tophat_breakpoint = 'NA';
   	my $defuse_breakpoint = 'NA';
   	my $defuse_junction = 'NA';
-  	my $defuse_clusterid = 'NA';	
+  	my $defuse_clusterid = 'NA';
   	my $chr1 = 'NA';
   	my $pos1 = 'NA';
   	my $strand1 = 'NA';
@@ -632,7 +635,7 @@ sub generate_output {
   	my $defuse_span_count = 'NA';
   	my $defuse_splitr_seq = 'NA';
   	my $defuse_cgp_filter = 'NA';
-  	  
+
   	if(defined $tophat_pos){
   	  $tophat_breakpoint = $fields[$tophat_pos];
   	  $tophat_junction_reads = $tophat_data->{$tophat_breakpoint}{'num_spanning_reads'};
@@ -643,9 +646,9 @@ sub generate_output {
   	  $chr2 = $tophat_data->{$tophat_breakpoint}{'chr2'};
   	  $pos2 = $tophat_data->{$tophat_breakpoint}{'pos2'};
   	  $strand2 = $tophat_data->{$tophat_breakpoint}{'strand2'};
-  	} 	  
+  	}
   	if(defined $star_pos){
-  	  $star_breakpoint = $fields[$star_pos];  
+  	  $star_breakpoint = $fields[$star_pos];
   	  $star_junction_reads = $star_data->{$star_breakpoint}{'junction_reads'};
   	  $star_spanning_frags = $star_data->{$star_breakpoint}{'spanning_frags'};
   	  $chr1 = $star_data->{$star_breakpoint}{'chr1'};
@@ -690,9 +693,9 @@ sub generate_output {
       my $exon2_number = $fields[14];
       my $exon2_start = $fields[15];
       my $exon2_end = $fields[16];
-      
+
       $source = reverse $source;
-      
+
       print $ofh1 "$sample\t$fusion_name\t$source\t$confidence\t$star_breakpoint\t$tophat_breakpoint\t$defuse_junction\t$defuse_clusterid\t$star_junction_reads\t$star_spanning_frags\t$tophat_junction_reads\t$tophat_spanning_frags\t$defuse_splitr_count\t$defuse_span_count\t$gene1_name\t$gene1_id\t$chr1\t$pos1\t$strand1\t$gene2_name\t$gene2_id\t$chr2\t$pos2\t$strand2\t$transcript1_id\t$transcript1_src\t$exon1_number\t$exon1_start\t$exon1_end\t$transcript2_id\t$transcript2_src\t$exon2_number\t$exon2_start\t$exon2_end\t$defuse_splitr_seq\t$tophat_splitr_seq\t$defuse_cgp_filter\n";
     }
     else{
@@ -702,19 +705,19 @@ sub generate_output {
   }
   close($ifh1);
   }
-  
+
   close($ofh1);
-  
+
   return 1;
 }
 
 sub parse_annotation {
   my $line = shift;
   $line =~ s/"//g;
-  
+
   my %annotation;
   my @fields = split "\t", $line;
-  
+
   $annotation{'breakpoint'} = $fields[3];
   $annotation{'alt_breakpoint'} = $fields[4];
   $annotation{'alt_breakpoint2'} = $fields[8];
@@ -740,12 +743,12 @@ sub parse_annotation {
 
 sub parse_bed_file {
   my ($line, $breaknum) = @_;
-  
-  my @fields = split "\t", $line; 
+
+  my @fields = split "\t", $line;
   my $fusion;
-  
+
   if($breaknum == 1){
-  
+
     $fusion = new Sanger::CGP::CompareFusions::FusionAnnotation(
     -breakpoint	=> $fields[3],
     -alt_breakpoint	=> $fields[4],
@@ -769,18 +772,18 @@ sub parse_bed_file {
     -strand2	=> $fields[5],
     -gene2	=> $fields[6],
     -gene2_id	=> $fields[7],
-    -feature1 => $fields[9]);    
+    -feature1 => $fields[9]);
   }
-  
+
   return $fusion;
 }
 
 sub parse_break_data {
   my $line = shift;
-  
+
   my %break;
   my @fields = split "\t", $line;
-  
+
   my @breakpoint = split "_", $fields[0];
   $break{'breakpoint'} = $breakpoint[0];
   $break{'alt_breakpoint'} = $fields[1];
@@ -795,19 +798,20 @@ sub parse_break_data {
   $break{'transcript_id'} = $fields[10];
   $break{'transcript_src'} = $fields[11];
   $break{'gene_biotype'} = $fields[12];
-  
+
   return \%break;
 }
 
 sub parse_defuse_file {
-  
+
   my $defuse_file = shift;
-  
+
   my %defuse_data;
   open (my $ifh1, $defuse_file) or die "Could not open file '$defuse_file' $!";
   while (<$ifh1>) {
     chomp;
     my $line = $_;
+		next if($line eq q{##EOF##});
     next if($line =~ m/$DEFUSE_HEADER_PATTERN/);
     my @fields = split $DEFUSE_SPLIT_CHAR, $line;
     my $break_ref = $fields[$DEFUSE_BREAKREF-1];
@@ -895,30 +899,30 @@ sub parse_exon_data {
 sub parse_gene_info {
   my $line = shift;
   $line =~ s/"//g;
-  
+
   my %gene_annotation;
   my @fields = split "\t", $line;
-  
+
   $gene_annotation{'start'} = $fields[3];
   $gene_annotation{'end'} = $fields[4];
-  
+
   my $annot_column = scalar @fields;
   my @annot_fields = split /; /, $fields[$annot_column-1];
   foreach my $item(@annot_fields) {
     my ($type,$value)= split / /, $item;
     $gene_annotation{$type} = $value;
   }
-  
+
   return \%gene_annotation;
 }
 
 sub parse_intersection {
   my ($line) = @_;
-  
+
   my @fields = split " ", $line;
-  
+
   my $fusion = new Sanger::CGP::CompareFusions::FusionAnnotation();
-  
+
   $fusion->breakpoint($fields[0]);
   $fusion->chr1($fields[1]);
   $fusion->pos1_start($fields[2]);
@@ -930,15 +934,15 @@ sub parse_intersection {
   $fusion->strand2($fields[9]);
   $fusion->alt_breakpoint($fields[17]);
   $fusion->alt_breakpoint2($fields[36]);
-  
+
   return $fusion;
 }
 
 sub parse_overlap {
   my ($line) = @_;
-  
+
   my @fields = split "\t", $line;
-  
+
   my $fusion = new Sanger::CGP::CompareFusions::FusionAnnotation(
     -breakpoint	=> $fields[7],
     -chr1	=> $fields[0],
@@ -951,19 +955,20 @@ sub parse_overlap {
     -strand2	=> $fields[9],
     -alt_breakpoint => $fields[17],
     -alt_breakpoint2 => 'NA');
-  
+
   return $fusion;
 }
 
 sub parse_star_file {
-  
+
   my $star_file = shift;
-  
+
   my %star_data;
   open (my $ifh1, $star_file) or die "Could not open file '$star_file' $!";
   while (<$ifh1>) {
     chomp;
     my $line = $_;
+		next if($line eq q{##EOF##});
     next if($line =~ m/$STAR_HEADER_PATTERN/);
     my @fields = split $STAR_SPLIT_CHAR, $line;
     my $breakpoint = $fields[0];
@@ -989,15 +994,16 @@ sub parse_star_file {
 }
 
 sub parse_tophat_file {
-  
+
   my $tophat_file = shift;
-  
+
   my %tophat_data;
   open (my $ifh1, $tophat_file) or die "Could not open file '$tophat_file' $!";
   while (<$ifh1>) {
     chomp;
     my $line = $_;
     next if($line =~ m/$TOPHAT_HEADER_PATTERN/);
+		next if($line eq q{##EOF##});
     my @fields = split $TOPHAT_SPLIT_CHAR, $line;
     my $breakpoint = $fields[$TOPHAT_BREAKREF-1];
     $tophat_data{$breakpoint}{'gene1_name'} = $fields[$TOPHAT_GENE1-1];
@@ -1025,7 +1031,7 @@ sub parse_transcript_data {
 		push(@filteredTrans, $t) if ($fusion->{'pos'.$breaknum.'_end'} >= $t->getGenomicMinPos && $fusion->{'pos'.$breaknum.'_end'} <= $t->getGenomicMaxPos);
 	}
 	my @sortedTrans = sort{&annotation_sort} @filteredTrans;
-	
+
 	if(defined $sortedTrans[0]){
     my $vagrent_genename;
 	  my $exon_number;
@@ -1084,16 +1090,16 @@ sub parse_transcript_data {
 		      $fusion->feature2_end($exon_end);
         }
 	    }
-    }	
+    }
   }
   return $fusion;
 }
 
 sub parse_vagrent_query_file {
   my ($line) = @_;
-  
+
   my @fields = split "\t", $line;
-  
+
   my $fusion = new Sanger::CGP::CompareFusions::FusionAnnotation(
     -breakpoint	=> $fields[0],
     -alt_breakpoint	=> $fields[1],
@@ -1107,7 +1113,7 @@ sub parse_vagrent_query_file {
     -pos2_end	=> $fields[9],
     -strand2	=> $fields[10],
     -feature1 => $fields[11]);
-  
+
   return $fusion;
 }
 
@@ -1115,7 +1121,7 @@ sub process_annotation_file {
   my ($input) = @_;
 
   my %exon_annotation;
-  
+
   open (my $ifh1, $input) or die "Could not open file '$input' $!";
   while (<$ifh1>){
     chomp;
@@ -1137,18 +1143,18 @@ sub process_overlap_files {
 
   my $tmp = $options->{'tmp'};
   return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
-  
+
   my $sample = $options->{'sample'};
-  
+
   # Establish the source of 1 and 2 respectively
   my $source_comb;
   my $source1 = $options->{'fusion_files'}->{'1'}->{'format'};
   my $source2 = $options->{'fusion_files'}->{'2'}->{'format'};
-  
+
   my $output_file = File::Spec->catfile($tmp, "$sample.vagrent.query.list");
   my %all_fusions;
   my $cols;
-  
+
   if($options->{'num'} == 3){
     my $source3 = $options->{'fusion_files'}->{'3'}->{'format'};
     $source_comb = uc(substr($source1,0,1).substr($source2,0,1).substr($source3,0,1));
@@ -1159,14 +1165,14 @@ sub process_overlap_files {
       my $line = $_;
       my $fusion = parse_intersection($line);
       my $breakpoint = $fusion->breakpoint();
-      
+
       if(!exists $all_fusions{$breakpoint}){
         $all_fusions{$breakpoint} = $fusion;
         $all_fusions{$breakpoint}{'source'} = $source_comb;
       }
     }
     close($ifh1);
-    
+
     $source_comb = uc(substr($source1,0,1).substr($source3,0,1));
     my $overlap_file1_3 = File::Spec->catfile($tmp, "1_3.$sample.bedpe_overlap");
     open (my $ifh2, $overlap_file1_3) or die "Could not open file '$overlap_file1_3' $!";
@@ -1175,14 +1181,14 @@ sub process_overlap_files {
       my $line = $_;
       my $fusion = parse_overlap($line);
       my $breakpoint = $fusion->breakpoint();
-      
+
       if(!exists $all_fusions{$breakpoint}){
         $all_fusions{$breakpoint} = $fusion;
         $all_fusions{$breakpoint}{'source'} = $source_comb;
       }
     }
-    close($ifh2); 
-    
+    close($ifh2);
+
     $source_comb = uc(substr($source2,0,1).substr($source3,0,1));
     my $overlap_file2_3 = File::Spec->catfile($tmp, "2_3.$sample.bedpe_overlap");
     open (my $ifh3, $overlap_file2_3) or die "Could not open file '$overlap_file2_3' $!";
@@ -1191,15 +1197,15 @@ sub process_overlap_files {
       my $line = $_;
       my $fusion = parse_overlap($line);
       my $breakpoint = $fusion->breakpoint();
-      
+
       if(!exists $all_fusions{$breakpoint}){
         $all_fusions{$breakpoint} = $fusion;
         $all_fusions{$breakpoint}{'source'} = $source_comb;
       }
     }
-    close($ifh3);    
+    close($ifh3);
   }
-  
+
   my $overlap_file1_2 = File::Spec->catfile($tmp, "1_2.$sample.bedpe_overlap");
   $source_comb = uc(substr($source1,0,1).substr($source2,0,1));
   open (my $ifh4, $overlap_file1_2) or die "Could not open file '$overlap_file1_2' $!";
@@ -1208,22 +1214,22 @@ sub process_overlap_files {
     my $line = $_;
     my $fusion = parse_overlap($line);
     my $breakpoint = $fusion->breakpoint();
-      
+
     if(!exists $all_fusions{$breakpoint}){
       $all_fusions{$breakpoint} = $fusion;
       $all_fusions{$breakpoint}{'source'} = $source_comb;
     }
   }
   close($ifh4);
-  
+
   open(my $ofh1, '>', $output_file) or die "Could not open file '$output_file' $!";
   for my $brk (keys %all_fusions){
     my $output_line = $all_fusions{$brk}->format_fusion_line($all_fusions{$brk}{'source'});
     print $ofh1 $output_line."\n";
-  
+
   }
   close($ofh1);
-  
+
   PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
   return 1;
 }
@@ -1234,11 +1240,11 @@ sub process_singletons {
   my $tmp = $options->{'tmp'};
   return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
   my $sample = $options->{'sample'};
-  
+
   my %star_ids;
   my %tophat_ids;
   my %defuse_ids;
-  
+
   my $overlaps_file = File::Spec->catfile($tmp, "$sample.vagrent.query.list");
   open (my $ifh1, $overlaps_file) or die "Could not open file '$overlaps_file' $!";
   while (<$ifh1>) {
@@ -1247,18 +1253,18 @@ sub process_singletons {
     my @fields = split "\t", $line;
     my $length = scalar @fields;
     my $source = $fields[$length-1];
-    
+
     if($source eq 'STD'){
       $star_ids{$fields[0]} = 'STD';
       $tophat_ids{$fields[1]} = 'STD';
-      my $defuse_brk_id = $fields[2];    
+      my $defuse_brk_id = $fields[2];
       my @defuse_id_split = split "_", $defuse_brk_id;
       my $defuse_junction = $defuse_id_split[0];
       $defuse_ids{$defuse_junction} = 'STD';
     }
     elsif($source eq 'SD'){
       $star_ids{$fields[0]} = 'SD';
-      my $defuse_brk_id = $fields[1];    
+      my $defuse_brk_id = $fields[1];
       my @defuse_id_split = split "_", $defuse_brk_id;
       my $defuse_junction = $defuse_id_split[0];
       $defuse_ids{$defuse_junction} = 'SD';
@@ -1270,13 +1276,13 @@ sub process_singletons {
     elsif($source eq 'TD'){
       $tophat_ids{$fields[0]} = 'TD';
       $defuse_ids{$fields[1]} = 'TD';
-      my $defuse_brk_id = $fields[1];    
+      my $defuse_brk_id = $fields[1];
       my @defuse_id_split = split "_", $defuse_brk_id;
       my $defuse_junction = $defuse_id_split[0];
       $defuse_ids{$defuse_junction} = 'TD';
     }
     else{
-      die "Fusion does not have recognised source algorithms\n"; 
+      die "Fusion does not have recognised source algorithms\n";
     }
   }
   close($ifh1);
@@ -1288,15 +1294,15 @@ sub process_singletons {
   my $tophat_data = parse_tophat_file($tophat_file);
   my $defuse_data = parse_defuse_file($defuse_file);
   my %all_singletons;
-  
+
   for my $star_brk (keys $star_data){
     if(!exists $star_ids{$star_brk}){
-    
+
       $star_ids{$star_brk} = 'S';
-    
+
       my $pos_start1 = $star_data->{$star_brk}{'pos1'} -1;
       my $pos_start2 = $star_data->{$star_brk}{'pos2'} -1;
-    
+
       my $fusion = new Sanger::CGP::CompareFusions::FusionAnnotation(
       -breakpoint	=> $star_brk,
       -chr1	=> $star_data->{$star_brk}{'chr1'},
@@ -1309,7 +1315,7 @@ sub process_singletons {
       -strand2	=> $star_data->{$star_brk}{'strand2'},
       -alt_breakpoint => 'NA',
       -alt_breakpoint2 => 'NA');
-      
+
       if(!exists $all_singletons{$star_brk}){
         $all_singletons{$star_brk} = $fusion;
         $all_singletons{$star_brk}{'source'} = 'S';
@@ -1319,9 +1325,9 @@ sub process_singletons {
 
   for my $tophat_brk (keys $tophat_data){
     if(!exists $tophat_ids{$tophat_brk}){
-    
+
       $tophat_ids{$tophat_brk} = 'T';
-    
+
       my $fusion = new Sanger::CGP::CompareFusions::FusionAnnotation(
       -breakpoint	=> $tophat_brk,
       -chr1	=> $tophat_data->{$tophat_brk}{'chr1'},
@@ -1334,20 +1340,20 @@ sub process_singletons {
       -strand2	=> $tophat_data->{$tophat_brk}{'strand2'},
       -alt_breakpoint => 'NA',
       -alt_breakpoint2 => 'NA');
-      
+
       if(!exists $all_singletons{$tophat_brk}){
         $all_singletons{$tophat_brk} = $fusion;
         $all_singletons{$tophat_brk}{'source'} = 'T';
       }
     }
   }
-  
+
   for my $defuse_brk (keys $defuse_data){
     my @defuse_ids = split "_", $defuse_brk;
     my $breakpoint = $defuse_ids[0];
     if(!exists $defuse_ids{$breakpoint}){
       $defuse_ids{$breakpoint} = 'D';
-    
+
       my $fusion = new Sanger::CGP::CompareFusions::FusionAnnotation(
       -breakpoint	=> $defuse_brk,
       -chr1	=> $defuse_data->{$defuse_brk}{'chr1'},
@@ -1360,7 +1366,7 @@ sub process_singletons {
       -strand2	=> $defuse_data->{$defuse_brk}{'strand2'},
       -alt_breakpoint => 'NA',
       -alt_breakpoint2 => 'NA');
-      
+
       if(!exists $all_singletons{$defuse_brk}){
         $all_singletons{$defuse_brk} = $fusion;
         $all_singletons{$defuse_brk}{'source'} = 'D';
@@ -1373,9 +1379,9 @@ sub process_singletons {
     print $ofh1 $output_line."\n";
   }
   close($ofh1);
-  
+
   PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
-  
+
   return 1;
 }
 
@@ -1384,13 +1390,13 @@ sub query_vagrent {
 
   my $tmp = $options->{'tmp'};
   return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
-	
+
   my $sample = $options->{'sample'};
 
   my $star_file = $options->{'fusion_files'}->{'1'}->{'name'};
   my $tophat_file = $options->{'fusion_files'}->{'2'}->{'name'};
   my $defuse_file = $options->{'fusion_files'}->{'3'}->{'name'};
- 
+
   my $gene_list = parse_star_file($star_file);
   my $gene_gtf = filter_gtf($options, 'gene');
 
@@ -1405,11 +1411,11 @@ sub query_vagrent {
     }
   }
   close ($ifh1);
-  
+
   my %rev_gene_info = reverse %gene_info;
-  
+
   my $tophat_data = parse_tophat_file($tophat_file);
-  
+
   for my $brk (keys $tophat_data){
     if(!exists $gene_list->{$brk}){
       my $gene1_name = $tophat_data->{$brk}{'gene1_name'};
@@ -1438,9 +1444,9 @@ sub query_vagrent {
 			}
     }
   }
-  
+
   my $defuse_data = parse_defuse_file($defuse_file);
-  
+
   for my $defuse_brk (keys $defuse_data){
     if(!exists $gene_list->{$defuse_brk}){
       my $gene1_name = $defuse_data->{$defuse_brk}{'gene1_name'};
@@ -1453,12 +1459,12 @@ sub query_vagrent {
       $gene_list->{$defuse_brk}{'gene2_id'} = $gene2_name if(!defined $gene_list->{$defuse_brk}{'gene2_id'});
     }
   }
-  
+
 	my $vagrent_version = "VAGrENT_".Sanger::CGP::Vagrent->VERSION;
-	
-	my $ts = Sanger::CGP::Vagrent::TranscriptSource::FileBasedTranscriptSource->new('cache' => $options->{'cache'});	
+
+	my $ts = Sanger::CGP::Vagrent::TranscriptSource::FileBasedTranscriptSource->new('cache' => $options->{'cache'});
 	my %breaklist;
-	
+
 	my $vagrent_query_file = File::Spec->catfile($tmp, "$sample.vagrent.query.list");
 
   open (my $ifh2, $vagrent_query_file) or die "Could not open file '$vagrent_query_file' $!";
@@ -1470,23 +1476,23 @@ sub query_vagrent {
     $fusion->gene2($gene_list->{$fusion->{'breakpoint'}}{'gene2_name'});
     $fusion->gene1_id($gene_list->{$fusion->{'breakpoint'}}{'gene1_id'});
     $fusion->gene2_id($gene_list->{$fusion->{'breakpoint'}}{'gene2_id'});
-    
+
     my $genomic_pos1 = Sanger::CGP::Vagrent::Data::GenomicRegion->new('species' => 'human', 'genomeVersion' => 'GRCh38', 'chr' => $fusion->{'chr1'}, 'minpos' => $fusion->{'pos1_start'}, 'maxpos' => $fusion->{'pos1_end'}, 'id' => $fusion->{'breakpoint'});
     my $genomic_pos2 = Sanger::CGP::Vagrent::Data::GenomicRegion->new('species' => 'human', 'genomeVersion' => 'GRCh38', 'chr' => $fusion->{'chr2'}, 'minpos' => $fusion->{'pos2_start'}, 'maxpos' => $fusion->{'pos2_end'}, 'id' => $fusion->{'breakpoint'});
-	  
+
 	  unless($genomic_pos1->{'_chr'} eq 'GL000219.1' || $genomic_pos2->{'_chr'} eq 'GL000219.1' || $genomic_pos1->{'_chr'} eq 'KI270726.1' || $genomic_pos2->{'_chr'} eq 'KI270726.1'){
-	  
+
       my @trans1 = $ts->getTranscripts($genomic_pos1);
       my @trans2 = $ts->getTranscripts($genomic_pos2);
-   
+
       $fusion = parse_transcript_data($fusion, 1, \@trans1);
       $fusion = parse_transcript_data($fusion, 2, \@trans2);
     }
-    
+
 		$breaklist{$fusion->{'breakpoint'}} = $fusion if(!exists $breaklist{$fusion->{'breakpoint'}});
   }
   close ($ifh2);
-	
+
 	my $final_annot_file1 = File::Spec->catfile($tmp, "$sample.1.ann_final");
 	my $final_annot_file2 = File::Spec->catfile($tmp, "$sample.2.ann_final");
 	my $bed_file1 = File::Spec->catfile($tmp, "$sample.1.bed");
@@ -1528,39 +1534,39 @@ sub query_vagrent {
 	close($ofh1);
 
   PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
-	
+
   return 1;
 }
 
 sub run_bed_pairtopair {
   my $options = shift;
-  
+
   my $tmp = $options->{'tmp'};
   return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
 
   my $sample = $options->{'sample'};
-  
+
   my $prog = _which('bedtools');
   my @commands;
-  
+
   # There will always be at least two input files so build the command for the first comparison
   my $overlap_file1 = File::Spec->catfile($tmp, "1_2.$sample.bedpe_overlap");
   push @commands, $prog . sprintf $BEDTOOLS_PAIRTOPAIR, 	File::Spec->catfile($tmp, "1.$sample.bedpe"),
   						 	File::Spec->catfile($tmp, "2.$sample.bedpe"),
   						 	$overlap_file1;
-  						 	
+
   if($options->{'num'} == 3){
-    
+
     my $overlap_file2 = File::Spec->catfile($tmp, "1_3.$sample.bedpe_overlap");
     push @commands, $prog . sprintf $BEDTOOLS_PAIRTOPAIR, 	File::Spec->catfile($tmp, "1.$sample.bedpe"),
   						 	File::Spec->catfile($tmp, "3.$sample.bedpe"),
   						 	$overlap_file2;
-  	
-  	my $overlap_file3 = File::Spec->catfile($tmp, "2_3.$sample.bedpe_overlap");				 	
+
+  	my $overlap_file3 = File::Spec->catfile($tmp, "2_3.$sample.bedpe_overlap");
   	push @commands, $prog . sprintf $BEDTOOLS_PAIRTOPAIR, 	File::Spec->catfile($tmp, "2.$sample.bedpe"),
   						 	File::Spec->catfile($tmp, "3.$sample.bedpe"),
   						 	$overlap_file3;
-  						 	
+
   	 # Also find the intersection between all three algorithms using Unix sort and join commands.
   	 my $sorted_file1 = File::Spec->catfile($tmp, "1_2.$sample.bedpe_overlap.sorted");
   	 my $sorted_file2 = File::Spec->catfile($tmp, "1_3.$sample.bedpe_overlap.sorted");
@@ -1569,7 +1575,7 @@ sub run_bed_pairtopair {
   	 push @commands, sprintf $SORT, 8,8, $overlap_file2, $sorted_file2;
      push @commands, sprintf $JOIN, $sorted_file1,$sorted_file2, $overlap_file123;
   }
-  
+
   PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), \@commands, 0);
   PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
 
@@ -1580,21 +1586,21 @@ sub select_annotation {
 
   # All possible exon annotations have been retrieved for each breakpoint, we need to select annotation for the nearest.
   my $options = shift;
-  
+
   my $tmp = $options->{'tmp'};
   return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
-  
+
   my $sample = $options->{'sample'};
-  
+
   my ($gtf, $path) = fileparse($options->{'gtf'});
-	
+
   my $annot_file1 = File::Spec->catfile($tmp, "$sample.1.ann");
   my $annot_file2 = File::Spec->catfile($tmp, "$sample.2.ann");
   my $bed_file1 = File::Spec->catfile($tmp, "$sample.1.bed");
   my $bed_file2 = File::Spec->catfile($tmp, "$sample.2.bed");
   my $final_annot_file1 = $annot_file1."_final";
   my $final_annot_file2 = $annot_file2."_final";
-  
+
   my $exon_annotation1;
   my $exon_annotation2;
 
@@ -1604,7 +1610,7 @@ sub select_annotation {
 	if(-s $annot_file2){
     $exon_annotation2 = process_annotation_file($annot_file2);
 	}
-	
+
 	my $gene_gtf = File::Spec->catfile($tmp, "filtered_gene.gtf");
   my %gene_info;
 
@@ -1619,10 +1625,10 @@ sub select_annotation {
     }
   }
   close ($ifh1);
-	
+
 	my $bed1;
   my $bed2;
-  
+
   if(-s $bed_file1){
     open(my $ofh1, '>>', $final_annot_file1) or die "Could not open file '$final_annot_file1' $!";
     open (my $ifh2, $bed_file1) or die "Could not open file '$bed_file1' $!";
@@ -1661,7 +1667,7 @@ sub select_annotation {
     close($ifh2);
     close($ofh1);
 	}
-	
+
 	if(-s $bed_file2){
 	  open(my $ofh2, '>>', $final_annot_file2) or die "Could not open file '$final_annot_file2' $!";
     open (my $ifh3, $bed_file2) or die "Could not open file '$bed_file2' $!";
@@ -1702,7 +1708,7 @@ sub select_annotation {
 	}
 
   #PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
-	
+
   return 1;
 }
 
