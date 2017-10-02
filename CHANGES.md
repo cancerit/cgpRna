@@ -1,3 +1,6 @@
+### 2.1.6-2.1.7
+* Fixing issues with data exhibiting no fusions.
+
 ### 2.1.5
 * updating cpanm source url
 
