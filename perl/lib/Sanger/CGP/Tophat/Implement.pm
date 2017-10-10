@@ -64,26 +64,26 @@ const my $TOPHAT_POST_SECTION => 'tophat-post-parameters';
 
 sub add_strand {
 	my $options = shift;
-	
+
 	my $tmp = $options->{'tmp'};
-	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);	
+	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
 
 	my $sample = $options->{'sample'};
-	my $post_outdir = File::Spec->catdir($options->{'tmp'}, 'tophatpostrun/tophatfusion_'.$sample);	
+	my $post_outdir = File::Spec->catdir($options->{'tmp'}, 'tophatpostrun/tophatfusion_'.$sample);
 	my $fusions_file = File::Spec->catfile($post_outdir, "$sample.tophat-fusion.normals.filtered.txt");
 	my $potential_fusions = File::Spec->catfile($post_outdir, 'potential_fusion.txt');
 	die "Please run the filter_fusions step prior to filter\n" unless(-e $fusions_file && -e $potential_fusions);
-	
+
 	my $command = "$^X ";
 	$command .= _which('tophat_add_strand.pl');
 	$command .= sprintf $ADD_STRAND, 	$fusions_file,
 						$sample,
 						$potential_fusions,
 						$post_outdir;
-						
+
 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
-	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);	
-	
+	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
+
 	return 1;
 }
 
@@ -94,7 +94,7 @@ sub bam_to_fastq {
 
 	my $tmp = $options->{'tmp'};
 	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), $index);
-	
+
 	my $command;
 	my $rg;
 	my $sample = $options->{'sample'};
@@ -113,23 +113,23 @@ sub bam_to_fastq {
 						File::Spec->catfile($inputdir, $sample.'.'.$rg.'_2.fastq.gz'),
 						$input->in;
 	}
-	
+
  	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, $index);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), $index);
-	
+
 	return 1;
 }
 
 sub check_input {
 	my $options = shift;
-	
+
 	# Check the bowtie reference index files are in place and are appropriate for the version of bowtie being used
 	my $suffix;
 	my $ref_prefix = $options->{'referenceindex'};
 	my $trans_prefix = $options->{'transcriptomeindex'};
 	my $refdata = File::Spec->catdir($options->{'refdataloc'},$options->{'species'});
 	my $ens_refdata = File::Spec->catdir($refdata,$options->{'referencebuild'});
-	
+
 	if($options->{'bowtieversion'} == 1){
 		for $suffix(@BOWTIE1_SUFFIXES){
 			PCAP::Cli::file_for_reading('bowtie1-ref-index',File::Spec->catfile($ens_refdata,$ref_prefix.$suffix));
@@ -146,7 +146,7 @@ sub check_input {
 			$options->{'transcriptomepath'} = File::Spec->catfile($ens_refdata,'tophat',$options->{'genebuild'},$trans_prefix);
 		}
 	}
-	
+
 	# Check the TopHat Fusion Post files exist
 	my $ucsc_prefix = $options->{'tophatpostindex'};
 	for $suffix(@BOWTIE1_SUFFIXES){
@@ -155,34 +155,34 @@ sub check_input {
 	$options->{'tophatpostpath'} = File::Spec->catfile($ens_refdata,'tophat',$ucsc_prefix);
 	PCAP::Cli::file_for_reading('refGene',File::Spec->catfile($ens_refdata,'tophat',$options->{'refgene'}));
 	PCAP::Cli::file_for_reading('ensGene',File::Spec->catfile($ens_refdata,'tophat',$options->{'genebuild'},$options->{'ensgene'}));
-	
+
 	# Check the normal fusions file exists for the filtering step
 	PCAP::Cli::file_for_reading('normals-list',File::Spec->catfile($ens_refdata,'cgpRna',$options->{'normalfusionslist'}));
-	
+
 	$options->{'meta_set'} = PCAP::Bwa::Meta::files_to_meta($options->{'tmp'}, $options->{'raw_files'}, $options->{'sample'});
-	
+
 	# If the input includes BAM files update flag in options to trigger the bamtofastq subroutine
 	my $input_meta = $options->{'meta_set'};
 	# Only need to check the first input file to see if it's BAM
 	my $input = @{$input_meta}[0];
 	$options->{'bam'} = 1 unless($input->fastq);
 	$options->{'max_split'} = scalar @{$options->{'meta_set'}};
-		
+
 	return 1;
 }
 
 sub check_ref_seqs {
 	my $options = shift;
-	
+
 	my $tophat_ref = $options->{'referencepath'}.'.fa.fai';
 	my $tophatpost_ref = $options->{'tophatpostpath'}.'.fa.fai';
-	
+
 	my $tophat_fai_seqs = capture_stdout { system('cut', '-f', 1, $tophat_ref ); };
 	my $tophatpost_fai_seqs = capture_stdout { system('cut', '-f', 1, $tophatpost_ref ); };
-	
+
 	my @tophat_all_seqs = split /\n/, $tophat_fai_seqs;
 	my @tophatpost_all_seqs = split /\n/, $tophatpost_fai_seqs;
-	
+
 	# The current assumption is that tophatpost always needs the chromosome names to be prefixed with chr.
 	# When comparing, keep the reference chromosome names as is and update the tophatpost names accordingly
 	# that way we have the correctly formatted exclusion string ready for the tophat fusion mapping parameter
@@ -191,16 +191,16 @@ sub check_ref_seqs {
 			s/^chr//;
 		}
 	}
-	
+
 	# First cross compare the tophat reference with the tophat post UCSC reference to see what's common
 	my %ref = ();
 	my @isect = ();
- 
+
 	map { $ref{$_} = 1 } @tophat_all_seqs;
 	@isect = grep { $ref{$_} } @tophatpost_all_seqs;
 
 	# Subtract the common chromosomes from all chromosomes in the tophat .fai file to find the difference
-	my @isect_ref = (); 
+	my @isect_ref = ();
 	my @diff_ref = ();
 	my %count = ();
 
@@ -210,7 +210,7 @@ sub check_ref_seqs {
 	foreach my $element (keys %count) {
        push @{ $count{$element} > 1 ? \@isect_ref : \@diff_ref }, $element;
 	};
-	
+
 	# Return the formatted exclusion list for the tophat fusion parameter --fusion-ignore-chromosomes
 	return join(",",@diff_ref);
 
@@ -218,10 +218,10 @@ sub check_ref_seqs {
 
 sub filter_fusions {
 	my $options = shift;
-	
+
 	my $tmp = $options->{'tmp'};
 	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
-	
+
 	my $sample = $options->{'sample'};
 	my $post_outdir = File::Spec->catdir($options->{'tmp'}, 'tophatpostrun/tophatfusion_'.$sample);
 	my $fusions_file = File::Spec->catfile($post_outdir, 'result.txt');
@@ -229,7 +229,7 @@ sub filter_fusions {
 	die "Please run tophatfusion_post step prior to filter\n" unless(-e $fusions_file);
 
 	my $normals_file = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'cgpRna',$options->{'normalfusionslist'});
-	
+
 	my $command = "$^X ";
 	$command .= _which('filter_fusions.pl');
 	$command .= sprintf $FUSIONS_FILTER, 	$fusions_file,
@@ -244,7 +244,7 @@ sub filter_fusions {
 
 sub process_rg_tags {
 	my $options = shift;
-	
+
 	my $rg_line = $options->{'rgline'};
 	$rg_line =~ s/'//g;
 	my @rg_fields = split(/\\t/, $rg_line);
@@ -258,12 +258,12 @@ sub process_rg_tags {
 
 sub process_tophat_params {
 	my ($options, $fusion_mode) = @_;
-	
+
 	my $ini_file = $options->{'config'};
 	my $cfg = new Config::IniFiles( -file => $ini_file ) or die "Could not open config file: $ini_file";
-	
+
 	die "The tophat default parameters are missing from the config file: $ini_file\n" unless($cfg->SectionExists($TOPHAT_DEFAULTS_SECTION));
-	
+
 	# Get the TopHat sample specific parameters from the options hash
 	my $threads = $TOPHAT_MAX_CORES;
 	$threads = $options->{'threads'} if($options->{'threads'} < $TOPHAT_MAX_CORES);
@@ -280,10 +280,10 @@ sub process_tophat_params {
 	$cfg->setval($TOPHAT_DEFAULTS_SECTION, 'rg-center', $options->{'CN'}) if(defined $options->{'CN'});
 	$cfg->setval($TOPHAT_DEFAULTS_SECTION, 'rg-date', $options->{'DT'}) if(defined $options->{'DT'});
 	$cfg->setval($TOPHAT_DEFAULTS_SECTION, 'rg-platform', $options->{'PL'}) if(defined $options->{'PL'});
-	
+
 	my @tophat_command;
 	my @tophat_defaults = $cfg->Parameters($TOPHAT_DEFAULTS_SECTION);
-	
+
 	for my $key(@tophat_defaults){
 		if($cfg->val($TOPHAT_DEFAULTS_SECTION, $key) eq 'Y'){
 			push @tophat_command, "--".$key;
@@ -292,11 +292,11 @@ sub process_tophat_params {
 			push @tophat_command, "--".$key." ".$cfg->val($TOPHAT_DEFAULTS_SECTION, $key);
 		}
 	}
-	
+
 	if(defined $fusion_mode) {
 		die "The tophat-fusion default parameters are missing from the config file: $ini_file\n" unless($cfg->SectionExists($TOPHAT_FUSION_SECTION));
 		$cfg->setval($TOPHAT_FUSION_SECTION, 'fusion-ignore-chromosomes', $options->{'exclude'}) if(defined $options->{'exclude'});
-		
+
 		my @tophat_fusion_defaults = $cfg->Parameters($TOPHAT_FUSION_SECTION);
 		for my $key(@tophat_fusion_defaults){
 			if($cfg->val($TOPHAT_FUSION_SECTION, $key) eq 'Y'){
@@ -306,20 +306,20 @@ sub process_tophat_params {
 				push @tophat_command, "--".$key." ".$cfg->val($TOPHAT_FUSION_SECTION, $key);
 			}
 		}
-		
+
 	}
-	
+
 	return join(" ", @tophat_command);
 }
 
 sub process_tophatpost_params {
 	my $options = shift;
-	
+
 	my $ini_file = $options->{'config'};
 	my $cfg = new Config::IniFiles( -file => $ini_file ) or die "Could not open config file: $ini_file";
-	
+
 	die "The tophat post parameters are missing from the config file: $ini_file\n" unless($cfg->SectionExists($TOPHAT_POST_SECTION));
-	
+
 	my $threads = $TOPHAT_MAX_CORES;
 	$threads = $options->{'threads'} if($options->{'threads'} < $TOPHAT_MAX_CORES);
 	$cfg->setval($TOPHAT_POST_SECTION, 'num-threads', $threads);
@@ -335,7 +335,7 @@ sub process_tophatpost_params {
 			push @tophatpost_command, "--".$key." ".$cfg->val($TOPHAT_POST_SECTION, $key);
 		}
 	}
-	
+
 	return join(" ", @tophatpost_command);
 }
 
@@ -368,17 +368,17 @@ sub prog_version {
 
 sub split_setup {
 	my $options = shift;
-	
+
 	my $tmp = $options->{'tmp'};
 	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
-	
+
 	my $sample = $options->{'sample'};
 	my $tophat_fusion_dir = File::Spec->catdir($options->{'tmp'}, 'tophat_'.$sample);
 	die "Please run the tophatfusion step prior to split\n" unless(-d $tophat_fusion_dir);
 	my $fusions_file = File::Spec->catfile($tophat_fusion_dir,'fusions.out');
 	die "Some files are missing from the tophatfusion process, please check the tophat fusion output directory and run the process again if necessary.\n" unless( -e $fusions_file && -e File::Spec->catfile($tophat_fusion_dir,'accepted_hits.bam') && -e File::Spec->catfile($tophat_fusion_dir,'unmapped.bam'));
 	PCAP::Cli::file_for_reading('fusions.out', $fusions_file);
-	
+
 	# Create the TopHat Post run directory
 	my $post_rundir = File::Spec->catdir($options->{'tmp'}, 'tophatpostrun');
 	make_path($post_rundir) unless(-d $post_rundir);
@@ -389,19 +389,19 @@ sub split_setup {
 	symlink($refgene, $post_rundir.'/refGene.txt') unless(-l File::Spec->catfile($post_rundir,'refGene.txt'));
 	symlink($ensgene, $post_rundir.'/ensGene.txt') unless(-l File::Spec->catfile($post_rundir,'ensGene.txt'));
 	symlink($blast, $post_rundir.'/blast') unless(-l $post_rundir.'/blast');
-	
-	my @commands;	
+
+	my @commands;
 	# Reformat the fusions.out file created by tophatfusion to UCSC chromosome names if chr is not the chromosome name prefix already
 	my $fusion_line = capture_stdout { system('head', '-n', 1, $fusions_file ); };
 	if($fusion_line !~ /^chr/){
 		push @commands, sprintf q{sed -i.bak -E 's/^([0-9|X|Y]+)-([0-9|X|Y]+.*)/chr\\1-chr\\2/' %s}, $fusions_file;
 	}
-	
+
 	# Split the fusions file into sub-files
 	push @commands, sprintf q{split --numeric-suffixes --verbose --lines=%s %s %s/fusions}, $FUSIONS_SPLIT, $fusions_file, $tophat_fusion_dir;
-	
+
 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), \@commands, 0);
-	
+
 	# Create the sample sub-directories in the Tophat post run directory based on the number of split fusion files
 	my $split_count = 0;
 	my $split_dir;
@@ -420,22 +420,22 @@ sub split_setup {
 			symlink($abs_tophat_rundir.'/junctions.bed', $split_dir.'/junctions.bed') unless(-l File::Spec->catfile($split_dir,'junctions.bed'));
 		}
 	}
-	
+
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
 	return 1;
 }
 
 sub tophat_fusion {
 	my $options = shift;
-	
+
 	my $tmp = $options->{'tmp'};
 	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
-	
+
 	my $sample = $options->{'sample'};
-	
+
 	# Check the input data
 	my $input_meta = $options->{'meta_set'};
-	
+
 	# Get the RG header information to format parameters --rg-id and --rg-sample
 	my $first_file = $input_meta->[0];
 	my $rg_line;
@@ -448,7 +448,7 @@ sub tophat_fusion {
 		$rg_line = q{'}.$rg_line.q{'};
 	}
 	$options->{'rgline'} = $rg_line;
-	
+
 	process_rg_tags($options);
 	my $tophat_params = process_tophat_params($options, 1);
 
@@ -476,36 +476,36 @@ sub tophat_fusion {
 			push @input2, File::Spec->catfile($abs_inputdir, $sample.'.'.$rg.'_2.fastq.gz');
 		}
 	}
-	
+
 	# Update the environment to use the correct version of bowtie
 	my $bwtpath = dirname($options->{'bowtiepath'} );
 	$ENV{PATH} = "$bwtpath:$ENV{PATH}" if($ENV{'PATH'} !~ /$bwtpath/);
-	
+
 	my $ref_index_stem = $options->{'referencepath'};
 	my $tophat_path = $options->{'tophatpath'};
 	if(! defined $tophat_path || $tophat_path eq ''){
 	  $tophat_path = _which('tophat');
 	}
-	
+
 	my $command = $tophat_path." ".$tophat_params." ".$ref_index_stem." ".join(",",@input1)." ".join(",",@input2);
-	
+
 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
-	
+
 	return 1;
 }
 
 sub tophatfusion_post {
 	my $options = shift;
-	
+
 	my $tmp = $options->{'tmp'};
 	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
-	
+
 	# Check that the tophat fusion post run directory exists and has been setup correctly
 	my $post_rundir = File::Spec->catdir($options->{'tmp'}, 'tophatpostrun');
 	die "Please run tophatfusion and split steps prior to tophatfusion_post\n" unless(-d $post_rundir);
 	die "Some Tophat-fusion-post setup files are missing, please run tophatfusion and split steps prior to tophatfusion_post\n" unless( -l $post_rundir.'/ensGene.txt' && -l $post_rundir.'/refGene.txt');
-	
+
 	my $tophatpost_params = process_tophatpost_params($options);
 	my $tophatpost = $options->{'tophatpath'};
 	if(! defined $tophatpost || $tophatpost eq ''){
@@ -517,24 +517,31 @@ sub tophatfusion_post {
 
 	# Get the full path of the tophat post run directory as need to cd to that location immediately prior to running tophat post
 	my $abs_path = File::Spec->rel2abs( $post_rundir );
-	
+
 	my $command = "cd $abs_path; $runcommand";
 
 	# Ensure the correct version of bowtie is on the path along with blastn
 	my $bwtpath = dirname($options->{'bowtiepath'} );
 	my $blastnpath = $options->{'blastn'};
-	
+
 	if(! defined $options->{'blastn'} || $options->{'blastn'} eq ''){
 	  $blastnpath = _which('blastn');
 	  $options->{'blastn'} = $blastnpath;
 	}
-	
+
 	$ENV{PATH} = "$bwtpath:$ENV{PATH}" if($ENV{'PATH'} !~ /$bwtpath/);
 	$ENV{PATH} = "$blastnpath:$ENV{PATH}" if($ENV{'PATH'} !~ /$blastnpath/);
 	_which('bowtie');
 
 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
-	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);	
+
+	#If the output is empty, ensure that it passes further checks by adding ##EOF## to the file.
+	$output_post = $post_rundir.'/result.txt';
+	if(-s $output_post == 0){
+		system("echo '##EOF##' > $output_post") && die "An error occurred: $!";
+	}
+
+	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
 	return 1;
 }
 
