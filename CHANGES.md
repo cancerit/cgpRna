@@ -1,3 +1,6 @@
+### 2.1.8
+* Fix issues with empty output from tophatpost when running tophat_filter
+
 ### 2.1.6-2.1.7
 * Fixing issues with data exhibiting no fusions.
 
