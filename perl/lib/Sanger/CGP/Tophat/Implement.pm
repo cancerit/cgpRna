@@ -536,7 +536,7 @@ sub tophatfusion_post {
 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
 
 	#If the output is empty, ensure that it passes further checks by adding ##EOF## to the file.
-	$output_post = $post_rundir.'/result.txt';
+	my $output_post = $post_rundir.'/result.txt';
 	if(-s $output_post == 0){
 		system("echo '##EOF##' > $output_post") && die "An error occurred: $!";
 	}
