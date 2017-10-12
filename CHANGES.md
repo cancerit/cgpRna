@@ -1,3 +1,6 @@
+### 2.1.9
+* Fix missed compilation failure
+
 ### 2.1.8
 * Fix issues with empty output from tophatpost when running tophat_filter
 
