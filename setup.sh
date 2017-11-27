@@ -417,7 +417,7 @@ if [ -e $SETUP_DIR/rseqc.success ]; then
 else
 (
   cd $SETUP_DIR
-  pip install --target $INST_PATH RSeQC==$RSEQC_VERSION
+  pip install --prefix $INST_PATH RSeQC==$RSEQC_VERSION
   touch $SETUP_DIR/rseqc.success
   )>>$INIT_DIR/setup.log 2>&1
 fi
@@ -430,7 +430,7 @@ if [ -e $SETUP_DIR/htseq.success ]; then
 else
 (
   cd $SETUP_DIR
-  pip install --target $INST_PATH HTSeq==$HTSEQ_VERSION
+  pip install --prefix $INST_PATH HTSeq==$HTSEQ_VERSION
   touch $SETUP_DIR/htseq.success
   )>>$INIT_DIR/setup.log 2>&1
 fi
