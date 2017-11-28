@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ########## LICENCE ##########
-# Copyright (c) 2014-2016 Genome Research Ltd.
+# Copyright (c) 2014-2017 Genome Research Ltd.
 #
 # Author: Cancer Genome Project <cgpit@sanger.ac.uk>
 #
@@ -33,7 +33,6 @@
 
 SOURCE_STAR="https://github.com/alexdobin/STAR/archive/2.5.0c.tar.gz"
 SOURCE_STARFUSION="https://github.com/STAR-Fusion/STAR-Fusion/archive/v0.1.1.tar.gz"
-SOURCE_RSEQC="http://sourceforge.net/projects/rseqc/files/RSeQC-2.6.3.tar.gz/download"
 SOURCE_BOWTIE1="https://sourceforge.net/projects/bowtie-bio/files/bowtie/1.1.1/bowtie-1.1.1-linux-x86_64.zip/download"
 VERSION_BOWTIE1="1.1.1"
 SOURCE_BOWTIE2="https://sourceforge.net/projects/bowtie-bio/files/bowtie2/2.2.3/bowtie2-2.2.3-linux-x86_64.zip/download"
@@ -46,7 +45,8 @@ SOURCE_GMAP="http://research-pub.gene.com/gmap/src/gmap-gsnap-2015-09-10.tar.gz"
 SOURCE_BLAT="http://users.soe.ucsc.edu/~kent/src/blatSrc35.zip"
 SOURCE_FATOTWOBIT="http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/faToTwoBit"
 SOURCE_BEDTOOLS="https://github.com/arq5x/bedtools2/releases/download/v2.21.0/bedtools-2.21.0.tar.gz"
-SOURCE_HTSEQ="https://pypi.python.org/packages/3c/6e/f8dc3500933e036993645c3f854c4351c9028b180c6dcececde944022992/HTSeq-0.6.1p1.tar.gz"
+RSEQC_VERSION=2.6.4
+HTSEQ_VERSION=0.7.2
 
 done_message () {
     if [ $? -eq 0 ]; then
@@ -417,11 +417,7 @@ if [ -e $SETUP_DIR/rseqc.success ]; then
 else
 (
   cd $SETUP_DIR
-  get_distro "rseqc" $SOURCE_RSEQC
-  mkdir -p rseqc
-  tar --strip-components 1 -C rseqc -zxf rseqc.tar.gz
-  cd $SETUP_DIR/rseqc &&
-  python ./setup.py install --prefix=$INST_PATH
+  pip install --prefix $INST_PATH RSeQC==$RSEQC_VERSION
   touch $SETUP_DIR/rseqc.success
   )>>$INIT_DIR/setup.log 2>&1
 fi
@@ -434,11 +430,7 @@ if [ -e $SETUP_DIR/htseq.success ]; then
 else
 (
   cd $SETUP_DIR
-  get_distro "htseq" $SOURCE_HTSEQ
-  mkdir -p htseq
-  tar --strip-components 1 -C htseq -zxf htseq.tar.gz
-  cd $SETUP_DIR/htseq &&
-  python ./setup.py install --prefix=$INST_PATH
+  pip install --prefix $INST_PATH HTSeq==$HTSEQ_VERSION
   touch $SETUP_DIR/htseq.success
   )>>$INIT_DIR/setup.log 2>&1
 fi
