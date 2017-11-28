@@ -4,9 +4,8 @@
 /perl/pm_to_blib
 /install_tmp
 /setup.log
-/LICENSE
-/README.md
 /perl/MYMETA.json
 /perl/MYMETA.yml
 /perl/docs/
 /perl/perltidy.LOG
+/env
