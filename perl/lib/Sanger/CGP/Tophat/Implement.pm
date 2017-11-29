@@ -74,6 +74,10 @@ sub add_strand {
 	my $potential_fusions = File::Spec->catfile($post_outdir, 'potential_fusion.txt');
 	die "Please run the filter_fusions step prior to filter\n" unless(-e $fusions_file && -e $potential_fusions);
 
+	if(-s $potential_fusions == 0) {
+		system("echo '##EOF##' > $potential_fusions") && die "An error occurred: $!";
+	}
+
 	my $command = "$^X ";
 	$command .= _which('tophat_add_strand.pl');
 	$command .= sprintf $ADD_STRAND, 	$fusions_file,
@@ -227,6 +231,10 @@ sub filter_fusions {
 	my $fusions_file = File::Spec->catfile($post_outdir, 'result.txt');
 	die "Please run tophatfusion_post step prior to filter\n" unless(-d $post_outdir);
 	die "Please run tophatfusion_post step prior to filter\n" unless(-e $fusions_file);
+
+	if(-s $fusions_file == 0) {
+		system("echo '##EOF##' > $fusions_file") && die "An error occurred: $!";
+	}
 
 	my $normals_file = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'cgpRna',$options->{'normalfusionslist'});
 
@@ -537,7 +545,7 @@ sub tophatfusion_post {
 
 	#If the output is empty, ensure that it passes further checks by adding ##EOF## to the file.
 	my $output_post = $post_rundir.'/result.txt';
-	if(-s $output_post == 0){
+	if(!-e $output_post || -s $output_post == 0){
 		system("echo '##EOF##' > $output_post") && die "An error occurred: $!";
 	}
 
