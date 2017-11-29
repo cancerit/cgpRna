@@ -1,5 +1,9 @@
 # CHANGES
 
+## 2.2.1
+
+* Handle files not being written by tophat-fusion-post when no events generated.
+
 ## 2.2.0
 
 * RSeqQC  - Updated to 2.6.4, fixes known issues with low levels of mapped data.
