@@ -537,7 +537,7 @@ sub tophatfusion_post {
 
 	#If the output is empty, ensure that it passes further checks by adding ##EOF## to the file.
 	my $output_post = $post_rundir.'/result.txt';
-	if(-s $output_post == 0){
+	if(!-e $output_post || -s $output_post == 0){
 		system("echo '##EOF##' > $output_post") && die "An error occurred: $!";
 	}
 
