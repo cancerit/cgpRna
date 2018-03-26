@@ -114,12 +114,14 @@ sub get_start_end {
 sub search_break_point_annotations {
  my($chr,$start,$end,$tabix,$transcript1,$transcript2,$fusion_line)=@_;
 	my $results=undef;
-  my $iter = $tabix->query(sprintf '%s:%d-%d', $chr,$start,$end);
-  while(my $record = $iter->next){
-    my ($lgene,$rgene)=(split "/", (split "\t",$record)[12]);
-    my($matched)=compare_transcripts($transcript1,$transcript2,$lgene,$rgene);
-    push(@$results,"$matched\t$fusion_line\t$record\n") if($matched );
-  }
+  my $iter = $tabix->query_full($chr,$start,$end);
+	if(defined($iter)){
+	  while(my $record = $iter->next){
+	    my ($lgene,$rgene)=(split "/", (split "\t",$record)[12]);
+	    my($matched)=compare_transcripts($transcript1,$transcript2,$lgene,$rgene);
+	    push(@$results,"$matched\t$fusion_line\t$record\n") if($matched );
+	  }
+	}
 return $results;
 }
 
@@ -146,10 +148,3 @@ sub compare_gene {
  	}
 	return $matched;
 }
-
-
-
-
-
-
-
