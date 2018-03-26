@@ -1,5 +1,9 @@
 # CHANGES
 
+## 2.2.2
+
+* Change tabix query call to query_full
+
 ## 2.2.1
 
 * Handle files not being written by tophat-fusion-post when no events generated.
