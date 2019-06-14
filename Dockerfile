@@ -1,6 +1,4 @@
-# FROM  quay.io/wtsicgp/dockstore-cgpmap:3.1.4 as builder
-
-FROM  quay.io/wtsicgp/dockstore-cgpmap:3.1.4
+FROM  quay.io/wtsicgp/dockstore-cgpmap:3.1.4 as builder
 USER  root
 
 # ALL tool versions used by opt-build.sh
