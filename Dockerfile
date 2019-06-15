@@ -1,34 +1,35 @@
+# The two args will be passed to the later build stage as envs, which are used by opt-build-sys-dependencies.sh
+ARG VER_RSEQC="3.0.0"
+ARG VER_HTSEQ="0.7.2"
+
 FROM  quay.io/wtsicgp/dockstore-cgpmap:3.1.4 as builder
 USER  root
 
-# ALL tool versions used by opt-build.sh
+# tool versions used by opt-build.sh
 ## VAGrENG dependcies
-ENV VER_VCFTOOLS "0.1.16"
-ENV VER_Set_IntervalTree "0.12"
-ENV SOURCE_BEDTOOLS "https://github.com/arq5x/bedtools2/releases/download/v2.22.1/bedtools-2.22.1.tar.gz"
+ENV VER_VCFTOOLS="0.1.16"
+ENV VER_Set_IntervalTree="0.12"
+ENV SOURCE_BEDTOOLS="https://github.com/arq5x/bedtools2/releases/download/v2.22.1/bedtools-2.22.1.tar.gz"
 ## CancerIT dependencies
-ENV VER_CGPVCF "v2.2.1"
-ENV VER_GRASS "v2.1.1"
-ENV VER_VAGRENT "v3.3.3"
+ENV VER_CGPVCF="v2.2.1"
+ENV VER_GRASS="v2.1.1"
+ENV VER_VAGRENT="v3.3.3"
 ## cgpRna dependencies
-ENV VER_File_ShareDir_Install "0.13"
-ENV VER_Config_IniFiles "3.000002"
-ENV VER_STAR "2.5.0c"
-ENV VER_STARFUSION "v0.1.1"
-ENV SOURCE_BOWTIE1 "https://sourceforge.net/projects/bowtie-bio/files/bowtie/1.1.1/bowtie-1.1.1-linux-x86_64.zip/download"
-ENV VERSION_BOWTIE1 "1.1.1"
-ENV SOURCE_BOWTIE2 "https://sourceforge.net/projects/bowtie-bio/files/bowtie2/2.2.3/bowtie2-2.2.3-linux-x86_64.zip/download"
-ENV VERSION_BOWTIE2 "2.2.3"
-ENV VER_TOPHAT "2.1.0"
-ENV SOURCE_BLASTN "ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.2.30/ncbi-blast-2.2.30+-x64-linux.tar.gz"
-ENV VER_DEFUSE "v0.7.0"
-ENV VERSION_DEFUSE "0.7.0"
-ENV SOURCE_FATOTWOBIT "http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/faToTwoBit"
-ENV SOURCE_BLAT "http://users.soe.ucsc.edu/~kent/src/blatSrc35.zip"
-ENV SOURCE_GMAP "http://research-pub.gene.com/gmap/src/gmap-gsnap-2015-09-10.tar.gz"
-# The two args will be passed to the later build stage as envs
-ARG VER_RSEQC="3.0.0"
-ARG VER_HTSEQ="0.7.2"
+ENV VER_File_ShareDir_Install="0.13"
+ENV VER_Config_IniFiles="3.000002"
+ENV VER_STAR="2.5.0c"
+ENV VER_STARFUSION="v0.1.1"
+ENV SOURCE_BOWTIE1="https://sourceforge.net/projects/bowtie-bio/files/bowtie/1.1.1/bowtie-1.1.1-linux-x86_64.zip/download"
+ENV VERSION_BOWTIE1="1.1.1"
+ENV SOURCE_BOWTIE2="https://sourceforge.net/projects/bowtie-bio/files/bowtie2/2.2.3/bowtie2-2.2.3-linux-x86_64.zip/download"
+ENV VERSION_BOWTIE2="2.2.3"
+ENV VER_TOPHAT="2.1.0"
+ENV SOURCE_BLASTN="ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.2.30/ncbi-blast-2.2.30+-x64-linux.tar.gz"
+ENV VER_DEFUSE="v0.7.0"
+ENV VERSION_DEFUSE="0.7.0"
+ENV SOURCE_FATOTWOBIT="http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/faToTwoBit"
+ENV SOURCE_BLAT="http://users.soe.ucsc.edu/~kent/src/blatSrc35.zip"
+ENV SOURCE_GMAP="http://research-pub.gene.com/gmap/src/gmap-gsnap-2015-09-10.tar.gz"
 
 RUN apt-get -yq update
 RUN apt-get install -yq --no-install-recommends \
@@ -93,8 +94,12 @@ apt-get autoremove -yq
 RUN locale-gen en_US.UTF-8
 RUN update-locale LANG=en_US.UTF-8
 
-ENV VER_RSEQC ${VER_RSEQC}
-ENV VER_HTSEQ ${VER_HTSEQ} 
+# declare so can use the defaults set at the top of this file in the ENV instructions
+ARG VER_RSEQC
+ARG VER_HTSEQ
+ENV VER_RSEQC $VER_RSEQC
+ENV VER_HTSEQ $VER_HTSEQ
+
 ENV OPT /opt/wtsi-cgp
 ENV PATH $OPT/bin:$OPT/biobambam2/bin:$PATH
 ENV PERL5LIB $OPT/lib/perl5
