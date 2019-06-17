@@ -24,12 +24,12 @@ rm -f get-pip.py
 # for bx-python (one of RSeQC package dependencies)
 apt-get install -yq --no-install-recommends liblzo2-dev
 
-# if use HTSeq to plot
-apt-get install -yq --no-install-recommends python3-matplotlib
-
 # install RSeQC and HTSeq
 pip3 install RSeQC=="$VER_RSEQC"
 pip3 install HTSeq=="$VER_HTSEQ"
+
+# if use HTSeq to plot
+pip3 install matplotlib
 
 # cleanning
 apt-get autoremove -yq
