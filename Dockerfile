@@ -86,6 +86,7 @@ liblzma5 \
 libncurses5 \
 p11-kit \
 software-properties-common \
+apt-utils \
 unattended-upgrades && \
 unattended-upgrade -d -v && \
 apt-get remove -yq unattended-upgrades && \
