@@ -239,7 +239,7 @@ if [ ! -e $SETUP_DIR/gmap.success ]; then
   touch $SETUP_DIR/gmap.success
 fi
 
-## add Set::IntervalTree for cgpRna
+## add a few perl modules for cgpRna
 if [ ! -e $SETUP_DIR/Set_IntervalTree.success ]; then
   cpanm -l $INST_PATH --mirror http://cpan.metacpan.org Set::IntervalTree@$VER_Set_IntervalTree
   cpanm -l $INST_PATH --mirror http://cpan.metacpan.org Config::IniFiles@$VER_Config_IniFiles
