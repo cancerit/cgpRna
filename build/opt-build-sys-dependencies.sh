@@ -11,7 +11,7 @@ gpg -a --export E084DAB9 | apt-key add -
 
 # install python3, R and other packages for RSeQC to install
 apt-get update
-apt-get install -yq --no-install-recommends python3.7 python3.7-dev r-base r-base-dev libcurl4-gnutls-dev zlib1g-dev
+apt-get install -yq --no-install-recommends python3.7 python3.7-dev r-base r-base-dev libcurl4-gnutls-dev zlib1g-dev apt-utils
 apt-get upgrade -yq gcc
 
 # Replace python3
