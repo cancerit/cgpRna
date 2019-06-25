@@ -215,7 +215,7 @@ defuse_fusion.pl [options] [file(s)...]
 
   Optional
     -defuseconfig 	-d  	Name of the defuse config file. It should reside under /refdataloc/species/refbuild/defuse/genebuild/ [defuse-config.txt]
-	-updateconfig   -uc     A defuse config file which will be used to overwrite values in defuseconfig if identical keys are found in this file.
+    -updateconfig 	-uc 	A defuse config file which will be used to overwrite values in defuseconfig if identical keys are found in this file.
     -normals  	  	-n  	File containing list of gene fusions detected in normal samples. It should reside under /refdataloc/species/refbuild/ [normal-fusions]
     -threads   		-t  	Number of cores to use. [1]
     -config   		-c  	Path to config.ini file. The file contains defaults for the reference data and deFuse software installation details [<cgpRna-install-location>/config/defuse.ini]

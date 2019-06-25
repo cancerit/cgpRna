@@ -111,7 +111,8 @@ RUN mkdir -p $OPT
 COPY --from=builder $OPT $OPT
 
 COPY build/opt-build-sys-dependencies.sh ./
-RUN bash opt-build-sys-dependencies.sh && rm -f opt-build-sys-dependencies.sh
+COPY build/config-defuse.sh ./
+RUN bash opt-build-sys-dependencies.sh && rm -f opt-build-sys-dependencies.sh && bash config-defuse.sh $OPT && rm -f config-defuse.sh
 
 ## USER CONFIGURATION
 RUN adduser --disabled-password --gecos '' ubuntu && chsh -s /bin/bash && mkdir -p /home/ubuntu
