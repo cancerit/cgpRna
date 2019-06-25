@@ -55,6 +55,21 @@ perl Makefile.PL INSTALL_BASE=$INST_PATH
 make
 make test
 make install
-sed -i -e "/defuseversion/c defuseversion=$VER_DEFUSE" $INIT_DIR/perl/config/defuse.ini
 mkdir -p $INST_PATH/config
 cp $INIT_DIR/perl/config/*.ini $INST_PATH/config/
+
+# config defuse
+sed -i -e "/defuseversion/c defuseversion=$VER_DEFUSE" $INST_PATH/config/defuse.ini
+echo -e \
+"source_directory = $INST_PATH/bin/defuse_install\n"\
+"samtools_bin = $(which samtools)\n"\
+"bowtie_bin = $(which bowtie)\n"\
+"bowtie_build_bin = $(which bowtie-build)\n"\
+"blat_bin = $(which blat)\n"\
+"fatotwobit_bin = $(which faToTwoBit)\n"\
+"r_bin = $(which R)\n"\
+"rscript_bin = $(which Rscript)\n"\
+"gmap_bin = $(which gmap)\n"\
+"gmap_build_bin = $(which gmap_build)"\
+> $INST_PATH/config/defuse_running_env_config.ini
+echo "updateconfig=$(realpath $INST_PATH)/config/defuse_running_env_config.ini" >> $INST_PATH/config/defuse.ini
