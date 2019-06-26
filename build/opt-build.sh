@@ -178,7 +178,7 @@ fi
 
 # Install defuse
 if [ ! -e $SETUP_DIR/defuse.success ]; then
-  curl -sSL --retry 10 "https://bitbucket.org/dranew/defuse/get/v0.7.0.tar.gz" > distro.tar.gz
+  curl -sSL --retry 10 "https://bitbucket.org/dranew/defuse/get/${VER_DEFUSE}.tar.gz" > distro.tar.gz
   rm -rf distro/*
   tar --strip-components 1 -C distro -zxf distro.tar.gz
   cd distro/tools
