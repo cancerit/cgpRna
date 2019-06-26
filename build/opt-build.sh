@@ -193,7 +193,7 @@ if [ ! -e $SETUP_DIR/defuse.success ]; then
   if [ -e $INST_PATH/bin/defuse.pl ]; then
     rm $INST_PATH/bin/defuse.pl
   fi
-  ln -s $INST_PATH/bin/defuse_install/scripts/defuse.pl $INST_PATH/bin/defuse.pl
+  ln -s $INST_PATH/bin/defuse_install/scripts/defuse_run.pl $INST_PATH/bin/defuse.pl
   touch $SETUP_DIR/defuse.success
 fi
 
