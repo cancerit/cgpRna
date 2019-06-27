@@ -14,6 +14,9 @@ apt-get update
 apt-get install -yq --no-install-recommends python3.7 python3.7-dev r-base r-base-dev libcurl4-gnutls-dev zlib1g-dev
 apt-get upgrade -yq gcc
 
+# install R packages:
+Rscript -e 'install.packages("ada")'  # required by Defuse
+
 # Replace python3
 rm /usr/bin/python3 && ln -s /usr/bin/python3.7 /usr/bin/python3
 
