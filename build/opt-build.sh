@@ -245,4 +245,3 @@ if [ ! -e $SETUP_DIR/Set_IntervalTree.success ]; then
   cpanm -l $INST_PATH --mirror http://cpan.metacpan.org Config::IniFiles@$VER_Config_IniFiles
   touch $SETUP_DIR/Set_IntervalTree.success
 fi
-
