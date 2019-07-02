@@ -40,7 +40,7 @@ script:
  - docker run -t --rm cgprna R --version
  - docker run -t --rm cgprna which blat
  ### tophat dependencies
- - docker run -t --rm cgprna bowtie1 --version
+ - docker run -t --rm cgprna bowtie --version
  - docker run -t --rm cgprna bowtie2 --version
  ### tophat-fusion dependencies
  - docker run -t --rm cgprna blastn -version
