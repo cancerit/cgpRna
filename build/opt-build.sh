@@ -63,15 +63,8 @@ if [ ! -e $SETUP_DIR/vcftools.success ]; then
   touch $SETUP_DIR/vcftools.success
 fi
 
-## Bedtools
-if [ ! -e $SETUP_DIR/bedtools.success ]; then
-  curl -sSL --retry 10 $SOURCE_BEDTOOLS > distro.tar.gz
-  rm -rf distro/*
-  tar --strip-components 1 -C distro -zxf distro.tar.gz
-  make -C distro -j$CPU
-  cp distro/bin/* $INST_PATH/bin/.
-  touch $SETUP_DIR/bedtools.success
-fi
+# install bedtools so that VAGrENT can be installed properly
+apt-get install -yq --no-install-recommends bedtools=${VER_BEDTOOLS}
 
 ## add File::ShareDir::Install for VAGrENT
 if [ ! -e $SETUP_DIR/File_ShareDir_Install.success ]; then
@@ -137,45 +130,6 @@ if [ ! -e $SETUP_DIR/starfusion.success ]; then
   touch $SETUP_DIR/starfusion.success
 fi
 
-# Install bowtie1
-if [ ! -e $SETUP_DIR/bowtie1.success ]; then
-  # it could be very very slow sometimes, so it's not silented
-  curl -SL --retry 10 $SOURCE_BOWTIE1 > bowtie1.zip
-  unzip -qu bowtie1.zip
-  cp bowtie-$VERSION_BOWTIE1/bowtie* $INST_PATH/bin/.
-  touch $SETUP_DIR/bowtie1.success
-  ## not cleaning the unzipped folder, as this is on a docker builder
-fi
-
-# Install bowtie2
-if [ ! -e $SETUP_DIR/bowtie2.success ]; then
-  # it could be very very slow sometimes, so it's not silented
-  curl -SL --retry 10 $SOURCE_BOWTIE2 > bowtie2.zip
-  unzip -qu bowtie2.zip
-  cp bowtie2-$VERSION_BOWTIE2/bowtie2* $INST_PATH/bin/.
-  touch $SETUP_DIR/bowtie2.success
-  ## not cleaning the unzipped folder, as this is on a docker builder
-fi
-
-# Install tophat
-if [ ! -e $SETUP_DIR/tophat.success ]; then
-  curl -sSL --retry 10 https://ccb.jhu.edu/software/tophat/downloads/tophat-${VER_TOPHAT}.Linux_x86_64.tar.gz > distro.tar.gz
-  rm -rf distro/*
-  tar --strip-components 1 -C distro -zxf distro.tar.gz
-  rm -f distro/AUTHORS distro/LICENSE distro/README
-  cp -r distro/* $INST_PATH/bin/.
-  touch $SETUP_DIR/tophat.success
-fi
-
-# Install blastn
-if [ ! -e $SETUP_DIR/blastn.success ]; then
-  curl -sSL --retry 10 $SOURCE_BLASTN > distro.tar.gz
-  rm -rf distro/*
-  tar --strip-components 1 -C distro -zxf distro.tar.gz
-  cp distro/bin/blastn $INST_PATH/bin/.
-  touch $SETUP_DIR/blastn.success
-fi
-
 # Install defuse
 if [ ! -e $SETUP_DIR/defuse.success ]; then
   curl -sSL --retry 10 "https://bitbucket.org/dranew/defuse/get/${VER_DEFUSE}.tar.gz" > distro.tar.gz
@@ -223,20 +177,6 @@ if [ ! -e $SETUP_DIR/blat.success ]; then
   export MACHTYPE=$MACHTYPE_BK
   cd $SETUP_DIR
   touch $SETUP_DIR/blat.success
-fi
-
-# Install gmap
-if [ ! -e $SETUP_DIR/gmap.success ]; then
-  cd $SETUP_DIR
-  curl -sSL  --retry 10 $SOURCE_GMAP > distro.tar.gz
-  rm -rf distro/*
-  tar --strip-components 1 -C distro -zxf distro.tar.gz
-  cd distro
-  ./configure --prefix=$INST_PATH --with-gmapdb=$INST_PATH
-  make -j$CPU
-  make install
-  cd $SETUP_DIR
-  touch $SETUP_DIR/gmap.success
 fi
 
 ## add a few perl modules for cgpRna

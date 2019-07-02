@@ -1,35 +1,62 @@
-# The two args will be passed to the later build stage as envs, which are used by opt-build-sys-dependencies.sh
+# Tool version args, set them here so that both building stages can use them
+## VAGrENG dependcies
+ARG VER_VCFTOOLS="0.1.16"
+ARG VER_Set_IntervalTree="0.12"
+ARG VER_BEDTOOLS="2.25.0-1"
+## CancerIT dependencies
+ARG VER_CGPVCF="v2.2.1"
+ARG VER_GRASS="v2.1.1"
+ARG VER_VAGRENT="v3.3.3"
+## cgpRna dependencies
+ARG VER_File_ShareDir_Install="0.13"
+ARG VER_Config_IniFiles="3.000002"
+ARG VER_STAR="2.5.0c"
+ARG VER_STARFUSION="v0.1.1"
+ARG VER_BOWTIE1="1.1.2-3"
+ARG VER_BOWTIE2="2.2.6-2"
+ARG VER_TOPHAT="2.1.0+dfsg-1build1"
+ARG VER_BLAST="2.2.31-4"
+ARG VER_DEFUSE="v0.8.2"
+ARG VERSION_DEFUSE="0.7.0"
+ARG SOURCE_FATOTWOBIT="http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/faToTwoBit"
+ARG SOURCE_BLAT="http://users.soe.ucsc.edu/~kent/src/blatSrc35.zip"
+ARG VER_GMAP="2015-12-31.v7-1"
 ARG VER_RSEQC="3.0.0"
 ARG VER_HTSEQ="0.7.2"
 
 FROM  quay.io/wtsicgp/dockstore-cgpmap:3.1.4 as builder
 USER  root
 
-# tool versions used by opt-build.sh
-## VAGrENG dependcies
-ENV VER_VCFTOOLS="0.1.16"
-ENV VER_Set_IntervalTree="0.12"
-ENV SOURCE_BEDTOOLS="https://github.com/arq5x/bedtools2/releases/download/v2.22.1/bedtools-2.22.1.tar.gz"
-## CancerIT dependencies
-ENV VER_CGPVCF="v2.2.1"
-ENV VER_GRASS="v2.1.1"
-ENV VER_VAGRENT="v3.3.3"
-## cgpRna dependencies
-ENV VER_File_ShareDir_Install="0.13"
-ENV VER_Config_IniFiles="3.000002"
-ENV VER_STAR="2.5.0c"
-ENV VER_STARFUSION="v0.1.1"
-ENV SOURCE_BOWTIE1="https://sourceforge.net/projects/bowtie-bio/files/bowtie/1.1.1/bowtie-1.1.1-linux-x86_64.zip/download"
-ENV VERSION_BOWTIE1="1.1.1"
-ENV SOURCE_BOWTIE2="https://sourceforge.net/projects/bowtie-bio/files/bowtie2/2.2.3/bowtie2-2.2.3-linux-x86_64.zip/download"
-ENV VERSION_BOWTIE2="2.2.3"
-ENV VER_TOPHAT="2.1.0"
-ENV SOURCE_BLASTN="ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.2.30/ncbi-blast-2.2.30+-x64-linux.tar.gz"
-ENV VER_DEFUSE="v0.8.2"
-ENV VERSION_DEFUSE="0.7.0"
-ENV SOURCE_FATOTWOBIT="http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/faToTwoBit"
-ENV SOURCE_BLAT="http://users.soe.ucsc.edu/~kent/src/blatSrc35.zip"
-ENV SOURCE_GMAP="http://research-pub.gene.com/gmap/src/gmap-gsnap-2015-09-10.tar.gz"
+# Declare versions that will be installed in this stage
+ARG VER_VCFTOOLS
+ARG VER_Set_IntervalTree
+ARG VER_BEDTOOLS
+ARG VER_CGPVCF
+ARG VER_GRASS
+ARG VER_VAGRENT
+ARG VER_File_ShareDir_Install
+ARG VER_Config_IniFiles
+ARG VER_STAR
+ARG VER_STARFUSION
+ARG VER_DEFUSE
+ARG VERSION_DEFUSE
+ARG SOURCE_FATOTWOBIT
+ARG SOURCE_BLAT
+
+ENV VER_VCFTOOLS $VER_VCFTOOLS
+ENV VER_Set_IntervalTree $VER_Set_IntervalTree
+ENV VER_BEDTOOLS $VER_BEDTOOLS
+ENV VER_CGPVCF $VER_CGPVCF
+ENV VER_GRASS $VER_GRASS
+ENV VER_VAGRENT $VER_VAGRENT
+ENV VER_File_ShareDir_Install $VER_File_ShareDir_Install
+ENV VER_Config_IniFiles $VER_Config_IniFiles
+ENV VER_STAR $VER_STAR
+ENV VER_STARFUSION $VER_STARFUSION
+ENV VER_DEFUSE $VER_DEFUSE
+ENV VERSION_DEFUSE $VERSION_DEFUSE
+ENV SOURCE_FATOTWOBIT $SOURCE_FATOTWOBIT
+ENV SOURCE_BLAT $SOURCE_BLAT
 
 RUN apt-get -yq update
 RUN apt-get install -yq --no-install-recommends \
@@ -95,8 +122,23 @@ RUN locale-gen en_US.UTF-8
 RUN update-locale LANG=en_US.UTF-8
 
 # declare so can use the defaults set at the top of this file in the ENV instructions
+ARG VER_VCFTOOLS
+ARG VER_BEDTOOLS
+ARG VER_BOWTIE1
+ARG VER_BOWTIE2
+ARG VER_TOPHAT
+ARG VER_BLAST
+ARG VER_GMAP
 ARG VER_RSEQC
 ARG VER_HTSEQ
+
+ENV VER_VCFTOOLS $VER_VCFTOOLS
+ENV VER_BEDTOOLS $VER_BEDTOOLS
+ENV VER_BOWTIE1 $VER_BOWTIE1
+ENV VER_BOWTIE2 $VER_BOWTIE2
+ENV VER_TOPHAT $VER_TOPHAT
+ENV VER_BLAST $VER_BLAST
+ENV VER_GMAP $VER_GMAP
 ENV VER_RSEQC $VER_RSEQC
 ENV VER_HTSEQ $VER_HTSEQ
 

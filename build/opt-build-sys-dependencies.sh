@@ -9,9 +9,18 @@ echo "deb http://cran.rstudio.com/bin/linux/ubuntu xenial/" | tee -a /etc/apt/so
 gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9
 gpg -a --export E084DAB9 | apt-key add -
 
-# install python3, R and other packages for RSeQC to install
+# install python3, R, bedtools, tophat, bowtie1, bowtie2, blast, gmap and other packages for RSeQC to install
 apt-get update
-apt-get install -yq --no-install-recommends python3.7 python3.7-dev r-base r-base-dev libcurl4-gnutls-dev zlib1g-dev
+apt-get install -yq --no-install-recommends \
+python3.7 python3.7-dev \
+r-base r-base-dev \
+bedtools=${VER_BEDTOOLS} \
+tophat=${VER_TOPHAT} \
+bowtie=${VER_BOWTIE1} \
+bowtie2=${VER_BOWTIE2} \
+ncbi-blast+=${VER_BLAST} \
+gmap=${VER_GMAP} \
+libcurl4-gnutls-dev zlib1g-dev
 apt-get upgrade -yq gcc
 
 # install R packages:
