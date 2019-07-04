@@ -26,7 +26,7 @@ apt-get upgrade -yq gcc
 Rscript -e 'install.packages("ada")'  # required by Defuse
 
 # Replace python3
-rm /usr/bin/python3 && ln -s /usr/bin/python3.7 /usr/bin/python3
+update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.7 1
 
 # install pip3
 curl -s https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python3 get-pip.py
