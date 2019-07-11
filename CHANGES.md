@@ -1,5 +1,26 @@
 # CHANGES
 
+## 2.3.0
+
+* added an extra option "-updateconfig" to *defuse_fusion.pl*. It takes a file as input, which content is used to update *defuse-config.txt*. It'll search *defuse.ini* to find its default value. This addition shouldn't break any existing usage.
+
+* *defuse_fusion.pl* will always create a *defuse-config.txt* file in its temp folder and use it to run *defuse.pl*. In the temp file, **dataset_directory** is corrected using related command line input values. If "-updateconfig" presents, values in the file will be used to overwrite corresponding values in the temp file. **Note:** if ***dataset_directory*** key presents in the "-updateconfig" file, this will be the final value in the temp config file.
+
+* dockerised cgpRna. Within the docker container, version of some dependent tools have been changed:
+
+  1. Python3(**3.7.X**) is used in the container, thus:
+     - RSeQC is updated from version ***2.6.4*** to ***3.0.0***.
+     - However, version of HTSeq is not changed.
+
+  1. Defuse is updated from ***v0.7.0*** to ***v0.8.2*** due to "Possible precedence issue with control flow operator" warning with the version of Perl installed in the container. The fix is [here](https://bitbucket.org/dranew/defuse/commits/b979855999b8106f5dc9f9e54f86935c7bf4f62f). However it is not merged in any ***v0.7.x*** versions (also because there's only ONE ***v0.7.x*** version --***v0.7.0***), hence ***v0.8.2***, which is the latest version at the time, was chosen. 
+
+  1. To utilise apt packages for the ease of their installations, the following tool version changes were made:
+     - BedTools: ***2.21.0*** to ***2.25.0-1*** in apt,
+     - bowtie1: ***1.1.1*** to ***1.1.2-3*** in apt,
+     - bowtie2: ***2.2.3*** to ***2.2.6-2*** in apt,
+     - blast: ***2.2.30*** to ***2.2.31-4*** in apt,
+     - gmap: ***2015-09-10*** to ***2015-12-31.v7-1*** in apt. 
+
 ## 2.2.2
 
 * Change tabix query call to query_full
