@@ -1,0 +1,50 @@
+notifications:
+  slack: wtsi-cgpit:ptUMR1tkNyZJYd9TpGoss8WR
+  email: false
+
+sudo: false
+
+services:
+  - docker
+
+script:
+ - set -e
+ - echo 'Build and check docker image'
+ - docker build -t cgprna .
+ - docker images | grep -c cgprna
+ - echo 'Verify program(s) from each inherited base image - dockstore-cgpbigwig'
+ - docker run -t --rm cgprna bwjoin --version
+ - echo 'Verify program(s) from each inherited base image - dockstore-cgpmap'
+ - docker run -t --rm cgprna bwa_mem.pl -version
+ - docker run -t --rm cgprna bammarkduplicates2 --version
+ - docker run -t --rm cgprna samtools --version
+ - docker run -t --rm cgprna bash -c 'bwa 2>&1 | grep Version'
+ - echo 'Verify program(s) from this repo'
+ ## mapping
+ - docker run -t --rm cgprna star_mapping.pl --version
+ ## RSeQC
+ - docker run -t --rm cgprna split_bam.py --version
+ - docker run -t --rm cgprna geneBody_coverage.py --version
+ - docker run -t --rm cgprna read_distribution.py --version
+ ## BAM QC
+ - docker run -t --rm cgprna process_qcstats.pl --version
+ ## count
+ - docker run -t --rm cgprna which htseq-count
+ ## fusion
+ - docker run -t --rm cgprna tophat_fusion.pl --version
+ - docker run -t --rm cgprna star_fusion.pl --version
+ - docker run -t --rm cgprna defuse_fusion.pl --version
+ - docker run -t --rm cgprna which compare_overlapping_fusions.pl
+ ## some dependencies used by more than one tool
+ - docker run -t --rm cgprna bedtools --version
+ - docker run -t --rm cgprna R --version
+ - docker run -t --rm cgprna which blat
+ ### tophat dependencies
+ - docker run -t --rm cgprna bowtie --version
+ - docker run -t --rm cgprna bowtie2 --version
+ ### tophat-fusion dependencies
+ - docker run -t --rm cgprna blastn -version
+ ### Defuse dependencies
+ - docker run -t --rm cgprna which faToTwoBit
+ - docker run -t --rm cgprna gmap --version
+ 

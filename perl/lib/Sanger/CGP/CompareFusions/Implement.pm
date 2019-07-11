@@ -853,7 +853,7 @@ sub parse_exon_data {
 
   my $break_pos = $fusion->{'pos'.$breaknum.'_end'};
 
-  for my $e (keys $exons){
+  for my $e (keys %$exons){
     my $exon = $exons->{$e};
     if($break_pos == $exon->{'feature_start'} || $break_pos == $exon->{'feature_end'}){
       $found_exon_boundary = 1;
@@ -1295,7 +1295,7 @@ sub process_singletons {
   my $defuse_data = parse_defuse_file($defuse_file);
   my %all_singletons;
 
-  for my $star_brk (keys $star_data){
+  for my $star_brk (keys %$star_data){
     if(!exists $star_ids{$star_brk}){
 
       $star_ids{$star_brk} = 'S';
@@ -1323,7 +1323,7 @@ sub process_singletons {
     }
   }
 
-  for my $tophat_brk (keys $tophat_data){
+  for my $tophat_brk (keys %$tophat_data){
     if(!exists $tophat_ids{$tophat_brk}){
 
       $tophat_ids{$tophat_brk} = 'T';
@@ -1348,7 +1348,7 @@ sub process_singletons {
     }
   }
 
-  for my $defuse_brk (keys $defuse_data){
+  for my $defuse_brk (keys %$defuse_data){
     my @defuse_ids = split "_", $defuse_brk;
     my $breakpoint = $defuse_ids[0];
     if(!exists $defuse_ids{$breakpoint}){
@@ -1416,7 +1416,7 @@ sub query_vagrent {
 
   my $tophat_data = parse_tophat_file($tophat_file);
 
-  for my $brk (keys $tophat_data){
+  for my $brk (keys %$tophat_data){
     if(!exists $gene_list->{$brk}){
       my $gene1_name = $tophat_data->{$brk}{'gene1_name'};
       my $gene2_name = $tophat_data->{$brk}{'gene2_name'};
@@ -1447,7 +1447,7 @@ sub query_vagrent {
 
   my $defuse_data = parse_defuse_file($defuse_file);
 
-  for my $defuse_brk (keys $defuse_data){
+  for my $defuse_brk (keys %$defuse_data){
     if(!exists $gene_list->{$defuse_brk}){
       my $gene1_name = $defuse_data->{$defuse_brk}{'gene1_name'};
       my $gene2_name = $defuse_data->{$defuse_brk}{'gene2_name'};

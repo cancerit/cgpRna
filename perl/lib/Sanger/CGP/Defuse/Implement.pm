@@ -51,7 +51,7 @@ use PCAP::Bwa::Meta;
 use PCAP::Bam;
 use Sanger::CGP::CgpRna;
 
-const my $DEFUSE => q{ %s -c %s -p %d -o %s -n %s -l %s -s direct -1 %s -2 %s};
+const my $DEFUSE => q{ %s -c %s -d %s -p %d -o %s -n %s -l %s -s direct -1 %s -2 %s};
 const my $BAMFASTQ => q{ exclude=SECONDARY,SUPPLEMENTARY T=%s S=%s O=%s O2=%s F=%s F2=%s filename=%s};
 const my $FUSIONS_FILTER => q{ -i %s -s %s -n %s -o %s -p defuse};
 const my $DEFUSE_MAX_CORES => 16;
@@ -163,9 +163,33 @@ sub defuse {
 		die "ERROR: No input fastq files could be found in the input folder. Please check the prepare and (if multiple input BAMs have been entered) merge steps have been run.\n" if(!defined $fastq1 );
 	}
 
-	# Get the relevant defuse config file for the reference and gene builds
-	my $defuse_config = File::Spec->catfile($options->{'refdataloc'}, $options->{'species'}, $options->{'referencebuild'},'defuse',$options->{'genebuild'}, $options->{'defuseconfig'} );
+	# Get the defuse config file for the reference and gene builds, update and write to tmp folder
+	my $defuse_config = File::Spec->catfile($options->{'tmp'}, $options->{'defuseconfig'} );
+
+	my $defuse_ref_config = File::Spec->catfile($options->{'refdataloc'}, $options->{'species'}, $options->{'referencebuild'},'defuse',$options->{'genebuild'}, $options->{'defuseconfig'} );
 	
+	my $update_configs = {};
+	if ($options->{'updateconfig'}) {
+		$update_configs = _read_in_defuse_config($options->{'updateconfig'});
+	}
+	# dataset_directory should always be updated
+	if (! exists $update_configs->{ 'dataset_directory' }) {
+		$update_configs->{ 'dataset_directory' } = File::Spec->catfile($options->{'refdataloc'}, $options->{'species'}, $options->{'referencebuild'},'defuse',$options->{'genebuild'}, 'defuse-index');
+	}
+
+	open(my $original_config, $defuse_ref_config) or die "Unable to open file: $!\n";
+	open(my $new_config, '>', $defuse_config) or die "Unable to open file: $!\n";
+	while (my $line = <$original_config>) {
+		chomp $line;
+		if ($line =~ /^(\w+)\s*=\s*([^\s]+).*$/ && exists $update_configs->{$1}) {
+			print $new_config $1.' = '.$update_configs->{$1}."\n";
+		} else {
+			print $new_config $line."\n";
+		}
+	}
+	close($new_config);
+	close($original_config);
+
 	# Get the defuse installation path
 	my $defuse = $options->{'defusepath'};
 	if(! defined $defuse || $defuse eq ''){
@@ -175,6 +199,7 @@ sub defuse {
 	my $command = "$^X ";
 	$command .= sprintf $DEFUSE,	$defuse,
 					$defuse_config,
+					$update_configs->{ 'dataset_directory' },
 					$threads,
 					$outdir,
 					$sample,
@@ -331,6 +356,20 @@ sub prepare {
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), $index);
 	
 	return 1;
+}
+
+sub _read_in_defuse_config {
+	my $d_config = shift;
+	my @lines;
+	open(my $config, $d_config) or die "Unable to open file: $!\n";
+	while( my $line = <$config> ) {
+		$line =~ /^#/ and next;
+		chomp $line;
+		push @lines, $line
+	}
+	my %hash = map { split /\s*=\s*/; } @lines;
+	close($config);
+	return \%hash;
 }
 
 sub _which {

@@ -111,6 +111,7 @@ sub setup {
 			'r|refdataloc=s' => \$opts{'refdataloc'},
 			'n|normals=s' => \$opts{'normalfusionslist'},
 			'd|defuseconfig=s' => \$opts{'defuseconfig'},
+			'uc|updateconfig=s' => \$opts{'updateconfig'},
 			't|threads=i' => \$opts{'threads'},
 			'p|process=s' => \$opts{'process'},
 			'i|index=i' => \$opts{'index'},
@@ -135,6 +136,7 @@ sub setup {
 	$opts{'defusepath'} = $cfg->val('defuse-config','defusepath');
 	$opts{'defuseversion'} = $cfg->val('defuse-config','defuseversion');
 	$opts{'defuseconfig'} = $cfg->val('defuse-config','defuseconfig') unless(defined $opts{'defuseconfig'});
+	$opts{'updateconfig'} = $cfg->val('defuse-config','updateconfig') unless(defined $opts{'updateconfig'});
 
 	# Print version information for this program (deFuse itself does not have a -v or --version option)
 	if($opts{'version'}) {
@@ -167,6 +169,7 @@ sub setup {
 	delete $opts{'process'} unless(defined $opts{'process'});
 	delete $opts{'index'} unless(defined $opts{'index'});
 	delete $opts{'config'} unless(defined $opts{'config'});
+	delete $opts{'updateconfig'} unless(defined $opts{'updateconfig'});
 
  	# Apply defaults
 	$opts{'threads'} = 1 unless(defined $opts{'threads'});
@@ -212,9 +215,10 @@ defuse_fusion.pl [options] [file(s)...]
 
   Optional
     -defuseconfig 	-d  	Name of the defuse config file. It should reside under /refdataloc/species/refbuild/defuse/genebuild/ [defuse-config.txt]
+    -updateconfig 	-uc 	A defuse config file which will be used to overwrite values in defuseconfig if identical keys are found in this file.
     -normals  	  	-n  	File containing list of gene fusions detected in normal samples. It should reside under /refdataloc/species/refbuild/ [normal-fusions]
     -threads   		-t  	Number of cores to use. [1]
-    -config   		-c  	Path to config.ini file. The file contains defaults for the reference data and deFuse software installation details [<cgpRna-install-location>/perl/config/defuse.ini]
+    -config   		-c  	Path to config.ini file. The file contains defaults for the reference data and deFuse software installation details [<cgpRna-install-location>/config/defuse.ini]
     -refbuild 		-rb 	Reference assembly version. Can be UCSC or Ensembl format e.g. GRCh38 or hg38 [GRCh38] 
     -genebuild 		-gb 	Gene build version. This needs to be consistent with the reference build in terms of the version and chromosome name style. Please use the build number only minus any prefixes such as e/ensembl [77]
     -refdataloc  	-r  	Parent directory of the reference data.
