@@ -97,7 +97,7 @@ FROM ubuntu:16.04
 
 LABEL maintainer="cgphelp@sanger.ac.uk" \
       uk.ac.sanger.cgp="Cancer, Ageing and Somatic Mutation, Wellcome Trust Sanger Institute" \
-      version="1.0.0" \
+      version="2.3.0" \
       description="cgpRna docker"
 
 RUN apt-get -yq update
