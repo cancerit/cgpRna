@@ -56,7 +56,7 @@ const my @BOWTIE2_SUFFIXES => qw(.1.bt2 .2.bt2 .3.bt2 .4.bt2 .rev.1.bt2 .rev.2.b
 const my $BAMFASTQ => q{ exclude=SECONDARY,SUPPLEMENTARY T=%s S=%s O=%s O2=%s gz=1 level=1 F=%s F2=%s filename=%s};
 const my $FUSIONS_FILTER => q{ -i %s -s %s -n %s -o %s -p tophat};
 const my $ADD_STRAND => q{ -i %s -s %s -p %s -o %s};
-const my $FUSIONS_SPLIT => 50000;
+const my $FUSIONS_SPLIT => 5000;
 const my $TOPHAT_MAX_CORES => 16;
 const my $TOPHAT_DEFAULTS_SECTION => 'tophat-parameters';
 const my $TOPHAT_FUSION_SECTION => 'tophat-fusion-parameters';
