@@ -18,7 +18,6 @@ bedtools=${VER_BEDTOOLS} \
 bowtie=${VER_BOWTIE1} \
 bowtie2=${VER_BOWTIE2} \
 ncbi-blast+=${VER_BLAST} \
-gmap=${VER_GMAP} \
 libcurl4-gnutls-dev zlib1g-dev
 apt-get upgrade -yq gcc
 

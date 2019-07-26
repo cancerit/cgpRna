@@ -132,13 +132,28 @@ fi
 
 # Install tophat	
 if [ ! -e $SETUP_DIR/tophat.success ]; then	
-  curl -sSL --retry 10 https://ccb.jhu.edu/software/tophat/downloads/tophat-${VER_TOPHAT}.Linux_x86_64.tar.gz > distro.tar.gz	
+  curl -sSL --retry 10 https://ccb.jhu.edu/software/tophat/downloads/tophat-${VER_TOPHAT}.Linux_x86_64.tar.gz > distro.tar.gz 
   rm -rf distro/*	
   tar --strip-components 1 -C distro -zxf distro.tar.gz	
   rm -f distro/AUTHORS distro/LICENSE distro/README	
   cp -r distro/* $INST_PATH/bin/.	
   touch $SETUP_DIR/tophat.success	
 fi
+
+# install Gmap
+echo -n "Installing gmap ..."
+if [ ! -e $SETUP_DIR/gmap.success ]; then
+  curl -sSL --retry 10 http://research-pub.gene.com/gmap/src/gmap-gsnap-${VER_GMAP}.tar.gz  > distro.tar.gz
+  rm -rf distro/*
+  tar --strip-components 1 -C distro -zxf distro.tar.gz
+  cd distro
+  ./configure --prefix=$INST_PATH --with-gmapdb=$INST_PATH
+  make -j$CPU
+  make install
+  cd ../
+  touch $SETUP_DIR/gmap.success
+fi
+
 
 # Install defuse
 if [ ! -e $SETUP_DIR/defuse.success ]; then
