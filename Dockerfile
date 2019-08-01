@@ -18,7 +18,7 @@ ENV VER_STARFUSION "v0.1.1"
 ENV VER_TOPHAT "2.1.0"
 ENV VER_DEFUSE "v0.8.2"
 ENV SOURCE_FATOTWOBIT "http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/faToTwoBit"
-ENV SOURCE_BLAT "http://users.soe.ucsc.edu/~kent/src/blatSrc35.zip"
+ENV SOURCE_BLAT "https://hgwdev.gi.ucsc.edu/~kent/src/blatSrc35.zip"
 
 RUN apt-get -yq update
 RUN apt-get install -yq --no-install-recommends \
