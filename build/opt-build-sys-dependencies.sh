@@ -6,12 +6,14 @@ set -xe
 add-apt-repository -y ppa:deadsnakes/ppa
 # Add R key
 echo "deb http://cran.rstudio.com/bin/linux/ubuntu xenial/" | tee -a /etc/apt/sources.list
-gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9
-gpg -a --export E084DAB9 | apt-key add -
+# gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9
+# gpg -a --export E084DAB9 | apt-key add -
 
 # install python3, R, bedtools, bowtie1, bowtie2, blast, gmap and other packages for RSeQC to install
 apt-get update
-apt-get install -yq --no-install-recommends \
+
+# using --allow-unauthenticated because the added R key is not recognised, it worked fine without the option before 27 Jul 2019
+apt-get install -yq --no-install-recommends --allow-unauthenticated \
 python3.7 python3.7-dev \
 r-base r-base-dev \
 bedtools=${VER_BEDTOOLS} \
