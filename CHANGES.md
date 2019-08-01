@@ -21,6 +21,8 @@
      - blast: ***2.2.30*** to ***2.2.31-4*** in apt,
      - gmap: ***2015-09-10*** to ***2015-12-31.v7-1*** in apt. 
 
+* tophat-fusion-post now skips read dist step, which our infuse pipeline does not care and the `tophat-fusion-post.py` does not insert generated read distributions in final html report anyway neither.
+
 ## 2.2.2
 
 * Change tabix query call to query_full
