@@ -2,10 +2,6 @@
 
 ## 2.3.0
 
-* added an extra option "-updateconfig" to *defuse_fusion.pl*. It takes a file as input, which content is used to update *defuse-config.txt*. It'll search *defuse.ini* to find its default value. This addition shouldn't break any existing usage.
-
-* *defuse_fusion.pl* will always create a *defuse-config.txt* file in its temp folder and use it to run *defuse.pl*. In the temp file, **dataset_directory** is corrected using related command line input values. If "-updateconfig" presents, values in the file will be used to overwrite corresponding values in the temp file. **Note:** if ***dataset_directory*** key presents in the "-updateconfig" file, this will be the final value in the temp config file.
-
 * dockerised cgpRna. Within the docker container, version of some dependent tools have been changed:
 
   1. Python3(**3.7.X**) is used in the container, thus:
@@ -20,6 +16,10 @@
      - bowtie2: ***2.2.3*** to ***2.2.6-2*** in apt,
      - blast: ***2.2.30*** to ***2.2.31-4*** in apt,
      - gmap: ***2015-09-10*** to ***2015-12-31.v7-1*** in apt. 
+
+* added an extra option "-updateconfig" to *defuse_fusion.pl*. It takes a file as input, which content is used to update *defuse-config.txt*. It'll search *defuse.ini* to find its default value. This addition shouldn't break any existing usage.
+
+* *defuse_fusion.pl* will always create a *defuse-config.txt* file in its temp folder and use it to run *defuse.pl*. In the temp file, **dataset_directory** is corrected using related command line input values. If "-updateconfig" presents, values in the file will be used to overwrite corresponding values in the temp file. **Note:** if ***dataset_directory*** key presents in the "-updateconfig" file, this will be the final value in the temp config file.
 
 * tophat-fusion-post now skips read dist step, which our infuse pipeline does not care and the `tophat-fusion-post.py` does not insert generated read distributions in final html report anyway neither.
 
