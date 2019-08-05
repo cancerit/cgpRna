@@ -1,5 +1,17 @@
 # CHANGES
 
+## 2.3.3
+
+* fixed verison numbers
+
+## 2.3.2
+
+* fixed blatSrc url in setup.sh
+
+## 2.3.1
+
+* fixed blatSrc url in Docker container build script
+
 ## 2.3.0
 
 * dockerised cgpRna. Within the docker container, version of some dependent tools have been changed:
