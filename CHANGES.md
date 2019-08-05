@@ -1,5 +1,9 @@
 # CHANGES
 
+## 2.2.3
+
+* Fix url for blatSrc35 following move
+
 ## 2.2.2
 
 * Change tabix query call to query_full
