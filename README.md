@@ -20,6 +20,7 @@ Please install Perl packages:
 * [PCAP-core](https://github.com/ICGC-TCGA-PanCancer/PCAP-core/releases)
 * [VAGrENT](https://github.com/cancerit/VAGrENT/releases)
 * [cgpVcf](https://github.com/cancerit/cgpVcf/releases)
+* [Grass](https://github.com/cancerit/grass/releases) first.
 
 Prerequisites for the [RSeQC](http://rseqc.sourceforge.net/#installation) software are:
 
