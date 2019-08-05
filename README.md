@@ -1,5 +1,11 @@
 # cgpRna
 
+[![Quay Badge][quay-status]][quay-repo]
+
+| Master                                        | Develop                                         |
+| --------------------------------------------- | ----------------------------------------------- |
+| [![Master Badge][travis-master]][travis-base] | [![Develop Badge][travis-develop]][travis-base] |
+
 cgpRna provides pipelines, for RNA-Seq data, that implement commonly used mapping
 and analysis programs, such as TopHat and rna-star.
 At the present time (May 2016), only pipelines for mapping (with STAR), lane QC
@@ -86,3 +92,13 @@ statement that reads ‘Copyright (c) 2005-2012’ should be interpreted as bein
 identical to a statement that reads ‘Copyright (c) 2005, 2006, 2007, 2008,
 2009, 2010, 2011, 2012’."
 ```
+
+<!-- Travis -->
+[travis-base]: https://travis-ci.org/cancerit/cgprna
+[travis-master]: https://travis-ci.org/cancerit/cgprna.svg?branch=master
+[travis-develop]: https://travis-ci.org/cancerit/cgprna.svg?branch=dev
+
+<!-- Quay.io -->
+[quay-status]: https://quay.io/repository/wtsicgp/cgprna/status
+[quay-repo]: https://quay.io/repository/wtsicgp/cgprna
+[quay-builds]: https://quay.io/repository/wtsicgp/cgprna?tab=builds
