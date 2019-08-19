@@ -32,7 +32,7 @@ ENV SOURCE_BLAT "https://hgwdev.gi.ucsc.edu/~kent/src/blatSrc35.zip"
 
 RUN apt-get -yq update
 
-RUN apt-get install -qy --no-install-recommends lsb-release software-properties-common
+RUN apt-get install -qy --no-install-recommends lsb-release
 
 RUN echo "deb http://cran.rstudio.com/bin/linux/ubuntu `lsb_release -cs`/" >> /etc/apt/sources.list
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
@@ -92,7 +92,6 @@ LABEL maintainer="cgphelp@sanger.ac.uk" \
       uk.ac.sanger.cgp="Cancer, Ageing and Somatic Mutation, Wellcome Trust Sanger Institute" \
       version="2.3.3" \
       description="cgpRna docker"
-
 
 # Version of tools that are installed in both stages, make sure they are consistent.
 ## VAGrENG dependcies
