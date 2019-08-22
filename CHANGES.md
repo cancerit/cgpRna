@@ -1,5 +1,9 @@
 # CHANGES
 
+## 2.3.4
+
+* Added quotes around tags when passing it to Star. resolve #30.
+
 ## 2.3.3
 
 * fixed verison numbers

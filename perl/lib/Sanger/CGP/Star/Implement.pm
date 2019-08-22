@@ -198,7 +198,7 @@ sub format_rg_tags {
 
 	push @rg_header, 'LB:'.$options->{'LB'} if(exists $options->{'LB'});
 	# Quotes need to be around the description (DS:) tag text
-	push @rg_header, '"DS:'.$options->{'DS'}.'"' if(exists $options->{'DS'});
+	push @rg_header, 'DS:'.$options->{'DS'} if(exists $options->{'DS'});
 	push @rg_header, 'PL:'.$options->{'PL'} if(exists $options->{'PL'});
 	push @rg_header, 'PU:'.$options->{'PU'} if(exists $options->{'PU'});
 
@@ -206,7 +206,6 @@ sub format_rg_tags {
 	  unless($r eq '@RG' || $r =~ /^ID/){
 	    my @tag = split ':', $r;
 	    if(!exists $options->{$tag[0]}){
-	      $r = '"'.$r.'"' if($r =~ /DS:/);
 	      push @rg_header, $r;
 	    }
 	    # Once the RG tag has been formatted correctly for the CGP mapped BAM, add any pre-existing tags to a comment line to store what was in the BAM RG tags previously
@@ -225,8 +224,8 @@ sub format_rg_tags {
 	close($ofh);
 	
 	$options->{'commentfile'} = $comment_file unless($first_file->fastq);
-
-	$options->{'rgline'} = join(" ",@rg_header);
+	my @quoted_rg_header = map {'"'.$_.'"'} @rg_header; # so that star can catch the correct tags even if there's a space in tag value.
+	$options->{'rgline'} = join(" ", @quoted_rg_header);
 
   return 1;
 }
