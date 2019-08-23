@@ -224,8 +224,10 @@ sub format_rg_tags {
 	close($ofh);
 	
 	$options->{'commentfile'} = $comment_file unless($first_file->fastq);
-	my @quoted_rg_header = map {'"'.$_.'"'} @rg_header; # so that star can catch the correct tags even if there's a space in tag value.
-	$options->{'rgline'} = join(" ", @quoted_rg_header);
+
+	# convert tags to shell safe tags before passing them to star in command line
+	my @shell_safe_rg_header = map { _to_commandline_safe_tag_for_star($_) } @rg_header;
+	$options->{'rgline'} = join(" ", @shell_safe_rg_header);
 
   return 1;
 }
@@ -595,6 +597,23 @@ sub _which {
 	$path = which($prog) unless(-e $path);
 	die "Failed to find $prog in path or local bin folder ($l_bin)\n\tPATH: $ENV{PATH}\n" unless(defined $path && -e $path);
 	return $path;
+}
+
+sub _to_commandline_safe_tag_for_star {
+	# according to this: https://unix.stackexchange.com/a/398649
+	# preserving tag values is complicated
+	my $tag = shift;
+	# first skip back slashes
+	$tag =~ s/\\/\\\\/g;
+	# then skip other needed-to-skip characters.
+	# this will inevitably introduce an extra back slash into the tag if there's an '!', but for now no other way to skip '!' to prevent bash history expansion.
+	my @need_to_skips = ('$', '`', '"', '!');
+	foreach my $x (@need_to_skips) {
+		my $pattern = '['.$x.']';
+		$tag =~ s/$pattern/\\$x/g;
+	}
+	# double quoted it
+	return '"'.$tag.'"';
 }
 
 1;
