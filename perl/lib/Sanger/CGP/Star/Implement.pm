@@ -603,17 +603,13 @@ sub _to_commandline_safe_tag_for_star {
 	# according to this: https://unix.stackexchange.com/a/398649
 	# preserving tag values is complicated
 	my $tag = shift;
-	# first skip back slashes
+	# first escape backslashes
 	$tag =~ s/\\/\\\\/g;
-	# then skip other needed-to-skip characters.
-	# this will inevitably introduce an extra back slash into the tag if there's an '!', but for now no other way to skip '!' to prevent bash history expansion.
-	my @need_to_skips = ('$', '`', '"', '!');
-	foreach my $x (@need_to_skips) {
-		my $pattern = '['.$x.']';
-		$tag =~ s/$pattern/\\$x/g;
-	}
+	# then escape other needed-to-escape characters.
+	# this will inevitably introduce an extra backslash into the tag if there's an '!', but for now no other way to escape '!' to prevent bash history expansion.
+	$tag =~ s/([`"!\$])/\\$1/g;
 	# double quoted it
-	return '"'.$tag.'"';
+	return sprintf q{"%s"}, $tag;
 }
 
 1;
