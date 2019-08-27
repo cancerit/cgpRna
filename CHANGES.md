@@ -2,7 +2,7 @@
 
 ## 2.3.4
 
-* RG tags are converted to shell safe strings before passing to Star. resolve #30.
+* RG tags are converted to shell safe strings before passing to Star. partially resolve #30.
 
 ## 2.3.3
 
