@@ -13,6 +13,7 @@ from .bigwig import generate_bigwig
 
 version = pkg_resources.require("run_cgprna")[0].version
 
+
 def main():
     """
     Sets up the parser and handles triggereing of correct sub-command
@@ -51,25 +52,25 @@ def main():
     parser_a.add_argument(
         '-sp', '--species', dest='species',
         metavar='STR',
-        help='Species name. e.g.: human',
-        required=True)
+        help='Species name. No need to set if using a pre-built reference bundle. If using a folder as the reference, it\' be used to locate reference files.',
+        required=False)
     parser_a.add_argument(
         '-rb', '--reference-build', dest='ref_build',
         metavar='STR',
-        help='Reference build name, e.g.: GRCh38.',
-        required=True)
+        help='Reference build name. No need to set if using a pre-built reference bundle. If using a folder as the reference, it\' be used to locate reference files.',
+        required=False)
     parser_a.add_argument(
         '-gb', '--gene-build', dest='gene_build',
         metavar='STR',
-        help='Gene build name, e.g.: 77.',
-        required=True)
+        help='Gene build name. No need to set if using a pre-built reference bundle. If using a folder as the reference, it\' be used to locate for GTF file.',
+        required=False)
     parser_a.add_argument(
         '-gtf', '--gene-build-gtf-name', dest='gene_build_gtf_name',
         metavar='STR',
-        help='File name of the gene build file, e.g.: ensemble77.gtf.',
-        required=True)
+        help='File name of the gene build file. No need to set if using a pre-built reference bundle. If using a folder as the reference, it\' be used to locate the GTF file.',
+        required=False)
     parser_a.add_argument(
-        '-od', '--output_directory', dest='out_dir',
+        '-od', '--output-directory', dest='out_dir',
         metavar='DIR', default='.',
         help='Output directory. Default: current directory.',
         required=False)
@@ -126,14 +127,63 @@ def main():
         help='BAM file, in which reads are mapped to a reference transciptome (NOT genome).',
         required=False)
     parser_b.add_argument(
-        '-od', '--output_directory', dest='out_dir',
+        '-od', '--output-directory', dest='out_dir',
         metavar='DIR', default='.',
         help='Output directory. Default: current directory.',
         required=False)
     parser_b.set_defaults(func=generate_stats)
 
+    # create the parser for the "bigwig" command
+    parser_c = subparsers.add_parser(
+        'bigwig',
+        parents=[common_parser],
+        description='Generate bigwig file from a BAM file.')
+    parser_c.add_argument(
+        '-i', '--input', dest='input',
+        metavar='FILE',
+        help='Input BAM file, in which reads are mapped to a reference genome (NOT transcriptome).',
+        required=True)
+    parser_c.add_argument(
+        '-r', '--reference', dest='ref',
+        metavar='FASTA_FILE',
+        help='FASTA file of a reference file, which the input BAM file was mapped to.',
+        required=True)
+    parser_c.add_argument(
+        '-od', '--output-directory', dest='out_dir',
+        metavar='DIR', default='.',
+        help='Output directory. Default: current directory.',
+        required=False)
+    parser_c.add_argument(
+        '-t', '--threads', dest='threads',
+        metavar='INT', type=int, default=1,
+        help='Number of threads to use.',
+        required=False)
+    parser_c.set_defaults(func=generate_bigwig)
+
+    # create the parser for the "count" command
+    parser_d = subparsers.add_parser(
+        'count',
+        parents=[common_parser],
+        description='Generate gene counts from a BAM file.')
+    parser_d.add_argument(
+        '-i', '--input', dest='input',
+        metavar='FILE',
+        help='Input BAM file, in which reads are mapped to a reference genome (NOT transcriptome).',
+        required=True)
+    parser_d.add_argument(
+        '-r', '--reference', dest='ref',
+        metavar='GTF_FILE',
+        help='A reference GTF file.',
+        required=True)
+    parser_d.add_argument(
+        '-od', '--output-directory', dest='out_dir',
+        metavar='DIR', default='.',
+        help='Output directory. Default: current directory.',
+        required=False)
+    parser_d.set_defaults(func=count)
+
     args = parser.parse_args()
     if len(sys.argv) > 1:
         args.func(args)
     else:
-        sys.exit('\nERROR Arguments required\n\tPlease run: run-cgprna --help\n')
+        sys.exit('\nError: missed required arguments.\n\tPlease run: run-cgprna --help\n')
