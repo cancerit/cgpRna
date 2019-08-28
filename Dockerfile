@@ -150,6 +150,9 @@ ENV LANG en_US.UTF-8
 RUN mkdir -p $OPT
 COPY --from=builder $OPT $OPT
 
+COPY run-cgprna $OPT/cgprna
+RUN cd $OPT/cgprna && python3 setup.py develop
+
 ## USER CONFIGURATION
 RUN adduser --disabled-password --gecos '' ubuntu && chsh -s /bin/bash && mkdir -p /home/ubuntu
 
