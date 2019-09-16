@@ -39,7 +39,7 @@ def generate_stats(args):
     reference_data_root=os.path.abspath(args.ref)
     # If a ref bundle tar file is supplied
     # Anything else will be treated as a reference folder
-    if re.search(r'\.tar\.gz$', args.ref):
+    if args.ref.endswith('.tar.gz'):
         mkdir(temp_dir)
         reference_data_root=os.path.join(temp_dir, 'ref')
         untar(args.ref, reference_data_root)

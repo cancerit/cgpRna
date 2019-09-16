@@ -32,8 +32,7 @@ def run_templates_in_shell(list_of_templates, mapping):
 
 
 def mkdir(dir_path):
-    if not os.path.isdir(dir_path):
-        try:
-            os.makedirs(dir_path)
-        except Exception as e:
-            sys.exit('Error: unexpected exception. failed to create the directory %s: %s' % (dir_path, str(e)))
+    try:
+        os.makedirs(dir_path, exist_ok=True)
+    except Exception as e:
+        sys.exit('Error: unexpected exception. failed to create the directory %s: %s' % (dir_path, str(e)))
