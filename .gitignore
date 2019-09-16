@@ -21,3 +21,4 @@ __pycache__/
 /run-cgprna/build
 /run-cgprna/dist
 /run-cgprna/run_cgprna.egg-info
+.vscode
