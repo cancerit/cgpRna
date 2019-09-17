@@ -31,13 +31,13 @@ def main():
     parser_a = subparsers.add_parser(
         'map',
         parents=[common_parser],
-        description='Map RNA-Seq reads to a reference genome',
+        description='Use STAR to map RNA-Seq reads to a reference genome',
         epilog='Input can be either bam or \'f(ast)?q(\.gz)?\'.')
     parser_a.add_argument(
         '-i', '--input', dest='input',
         metavar='FILE',
         nargs='+',
-        help='An input raw bam file, or one of a pair of FastQ file. (optionally gzip compressed).',
+        help='An input raw bam file, or a pair of FastQ files split with spaces. (optionally gzip compressed).',
         required=True)
     parser_a.add_argument(
         '-r', '--reference', dest='ref',
