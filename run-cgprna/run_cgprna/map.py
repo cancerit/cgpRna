@@ -125,10 +125,18 @@ def map_seq_files(args):
     if clean_temp:
         shutil.rmtree(temp_dir)
 
+# NOTE: Does not work in python3.5
+# def find(pattern, path):
+#     return (
+#         os.path.join(root, name)
+#         for name in files if fnmatch.fnmatch(name, pattern)
+#         for root, _, files in os.walk(path) if files
+#     )
 
 def find(pattern, path):
-    return (
-        os.path.join(root, name)
-        for name in files if fnmatch.fnmatch(name, pattern)
-        for root, _, files in os.walk(path)
-    )
+    result = []
+    for root, _, files in os.walk(path):
+        for name in files:
+            if fnmatch.fnmatch(name, pattern):
+                result.append(os.path.join(root, name))
+    return result
