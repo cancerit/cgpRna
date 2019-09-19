@@ -4,7 +4,7 @@ class: CommandLineTool
 
 id: "run-cgprna_map"
 
-label: "cgpRna mapping flow"
+label: "cgpRna mapping"
 
 cwlVersion: v1.0
 
@@ -20,7 +20,7 @@ doc: |
 
 requirements:
   - class: DockerRequirement
-    dockerPull: "cgprna:2.3.4"
+    dockerPull: "quay.io/wtsicgp/cgprna:2.3.4"
 
 hints:
   - class: ResourceRequirement
@@ -34,10 +34,10 @@ inputs:
     type:
       type: array
       items: File
-      inputBinding:
-        prefix: --input
-        separate: true
-        itemSeparator: ' '
+    inputBinding:
+      prefix: --input
+      separate: true
+      itemSeparator: ' '
 
   reference:
     type: File
@@ -66,7 +66,6 @@ inputs:
   rg_id_tag:
     type: string?
     doc: "Readgroup ID tag value in the output BAM. Default: 1 or taken from the input raw BAM file."
-    default: '1'
     inputBinding:
       prefix: --rg-id-tag
       separate: true
@@ -113,29 +112,23 @@ outputs:
   star_transcriptome_bam:
     type: File
     outputBinding:
-      glob: $(inputs.sample_name).star.AlignedtoTranscriptome.out.bam
+     glob: $(inputs.sample_name).star.AlignedtoTranscriptome.out.bam
+    secondaryFiles:
+    - .bai
 
-  star_transcriptome_bam_index:
-    type: File
-    outputBinding:
-      glob: $(inputs.sample_name).star.AlignedtoTranscriptome.out.bam.bai
-
-  mark_dup_bam:
+  dup_marked_bam:
     type: File
     outputBinding:
       glob: $(inputs.sample_name).bam
+    secondaryFiles:
+    - .bai
 
-  mark_dup_bam_index:
-    type: File
-    outputBinding:
-      glob: $(inputs.sample_name).bam.bai
-
-  mark_dup_bam_dup_met:
+  dup_marked_bam_dup_met:
     type: File
     outputBinding:
       glob: $(inputs.sample_name).bam.met
 
-  mark_dup_bam_md5:
+  dup_marked_bam_md5:
     type: File
     outputBinding:
       glob: $(inputs.sample_name).bam.md5

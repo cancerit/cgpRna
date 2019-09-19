@@ -4,7 +4,7 @@ class: CommandLineTool
 
 id: "run-cgprna_htseq-count"
 
-label: "cgpRna htseq-count flow"
+label: "cgpRna htseq-count"
 
 cwlVersion: v1.0
 
@@ -20,7 +20,7 @@ doc: |
 
 requirements:
   - class: DockerRequirement
-    dockerPull: "cgprna:2.3.4"
+    dockerPull: "quay.io/wtsicgp/cgprna:2.3.4"
 
 hints:
   - class: ResourceRequirement
@@ -42,41 +42,11 @@ inputs:
       prefix: --reference
       separate: true
 
-# outputs:
-#   star_sample_bam:
-#     type: File
-#     outputBinding:
-#       glob: $(inputs.sample_name).star.Aligned.out.bam
-
-#   star_transcriptome_bam:
-#     type: File
-#     outputBinding:
-#       glob: $(inputs.sample_name).star.AlignedtoTranscriptome.out.bam
-
-#   star_transcriptome_bam_index:
-#     type: File
-#     outputBinding:
-#       glob: $(inputs.sample_name).star.AlignedtoTranscriptome.out.bam.bai
-
-#   mark_dup_bam:
-#     type: File
-#     outputBinding:
-#       glob: $(inputs.sample_name).bam
-
-#   mark_dup_bam_index:
-#     type: File
-#     outputBinding:
-#       glob: $(inputs.sample_name).bam.bai
-
-#   mark_dup_bam_dup_met:
-#     type: File
-#     outputBinding:
-#       glob: $(inputs.sample_name).bam.met
-
-#   mark_dup_bam_md5:
-#     type: File
-#     outputBinding:
-#       glob: $(inputs.sample_name).bam.md5
+outputs:
+  out_count:
+    type: File
+    outputBinding:
+      glob: rna_htseqcount.gz
 
 baseCommand: ["run-cgprna", "count"]
 

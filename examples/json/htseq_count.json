@@ -1,0 +1,14 @@
+{
+    "sample_bam": {
+        "class":"File",
+        "path": "ftp://ngs.sanger.ac.uk/production/cancer/dockstore/cgprna/small_RNAseq/small_RNAseq_mapped_dupMarked.bam"
+    },
+    "reference": {
+        "class":"File",
+        "path": "ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/GRCh38_full_analysis_set_plus_decoy_hla-ensembl77/ensembl.gtf"
+    },
+    "out_count": {
+        "class":"File",
+        "path": "/tmp/htseq_count.gz"
+    }
+}

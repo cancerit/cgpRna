@@ -82,7 +82,7 @@ def main():
     parser_a.add_argument(
         '--rg-id-tag', dest='rg_id_tag',
         metavar='STR',
-        help='Readgroup ID tag value in the output BAM. Default: 1 or taken from the input raw BAM file.',
+        help='Readgroup ID tag value in the output BAM. Default: None or taken from the input raw BAM file.',
         required=False)
     parser_a.add_argument(
         '--lb-tag', dest='lb_tag',

@@ -2,9 +2,9 @@
 
 class: CommandLineTool
 
-id: "run-cgprna_stats"
+id: "run-cgprna_bigwig"
 
-label: "cgpRna stats"
+label: "cgpRna bigwig"
 
 cwlVersion: v1.0
 
@@ -25,12 +25,12 @@ requirements:
 hints:
   - class: ResourceRequirement
     coresMin: 1
-    ramMin: 2000
+    ramMin: 4000
 
 inputs:
   sample_bam:
     type: File
-    doc: "Input BAM file, in which reads are mapped to a reference genome (NOT transcriptome)"
+    doc: "Input BAM file, in which reads are mapped to a reference genome (NOT transcriptome)."
     inputBinding:
       prefix: --input
       separate: true
@@ -39,52 +39,28 @@ inputs:
 
   reference:
     type: File
-    doc: "The reference files bundled in a tar.gz."
+    doc: "FASTA file of a reference file, which the input BAM file was mapped to."
     inputBinding:
       prefix: --reference
       separate: true
-
-  transcriptome_bam:
-    type: File
-    doc: "BAM file, in which reads are mapped to a reference transciptome (NOT genome)."
-    inputBinding:
-      prefix: --transcriptome-bam
-      separate: true
     secondaryFiles:
-    - .bai
+    - .fai
+
+  threads:
+    type: int?
+    doc: "Number of threads to use."
+    inputBinding:
+      prefix: --threads
+      separate: true
+      shellQuote: true
 
 outputs:
-  rna_bas:
+  out_bw:
     type: File
     outputBinding:
-      glob: $(inputs.sample_bam.nameroot).RNA.bas
+      glob: '*.bw'
 
-  gene_cover_png:
-    type: File
-    outputBinding:
-      glob: $(inputs.sample_bam.nameroot).geneBodyCoverage.curves.png
-
-  gene_body_coverage_rscript:
-    type: File
-    outputBinding:
-      glob: $(inputs.sample_bam.nameroot).geneBodyCoverage.r
-
-  gene_body_coverage_txt:
-    type: File
-    outputBinding:
-      glob: $(inputs.sample_bam.nameroot).geneBodyCoverage.txt
-
-  gene_body_coverage_updated_rscript:
-    type: File
-    outputBinding:
-      glob: $(inputs.sample_bam.nameroot).geneBodyCoverage_UPDATED.r
-
-  read_dist:
-    type: File
-    outputBinding:
-      glob: $(inputs.sample_bam.nameroot).read_dist.txt
-
-baseCommand: ["run-cgprna", "stats"]
+baseCommand: ["run-cgprna", "bigwig"]
 
 $schemas:
   - http://schema.org/docs/schema_org_rdfa.html
