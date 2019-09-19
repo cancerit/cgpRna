@@ -24,10 +24,6 @@
     },
     "map_threads": 8,
     "bigwig_threads": 8,
-    "star_sample_bam": {
-        "class":"File",
-        "path": "/tmp/a_small_sample.star.aligned.bam"
-    },
     "star_transcriptome_bam":{
         "class":"File",
         "path": "/tmp/a_small_sample.star.AlignedtoTranscriptome.bam"

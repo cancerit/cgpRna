@@ -104,11 +104,6 @@ inputs:
       shellQuote: true
 
 outputs:
-  star_sample_bam:
-    type: File
-    outputBinding:
-      glob: $(inputs.sample_name).star.Aligned.out.bam
-
   star_transcriptome_bam:
     type: File
     outputBinding:

@@ -67,10 +67,6 @@ inputs:
     doc: "Platform unit tag value in the output BAM header. Default: None or taken from the input raw BAM file."
 
 outputs:
-  star_sample_bam:
-    type: File
-    outputSource: map/star_sample_bam
-
   star_transcriptome_bam:
     type: File
     outputSource: map/star_transcriptome_bam
@@ -140,7 +136,7 @@ steps:
         source: pl_tag
       pu_tag:
         source: pu_tag
-    out: [star_sample_bam, star_transcriptome_bam, dup_marked_bam, dup_marked_bam_dup_met, dup_marked_bam_md5]
+    out: [star_transcriptome_bam, dup_marked_bam, dup_marked_bam_dup_met, dup_marked_bam_md5]
     run: tools/run-cgprna_star-map.cwl
 
   stats:
