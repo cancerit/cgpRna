@@ -21,6 +21,7 @@ doc: |
 requirements:
   - class: DockerRequirement
     dockerPull: "quay.io/wtsicgp/cgprna:2.3.4"
+  - class: InlineJavascriptRequirement
 
 hints:
   - class: ResourceRequirement
@@ -30,7 +31,7 @@ hints:
 
 inputs:
   raw_reads:
-    doc: "RAW read input, can be a bam file, or one of a pair of FastQ file. (optionally gzip compressed)."
+    doc: "RAW read input, can be multiple bam files, or several pairs of FastQ files (optionally gzip compressed), but not a mixture of BAM and FastQs."
     type:
       type: array
       items: File
@@ -55,6 +56,14 @@ inputs:
       separate: true
       shellQuote: true
 
+  output_file_prefix:
+      type: string?
+      doc: "Output files prefix, if final outputs should have prefix different from sample_name. This should not contain any folder path."
+      inputBinding:
+        prefix: --output-file-prefix
+        separate: true
+        shellQuote: true
+
   threads:
     type: int?
     doc: "Number of threads to use."
@@ -65,7 +74,7 @@ inputs:
 
   rg_id_tag:
     type: string?
-    doc: "Readgroup ID tag value in the output BAM. Default: 1 or taken from the input raw BAM file."
+    doc: "Readgroup ID tag value in the output BAM. Default: taken from the input raw BAM file or 1."
     inputBinding:
       prefix: --rg-id-tag
       separate: true
@@ -107,26 +116,54 @@ outputs:
   star_transcriptome_bam:
     type: File
     outputBinding:
-     glob: $(inputs.sample_name).star.AlignedtoTranscriptome.out.bam
+      glob: |
+        ${
+          if (inputs.output_file_prefix != null) {
+            return inputs.output_file_prefix + '.star.AlignedtoTranscriptome.out.bam';
+          } else {
+            return inputs.sample_name + '.star.AlignedtoTranscriptome.out.bam';
+          }
+        }
     secondaryFiles:
     - .bai
 
   dup_marked_bam:
     type: File
     outputBinding:
-      glob: $(inputs.sample_name).bam
+      glob: |
+        ${
+          if (inputs.output_file_prefix != null) {
+            return inputs.output_file_prefix + '.bam';
+          } else {
+            return inputs.sample_name + '.bam';
+          }
+        }
     secondaryFiles:
     - .bai
 
   dup_marked_bam_dup_met:
     type: File
     outputBinding:
-      glob: $(inputs.sample_name).bam.met
+      glob: |
+        ${
+          if (inputs.output_file_prefix != null) {
+            return inputs.output_file_prefix + '.bam.met';
+          } else {
+            return inputs.sample_name + '.bam.met';
+          }
+        }
 
   dup_marked_bam_md5:
     type: File
     outputBinding:
-      glob: $(inputs.sample_name).bam.md5
+      glob: |
+        ${
+          if (inputs.output_file_prefix != null) {
+            return inputs.output_file_prefix + '.bam.md5';
+          } else {
+            return inputs.sample_name + '.bam.md5';
+          }
+        }
 
 baseCommand: ["run-cgprna", "map"]
 

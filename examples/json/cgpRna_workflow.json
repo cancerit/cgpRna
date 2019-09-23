@@ -1,0 +1,89 @@
+{
+    "raw_reads": [
+        [{
+            "class":"File",
+            "path": "ftp://ngs.sanger.ac.uk/production/cancer/dockstore/cgprna/small_RNAseq/small_RNAseq.bam"
+        }],
+        [{
+            "class":"File",
+            "path": "ftp://ngs.sanger.ac.uk/production/cancer/dockstore/cgprna/part_of_EM-2_0.5.bam"
+        }]
+    ],
+    "rg_id_tags": ["1", "B"],
+    "lb_tags": ["libA", ""],
+    "ds_tags": ["a small test sample", "a sample that have a bad header"],
+    "pl_tags": ["Illumina", "Illumina"],
+    "pu_tags": ["", "PlatFormUnitB"],
+    "map_reference": {
+        "class":"File",
+        "path": "ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/GRCh38_full_analysis_set_plus_decoy_hla-ensembl77/cgpRna-mapRefBundle-star2.4.1c-GRCh38_full_analysis_set_plus_decoy_hla-ensembl77.tar.gz"
+    },
+    "sample_name": "cgpRna_test_RNAseq",
+    "stats_reference": {
+        "class":"File",
+        "path": "ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/GRCh38_full_analysis_set_plus_decoy_hla-ensembl77/GRCh38_rseqc_ref.tar.gz"
+    },
+    "count_reference": {
+        "class":"File",
+        "path": "ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/GRCh38_full_analysis_set_plus_decoy_hla-ensembl77/ensembl.gtf"
+    },
+    "bigwig_reference": {
+        "class":"File",
+        "path": "ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/GRCh38_full_analysis_set_plus_decoy_hla-ensembl77/genome.fa"
+    },
+    "map_threads": 8,
+    "bigwig_threads": 8,
+    "merge_threads": 8,
+    "dup_marked_bam": {
+        "class":"File",
+        "path": "/tmp/cgpRna_test_RNAseq.bam"
+    },
+    "dup_marked_bam_md5": {
+        "class":"File",
+        "path": "/tmp/cgpRna_test_RNAseq.bam.md5"
+    },
+    "dup_marked_bam_dup_met": {
+        "class":"File",
+        "path": "/tmp/cgpRna_test_RNAseq.bam"
+    },
+    "transcriptome_lane_bams": {
+        "class":"Directory",
+        "path":"/tmp/cgpRna_test_RNAseq_lane_stats/"
+    },
+    "dup_marked_lane_bam_dup_mets": {
+        "class":"Directory",
+        "path":"/tmp/cgpRna_test_RNAseq_lane_stats/"
+    },
+    "rna_bas_files": {
+        "class":"Directory",
+        "path":"/tmp/cgpRna_test_RNAseq_lane_stats/"
+    },
+    "gene_cover_pngs": {
+        "class":"Directory",
+        "path":"/tmp/cgpRna_test_RNAseq_lane_stats/"
+    },
+    "gene_body_coverage_rscripts": {
+        "class":"Directory",
+        "path":"/tmp/cgpRna_test_RNAseq_lane_stats/"
+    },
+    "gene_body_coverage_txts": {
+        "class":"Directory",
+        "path":"/tmp/cgpRna_test_RNAseq_lane_stats/"
+    },
+    "gene_body_coverage_updated_rscripts": {
+        "class":"Directory",
+        "path":"/tmp/cgpRna_test_RNAseq_lane_stats/"
+    },
+    "read_dists": {
+        "class":"Directory",
+        "path":"/tmp/cgpRna_test_RNAseq_lane_stats/"
+    },
+    "out_bw": {
+        "class":"File",
+        "path": "/tmp/cgpRna_test_RNAseq.bw"
+    },
+    "out_count": {
+        "class":"File",
+        "path": "/tmp/cgpRna_test_RNAseq.htseq_count.txt.gz"
+    }
+}
