@@ -75,6 +75,11 @@ def main():
         help='Output directory. Default: current directory.',
         required=False)
     parser_a.add_argument(
+        '-op', '--output-file-prefix', dest='out_file_prefix',
+        metavar='STR',
+        help='Output file name prefix. Default: value of --sample-name.',
+        required=False)
+    parser_a.add_argument(
         '-t', '--threads', dest='threads',
         metavar='INT', type=int, default=1,
         help='Number of threads to use.',
@@ -82,7 +87,7 @@ def main():
     parser_a.add_argument(
         '--rg-id-tag', dest='rg_id_tag',
         metavar='STR',
-        help='Readgroup ID tag value in the output BAM. Default: None or taken from the input raw BAM file.',
+        help='Readgroup ID tag value in the output BAM. Default: "1" or taken from the first input raw BAM file.',
         required=False)
     parser_a.add_argument(
         '--lb-tag', dest='lb_tag',

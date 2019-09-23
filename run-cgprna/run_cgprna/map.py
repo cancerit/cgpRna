@@ -9,6 +9,7 @@ from . import run_templates_in_shell, untar, mkdir
 STAR_MAP_TEMPLATE = Template('star_mapping.pl -s $sample_name -o $out_dir -t $threads -r $reference_data_root -sp $species -rb $ref_build -gb $gene_build -g $gene_build_gtf_name $other_options $raw_reads_string')
 MARK_DUPS_TEMPLATE = Template('bammarkduplicates2 I=$out_dir/$sample_name.star.Aligned.out.bam O=$out_dir/$sample_name.bam md5=1 index=1 markthreads=$threads md5filename=$out_dir/$sample_name.bam.md5 indexfilename=$out_dir/$sample_name.bam.bai M=$out_dir/$sample_name.bam.met tmpfile=$out_dir/biormdup')
 BAM_INDEX_TEMPLATE = Template('bamindex < $out_dir/$sample_name.star.AlignedtoTranscriptome.out.bam > $out_dir/$sample_name.star.AlignedtoTranscriptome.out.bam.bai')
+RENAME_OUTPUT_TEMPLATE = Template('mv "$out_dir/${sample_name}.$file_ext" "$out_dir/${out_file_prefix}.$file_ext"')
 
 
 def map_seq_files(args):
@@ -120,7 +121,30 @@ def map_seq_files(args):
             BAM_INDEX_TEMPLATE
         ],
         params)
-    
+
+    if args.out_file_prefix:
+        to_rename = [
+            "bam",
+            "bam.bai",
+            "bam.md5",
+            "bam.met",
+            "star.Aligned.out.bam",
+            "star.AlignedtoTranscriptome.out.bam",
+            "star.AlignedtoTranscriptome.out.bam.bai"
+        ]
+        for file_ext in to_rename:
+            run_templates_in_shell(
+                [
+                    RENAME_OUTPUT_TEMPLATE
+                ],
+                {
+                    'out_dir': os.path.abspath(args.out_dir),
+                    'sample_name': args.sample_name,
+                    'out_file_prefix': args.out_file_prefix,
+                    'file_ext': file_ext
+                }
+            )
+
     # clean temp dir
     if clean_temp:
         shutil.rmtree(temp_dir)
