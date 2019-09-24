@@ -228,7 +228,7 @@ star_mapping.pl [options] [file(s)...]
     -ds-tag  		-ds 	Study description for the RG BAM header DS tag    
     -machine-type  	-y 	Machine type or sequencing platform for the RG BAM header PL tag
     -npg-run  		-n 	NPG run id which will be used as the first part of the RG BAM header PU tag
-    -lane-pos  		-a 	Sequencing lane - this will be used as the second part 0of the RG BAM header PU tag
+    -lane-pos  		-a 	Sequencing lane - this will be used as the second part of the RG BAM header PU tag
       
   Targeted processing (further detail under OPTIONS):
     -process   		-p   	Only process this step then exit
