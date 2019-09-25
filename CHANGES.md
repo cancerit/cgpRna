@@ -10,7 +10,7 @@
       * `stats`: generates mapping stats using bam_stats and RSeQC.
       * `bigwig`: generates bigwig file using bamToBw.pl
       * `counts`: counts reads using htseq-count.
-* Built a new set of reference files for CLI to use. They're available on a [Sanger FTP](ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/).
+* Built a new set of reference files for CLI to use. They're available on a ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/.
 * Added CWL files:
    * added a workflow to map sample by lanes, generate mapping stats for lanes, merge lane bams, generate bigwig file and count reads.
    * added CWL tools/workflows for the workflow above to use.
