@@ -1,6 +1,6 @@
 # CHANGES
 
-## NEXT
+## 2.4.0
 
 * Revised Dockerfile so that the builder stage is properly used and the image size is reduced. Resolved #28.
 * Added a CLI, so that user can complete a step in RNA-seq data workflow with just one command, which also eases the development of CWL files.
