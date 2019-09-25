@@ -106,7 +106,7 @@ sub setup {
 			'p|process=s' => \$opts{'process'},
 			'i|index=i' => \$opts{'index'},
 			'c|config=s' => \$opts{'config'},
-			'l|lane-id=i' => \$opts{'ID'},
+			'l|lane-id=s' => \$opts{'ID'},
 			'b|library=s' => \$opts{'LB'},
 			'ds|ds-tag=s' => \$opts{'DS'},
 			'y|machine-type=s' => \$opts{'PL'},

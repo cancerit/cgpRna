@@ -9,3 +9,16 @@
 /perl/docs/
 /perl/perltidy.LOG
 /env
+# python code related
+/run-cgprna/env/
+__pycache__/
+/run-cgprna/*.py[cod]
+/run-cgprna/*$py.class
+/run-cgprna/.coverage
+/run-cgprna/.cache
+/run-cgprna/htmlcov/
+/run-cgprna/.eggs
+/run-cgprna/build
+/run-cgprna/dist
+/run-cgprna/run_cgprna.egg-info
+.vscode

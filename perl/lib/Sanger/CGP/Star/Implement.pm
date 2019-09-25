@@ -154,14 +154,18 @@ sub filter_fusions {
 }
 
 sub format_rg_tags {
-  my $options = shift;
+	my $options = shift;
 
-  my $sample = $options->{'sample'};
-  
-  # Format the PU RG tag if the npg_run and lane_pos parameters have been provided
-  $options->{'PU'} = $options->{'npg'}."_".$options->{'lane_pos'} if(defined $options->{'npg'} && $options->{'lane_pos'});
-  
-  # Check the input data
+	my $sample = $options->{'sample'};
+
+	# Format the PU RG tag if the npg_run and lane_pos parameters have been provided
+	if(defined $options->{'npg'} && defined $options->{'lane_pos'}) {
+		$options->{'PU'} = $options->{'npg'}."_".$options->{'lane_pos'};
+	} elsif (defined $options->{'npg'}) { # Use ngp_run alone if lane_pos is not defined, which allows users to set PU tag more easily.
+		$options->{'PU'} = $options->{'npg'};
+	}
+
+	# Check the input data
 	my $input_meta = $options->{'meta_set'};
 	
 	# Get the RG header information to format the @RG line for the mapped BAM

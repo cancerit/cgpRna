@@ -1,5 +1,21 @@
 # CHANGES
 
+## NEXT
+
+* Revised Dockerfile so that the builder stage is properly used and the image size is reduced. Resolved #28.
+* Added a CLI, so that user can complete a step in RNA-seq data workflow with just one command, which also eases the development of CWL files.
+   * CLI is written in Python
+   * currently 4 subcommands are implemented:
+      * `map`: uses star_mapping.pl to map and marks duplicates after mapping.
+      * `stats`: generates mapping stats using bam_stats and RSeQC.
+      * `bigwig`: generates bigwig file using bamToBw.pl
+      * `counts`: counts reads using htseq-count.
+* Built a new set of reference files for CLI to use. They're available on ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/.
+* Added CWL files:
+   * added a workflow to map sample by lanes, generate mapping stats for lanes, merge lane bams, generate bigwig file and count reads.
+   * added CWL tools/workflows for the workflow above to use.
+   * added example JSON for most of the CWL files.
+
 ## 2.3.4
 
 * RG tags are converted to shell safe strings before passing to Star. partially resolve #30.

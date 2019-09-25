@@ -1,0 +1,29 @@
+{
+    "raw_reads": [
+        {
+            "class":"File",
+            "path": "ftp://ngs.sanger.ac.uk/production/cancer/dockstore/cgprna/small_RNAseq/small_RNAseq.bam"
+        }
+    ],
+    "reference": {
+        "class":"File",
+        "path": "ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/GRCh38_full_analysis_set_plus_decoy_hla-ensembl77/cgpRna-mapRefBundle-star2.4.1c-GRCh38_full_analysis_set_plus_decoy_hla-ensembl77.tar.gz"
+    },
+    "sample_name": "a_small_sample",
+    "star_transcriptome_bam":{
+        "class":"File",
+        "path": "/tmp/a_small_sample.star.AlignedtoTranscriptome.bam"
+    },
+    "dup_marked_bam":{
+        "class":"File",
+        "path": "/tmp/a_small_sample.bam"
+    },
+    "dup_marked_bam_dup_met": {
+        "class":"File",
+        "path": "/tmp/a_small_sample.star.aligned.bam.met"
+    },
+    "dup_marked_bam_md5": {
+        "class":"File",
+        "path": "/tmp/a_small_sample.star.aligned.bam.md5"
+    }
+}
