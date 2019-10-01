@@ -151,8 +151,8 @@ def map_seq_files(args):
 
 
 def find(pattern, path):
-    return (
+    return [
         os.path.join(root, name)
         for root, _, files in os.walk(path) if files
         for name in files if fnmatch.fnmatch(name, pattern)
-    )
+    ]
