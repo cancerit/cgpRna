@@ -20,7 +20,7 @@ doc: |
 
 requirements:
   - class: DockerRequirement
-    dockerPull: "quay.io/wtsicgp/cgprna:2.3.4"
+    dockerPull: "quay.io/wtsicgp/cgprna:2.4.0"
   - class: InlineJavascriptRequirement
 
 hints:
