@@ -8,3 +8,6 @@
 /.git
 /perl/docs
 /perl/docs.tar.gz
+/.travis.yml
+/cwls
+/examples

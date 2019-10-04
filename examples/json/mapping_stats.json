@@ -1,0 +1,38 @@
+{
+    "sample_bam": {
+        "class":"File",
+        "path": "ftp://ngs.sanger.ac.uk/production/cancer/dockstore/cgprna/small_RNAseq/small_RNAseq_mapped_dupMarked.bam"
+    },
+    "reference": {
+        "class":"File",
+        "path": "ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/GRCh38_full_analysis_set_plus_decoy_hla-ensembl77/GRCh38_rseqc_ref.tar.gz"
+    },
+    "transcriptome_bam": {
+        "class":"File",
+        "path": "ftp://ngs.sanger.ac.uk/production/cancer/dockstore/cgprna/small_RNAseq/small_RNAseq.star.AlignedtoTranscriptome.out.bam"
+    },
+    "rna_bas": {
+        "class":"File",
+        "path": "/tmp/small_RNAseq.RNA.bas"
+    },
+    "gene_cover_png": {
+        "class":"File",
+        "path": "/tmp/small_RNAseq.geneBodyCoverage.curves.png"
+    },
+    "gene_body_coverage_rscript":{
+        "class":"File",
+        "path": "/tmp/small_RNAseq.geneBodyCoverage.r"
+    },
+    "gene_body_coverage_txt":{
+        "class":"File",
+        "path": "/tmp/small_RNAseq.geneBodyCoverage.txt"
+    },
+    "gene_body_coverage_updated_rscript": {
+        "class":"File",
+        "path": "/tmp/small_RNAseq.geneBodyCoverage_UPDATED.r"
+    },
+    "read_dist": {
+        "class":"File",
+        "path": "/tmp/small_RNAseq.read_dist.txt"
+    }
+}

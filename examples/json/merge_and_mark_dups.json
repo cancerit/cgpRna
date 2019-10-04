@@ -1,0 +1,25 @@
+{
+    "sorted_bams": [
+        {
+            "class":"File",
+            "path": "/home/ubuntu/data/test_cgpRna_cwls/test_bam_map/test_small_bam.bam"
+        },
+        {
+            "class":"File",
+            "path": "/home/ubuntu/data/test_cgpRna_cwls/test_fq_map/test_small_fq.bam"
+        }
+    ],
+    "threads": 8,
+    "dup_marked_merged_bam":{
+        "class":"File",
+        "path": "/tmp/a_small_sample.bam"
+    },
+    "dup_marked_bam_dup_met": {
+        "class":"File",
+        "path": "/tmp/a_small_sample.star.aligned.bam.met"
+    },
+    "dup_marked_bam_md5": {
+        "class":"File",
+        "path": "/tmp/a_small_sample.star.aligned.bam.md5"
+    }
+}

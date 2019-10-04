@@ -39,6 +39,8 @@ echo "Max compilation CPUs set to $CPU"
 SETUP_DIR=$INIT_DIR/install_tmp
 mkdir -p $SETUP_DIR/distro # don't delete the actual distro directory until the very end
 mkdir -p $INST_PATH/bin
+mkdir -p $INST_PATH/R-lib
+mkdir -p $INST_PATH/python-lib
 cd $SETUP_DIR
 
 # make sure tools installed can see the install loc of libraries
@@ -48,6 +50,21 @@ export PATH=`echo $INST_PATH/bin:$PATH | perl -pe 's/:\$//;'`
 export MANPATH=`echo $INST_PATH/man:$INST_PATH/share/man:$MANPATH | perl -pe 's/:\$//;'`
 export PERL5LIB=`echo $INST_PATH/lib/perl5:$PERL5LIB | perl -pe 's/:\$//;'`
 set -u
+
+
+# install R packages
+Rscript -e "install.packages(\"ada\", \"$INST_PATH/R-lib\")"  # required by Defuse
+
+# install python packages
+OPT_BK=$OPT # Somehow OPT affects compilation of numpy
+unset OPT
+pip3 install --install-option="--prefix=$INST_PATH/python-lib" --ignore-installed numpy  # for HTSeq installation.
+# matplotlib is required by HTSeq for plotting. Later version of matplotlib requires python3.6 or above.
+pip3 install --install-option="--prefix=$INST_PATH/python-lib" --ignore-installed \
+  RSeQC=="$VER_RSEQC" \
+  HTSeq=="$VER_HTSEQ" \
+  matplotlib==3.0
+OPT=$OPT_BK
 
 ## vcftools
 if [ ! -e $SETUP_DIR/vcftools.success ]; then
@@ -62,9 +79,6 @@ if [ ! -e $SETUP_DIR/vcftools.success ]; then
   rm -rf distro.* distro/*
   touch $SETUP_DIR/vcftools.success
 fi
-
-# install bedtools so that VAGrENT can be installed properly
-apt-get install -yq --no-install-recommends bedtools=${VER_BEDTOOLS}
 
 ## add File::ShareDir::Install for VAGrENT
 if [ ! -e $SETUP_DIR/File_ShareDir_Install.success ]; then
