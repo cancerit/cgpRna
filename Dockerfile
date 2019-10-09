@@ -78,7 +78,7 @@ ENV LC_ALL en_US.UTF-8
 ENV LANG en_US.UTF-8
 
 # build tools from other repos
-ADD build/opt-build.sh build/
+ADD build build/
 RUN bash build/opt-build.sh $OPT
 
 # build the tools in this repo, separate to reduce build time on errors
