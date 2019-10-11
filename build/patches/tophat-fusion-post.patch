@@ -787,13 +787,8 @@ def filter_fusion(bwt_idx_prefix, params):
                 max_intron_len = min(max_intron_len, abs(coord1 - coord2) * 9 / 10)
 
             same = False
-
-            def split_chr_coord(chr_coord):
-                coord = chr_coord.split(':')[-1]
-                return chr_coord.rstrip(':' + coord), coord
-
             for chr_coord in left_chrs:
-                chr, coord = split_chr_coord(chr_coord)
+                chr, coord = chr_coord.rsplit(':', 1)
                 coord = int(coord)
                 if chr == chr2 and abs(coord - coord2) < max_intron_len:
                     same = True
@@ -803,7 +798,7 @@ def filter_fusion(bwt_idx_prefix, params):
                 continue
             
             for chr_coord in right_chrs:
-                chr, coord = split_chr_coord(chr_coord)
+                chr, coord = chr_coord.rsplit(':', 1)
                 coord = int(coord)
                 if chr == chr1 and abs(coord - coord1) < max_intron_len:
                     same = True
