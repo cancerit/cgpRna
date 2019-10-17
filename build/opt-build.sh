@@ -152,7 +152,7 @@ if [ ! -e $SETUP_DIR/tophat.success ]; then
   rm -f distro/AUTHORS distro/LICENSE distro/README
   cp -r distro/* $INST_PATH/bin/.
   # patch tophat-fusion-post
-  cp $SCRIPT_PATH/patches/tophat-fusion-post.patch $INST_PATH/bin/tophat-fusion-post
+  patch $INST_PATH/bin/tophat-fusion-post $SCRIPT_PATH/patches/tophat-fusion-post.patch
   chmod +x $INST_PATH/bin/tophat-fusion-post
   touch $SETUP_DIR/tophat.success
 fi

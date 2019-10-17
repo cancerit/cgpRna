@@ -47,6 +47,7 @@ pkg-config \
 zlib1g-dev \
 zip \
 unzip \
+patch \
 libpng-dev \
 python3 python3-dev python3-pip python3-setuptools \
 r-base r-base-dev \
