@@ -144,14 +144,17 @@ if [ ! -e $SETUP_DIR/starfusion.success ]; then
   touch $SETUP_DIR/starfusion.success
 fi
 
-# Install tophat	
-if [ ! -e $SETUP_DIR/tophat.success ]; then	
-  curl -sSL --retry 10 https://ccb.jhu.edu/software/tophat/downloads/tophat-${VER_TOPHAT}.Linux_x86_64.tar.gz > distro.tar.gz	
-  rm -rf distro/*	
-  tar --strip-components 1 -C distro -zxf distro.tar.gz	
-  rm -f distro/AUTHORS distro/LICENSE distro/README	
-  cp -r distro/* $INST_PATH/bin/.	
-  touch $SETUP_DIR/tophat.success	
+# Install tophat
+if [ ! -e $SETUP_DIR/tophat.success ]; then
+  curl -sSL --retry 10 https://ccb.jhu.edu/software/tophat/downloads/tophat-${VER_TOPHAT}.Linux_x86_64.tar.gz > distro.tar.gz
+  rm -rf distro/*
+  tar --strip-components 1 -C distro -zxf distro.tar.gz
+  rm -f distro/AUTHORS distro/LICENSE distro/README
+  cp -r distro/* $INST_PATH/bin/.
+  # patch tophat-fusion-post
+  patch $INST_PATH/bin/tophat-fusion-post $SCRIPT_PATH/patches/tophat-fusion-post.patch
+  chmod +x $INST_PATH/bin/tophat-fusion-post
+  touch $SETUP_DIR/tophat.success
 fi
 
 # Install defuse
