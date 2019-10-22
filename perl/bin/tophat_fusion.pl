@@ -114,7 +114,7 @@ sub setup {
 			'sp|species=s' => \$opts{'species'},
 			'l|librarytype=s' => \$opts{'librarytype'},
 			'rb|refbuild=s' => \$opts{'referencebuild'},
-			'gb|genebuild=i' => \$opts{'genebuild'},
+			'gb|genebuild=s' => \$opts{'genebuild'},
 			'b|bowtie=i' => \$opts{'bowtieversion'},
 			'r|refdataloc=s' => \$opts{'refdataloc'},
 			'ri|refindex=s' => \$opts{'referenceindex'},
