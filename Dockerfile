@@ -138,7 +138,7 @@ RUN locale-gen en_US.UTF-8
 RUN update-locale LANG=en_US.UTF-8
 
 ENV OPT /opt/wtsi-cgp
-ENV PATH $OPT/bin:$OPT/biobambam2/bin:$OPT/python-lib/bin/:$PATH
+ENV PATH $OPT/bin:$OPT/biobambam2/bin:$OPT/python-lib/bin:$PATH
 ENV PERL5LIB $OPT/lib/perl5
 ENV R_LIBS $OPT/R-lib
 ENV R_LIBS_USER $R_LIBS
