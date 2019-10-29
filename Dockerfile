@@ -47,6 +47,7 @@ pkg-config \
 zlib1g-dev \
 zip \
 unzip \
+patch \
 libpng-dev \
 python3 python3-dev python3-pip python3-setuptools \
 r-base r-base-dev \
@@ -78,7 +79,7 @@ ENV LC_ALL en_US.UTF-8
 ENV LANG en_US.UTF-8
 
 # build tools from other repos
-ADD build/opt-build.sh build/
+ADD build build/
 RUN bash build/opt-build.sh $OPT
 
 # build the tools in this repo, separate to reduce build time on errors
@@ -90,7 +91,7 @@ FROM ubuntu:16.04
 
 LABEL maintainer="cgphelp@sanger.ac.uk" \
       uk.ac.sanger.cgp="Cancer, Ageing and Somatic Mutation, Wellcome Trust Sanger Institute" \
-      version="2.4.0" \
+      version="2.4.1" \
       description="cgpRna docker"
 
 # Version of tools that are installed in both stages, make sure they are consistent.

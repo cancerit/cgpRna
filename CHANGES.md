@@ -1,5 +1,9 @@
 # CHANGES
 
+## 2.4.1
+
+* added a patched topaht-fusion-post script, in which the contig name bug #37 is fixed
+
 ## 2.4.0
 
 * Revised Dockerfile so that the builder stage is properly used and the image size is reduced. Resolved #28.
