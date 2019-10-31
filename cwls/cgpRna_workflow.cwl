@@ -16,7 +16,7 @@ requirements:
 
 inputs:
   raw_reads:
-    doc: "RAW read input, can be multiple bam files, or several pairs of FastQ files (optionally gzip compressed), but not a mixture of BAM and FastQs. They'll be treated as if they were from the same lane of a sample, i.e. all reads will have the same read group ID in the mapped BAM."
+    doc: "RAW read input, can be BAM files or pairs of FastQ files (optionally gzip compressed). Each element of this array will be treated as one read group in the aligned BAM file. Within each element, only either BAM files or FastQ files are allowed."
     type:
       type: array
       items:
