@@ -1,0 +1,10 @@
+{
+    "in_bam": {
+        "class":"File",
+        "path": "ftp://ngs.sanger.ac.uk/production/cancer/dockstore/cgprna/small_RNAseq/small_RNAseq.bam"
+    },
+    "output_fqs": {
+        "class":"Directory",
+        "path":"/tmp/bamtofastq_matched_output/"
+    }
+}

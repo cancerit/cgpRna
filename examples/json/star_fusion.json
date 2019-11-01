@@ -1,0 +1,18 @@
+{
+    "reads": [
+        {
+            "class":"File",
+            "path": "ftp://ngs.sanger.ac.uk/production/cancer/dockstore/cgprna/small_RNAseq/small_RNAseq.bam"
+        }
+    ],
+    "reference": {
+        "class":"File",
+        "path": "ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/star_GRCh38_full_analysis_set_plus_decoy_hla_ensembl77_ref_bundle.tar.gz"
+    },
+    "sample_name": "a_small_sample",
+    "threads": 8,
+    "output": {
+        "class":"File",
+        "path": "/tmp/star_fusions.filtered.txt"
+    }
+}
