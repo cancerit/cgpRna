@@ -35,10 +35,12 @@ inputs:
     type:
       type: array
       items: File
+      inputBinding:
+        itemSeparator: ' '
     inputBinding:
       prefix: --input
       separate: true
-      itemSeparator: ' '
+
 
   reference:
     type: File
