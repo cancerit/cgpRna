@@ -79,7 +79,7 @@ def map_seq_files(args):
                 print('Make sure a file named: "%s" exists in the gene build folder in the bundle.' % args_dict[arg_name])
 
         # make the folder structure
-        bundle_decompress_path = os.path.join(temp_dir, ref_root_dir_name, args_dict['species'], args_dict['ref_build'], 'star')
+        bundle_decompress_path = os.path.join(temp_dir, ref_root_dir_name, args_dict['species'], args_dict['ref_build'])
         # dump reference bundle
         untar(args.ref, bundle_decompress_path)
 
