@@ -75,7 +75,7 @@ def map_seq_files(args):
                 args_dict[arg_name] = REF_RELATED_DEFAULTS[arg_name]
             if arg_name == 'gene_build':
                 print('Make sure a folder named "%s" exists in the ref bundle.' % args_dict[arg_name])
-            if arg_name == 'gene_build_gtf_name':
+            elif arg_name == 'gene_build_gtf_name':
                 print('Make sure a file named: "%s" exists in the gene build folder in the bundle.' % args_dict[arg_name])
 
         # make the folder structure
