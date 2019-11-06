@@ -4,7 +4,7 @@ class: CommandLineTool
 
 id: "bam-to-fq"
 
-label: "cgpRna convert bam to unzipped fq"
+label: "convert bam to unzipped fq"
 
 cwlVersion: v1.0
 

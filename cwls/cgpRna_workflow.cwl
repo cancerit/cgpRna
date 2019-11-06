@@ -4,7 +4,7 @@ class: Workflow
 
 id: "multi-lane-sample-workflow"
 
-label: "A CGP workflow to generate mapping stats and gene counts from RNA-seq data using tools in cgpRna"
+label: "workflow to generate mapping stats and gene counts"
 
 cwlVersion: v1.0
 

@@ -2,9 +2,9 @@
 
 class: CommandLineTool
 
-id: "run-cgprna_merge-mark-dups"
+id: "merge-mark-dups"
 
-label: "cgpRna merge mark dups"
+label: "merge BAMs and mark dupliates"
 
 cwlVersion: v1.0
 

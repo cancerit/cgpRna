@@ -2,9 +2,9 @@
 
 class: CommandLineTool
 
-id: "run-cgprna_compare-fusions"
+id: "run-cgprna_comp-fusions"
 
-label: "cgpRna compare fusions"
+label: "compare fusions"
 
 cwlVersion: v1.0
 

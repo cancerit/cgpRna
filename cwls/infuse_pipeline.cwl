@@ -4,7 +4,7 @@ class: Workflow
 
 id: "infuse-workflow"
 
-label: "A workflow to detect fusion events using tools in cgpRna"
+label: "workflow to detect fusion events"
 
 cwlVersion: v1.0
 

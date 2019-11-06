@@ -4,7 +4,7 @@ class: Workflow
 
 id: "multi-lane-cgprna-with-infuse-workflow"
 
-label: "A CGP workflow to generate mapping stats, gene counts and fusion events from RNA-seq data using tools in cgpRna"
+label: "workflow to generate mapping stats, counts and fusion events"
 
 cwlVersion: v1.0
 
