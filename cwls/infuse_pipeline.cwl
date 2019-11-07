@@ -2,8 +2,6 @@
 
 class: Workflow
 
-id: "infuse-workflow"
-
 label: "workflow to detect fusion events"
 
 cwlVersion: v1.0
