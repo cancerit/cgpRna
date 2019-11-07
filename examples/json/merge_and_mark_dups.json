@@ -2,11 +2,11 @@
     "sorted_bams": [
         {
             "class":"File",
-            "path": "/home/ubuntu/data/test_cgpRna_cwls/test_bam_map/test_small_bam.bam"
+            "path": "ftp://ngs.sanger.ac.uk/production/cancer/dockstore/cgprna/part_of_EM-2_0.5.bam"
         },
         {
             "class":"File",
-            "path": "/home/ubuntu/data/test_cgpRna_cwls/test_fq_map/test_small_fq.bam"
+            "path": "ftp://ngs.sanger.ac.uk/production/cancer/dockstore/cgprna/small_RNAseq/small_RNAseq_mapped_dupMarked.bam"
         }
     ],
     "threads": 8,

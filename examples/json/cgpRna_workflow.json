@@ -16,20 +16,20 @@
     "pu_tags": ["", "PlatFormUnitB"],
     "map_reference": {
         "class":"File",
-        "path": "ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/star_GRCh38_full_analysis_set_plus_decoy_hla_ensembl77_ref_bundle.tar.gz"
+        "path": "ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/GRCh38_full_analysis_set_plus_decoy_hla-ensembl77/star_GRCh38_full_analysis_set_plus_decoy_hla_ensembl77_ref_bundle.tar.gz"
     },
     "sample_name": "cgpRna_test_RNAseq",
     "stats_reference": {
         "class":"File",
-        "path": "ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/GRCh38_RSeQC_ref.tar.gz"
+        "path": "ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/GRCh38_full_analysis_set_plus_decoy_hla-ensembl77/GRCh38_RSeQC_ref.tar.gz"
     },
     "count_reference": {
         "class":"File",
-        "path": "ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/GRCh38_ensembl77.gtf"
+        "path": "ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/GRCh38_full_analysis_set_plus_decoy_hla-ensembl77/GRCh38_ensembl77.gtf"
     },
     "bigwig_reference": {
         "class":"File",
-        "path": "ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/GRCh38_full_analysis_set_plus_decoy_hla.fa"
+        "path": "ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/GRCh38_full_analysis_set_plus_decoy_hla-ensembl77/GRCh38_full_analysis_set_plus_decoy_hla.fa"
     },
     "map_threads": 8,
     "bigwig_threads": 8,
