@@ -2,7 +2,7 @@
 
 class: Workflow
 
-id: "infuse_workflow"
+id: "infuseasdsada"
 
 label: "workflow to detect fusion events"
 
