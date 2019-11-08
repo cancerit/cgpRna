@@ -32,6 +32,8 @@ cgpRna depends on these Perl packages, so they need to be installed first:
 * [cgpVcf](https://github.com/cancerit/cgpVcf/releases)
 * [Grass](https://github.com/cancerit/grass/releases)
 
+Note: samtools is also a dependency but this is installed by PCAP-Core.
+
 cgpRna uses [RSeQC](http://rseqc.sourceforge.net/#installation) and its prerequisites are:
 
 * gcc
@@ -63,7 +65,6 @@ N.B. the path_to_install_to should be the same as the install location used for 
 * [bedtools](https://github.com/arq5x/bedtools2/) Unless already in the install location bin directory
 * [blastn](http://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&PAGE_TYPE=BlastDocs&DOC_TYPE=Download) Used by tophat-fusion post
 * [HTSeq](https://pypi.python.org/packages/3c/6e/f8dc3500933e036993645c3f854c4351c9028b180c6dcececde944022992/HTSeq-0.6.1p1.tar.gz) used for read counting
-N.B. samtools is also a dependency but this is installed by PCAP-Core which should have already been installed (see above).
 
 If you are planning to use the fusion pipeline, specifically defuse_fusion.pl, the deFuse config.txt
 file will need to be updated with the installed locations of a number of tools.
