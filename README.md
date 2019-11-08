@@ -1,7 +1,5 @@
 # cgpRna
 
-[![Quay Badge][quay-status]][quay-repo]
-
 | Master                                        | Develop                                         |
 | --------------------------------------------- | ----------------------------------------------- |
 | [![Master Badge][travis-master]][travis-base] | [![Develop Badge][travis-develop]][travis-base] |
@@ -9,29 +7,41 @@
 cgpRna provides pipelines, for RNA-Seq data, that implement commonly used mapping
 and analysis programs, such as TopHat and rna-star.
 At the present time (May 2016), only pipelines for mapping (with STAR), lane QC
-and fusion gene detection are included in this codebase but this will be added
-to over time with; differential expression, gene/transcript quantification, splice
-variant analysis and allele specific expression.
+and fusion gene detection are included in this codebase.
+
+## Docker contianer
+
+cgpRna is available as a Docker container on [Quay.io][quay-repo].
+
+[![Quay Badge][quay-status]][quay-repo]
+
+## Workflows on Dockstore
+
+Due to an [issue](https://github.com/dockstore/dockstore/issues/2923) of Dockstore, we have not registered any of the workflows in `cwl` folder, as inputs of two of them are using two-demensional arrays. Once the issue is resolved, we'll test our workflows with the newer release of Dockstore, regiester our workflows and list their registries here.
 
 ## Dependencies and Installation
 
-Please install Perl packages:
+If you want install cgpRna locally, you'll need to follow the instructions below, however, we recommand to use the Docker container.
+
+### Dependencies
+
+cgpRna depends on these Perl packages, so they need to be installed first:
 
 * [PCAP-core](https://github.com/ICGC-TCGA-PanCancer/PCAP-core/releases)
 * [VAGrENT](https://github.com/cancerit/VAGrENT/releases)
 * [cgpVcf](https://github.com/cancerit/cgpVcf/releases)
-* [Grass](https://github.com/cancerit/grass/releases) first.
+* [Grass](https://github.com/cancerit/grass/releases)
 
-Prerequisites for the [RSeQC](http://rseqc.sourceforge.net/#installation) software are:
+cgpRna uses [RSeQC](http://rseqc.sourceforge.net/#installation) and its prerequisites are:
 
 * gcc
-* [python2.7](https://www.python.org/downloads/)
-  * The minimum version the pipeline has been tested with is python-2.7.6
+* [python3](https://www.python.org/downloads/) and pip3 executable.
 * [R](https://www.r-project.org/)
 * [numpy](http://www.numpy.org/)
 
-Once that is done and your $PATH environment variable has been updated so that newly installed
-software can be found, run the following to install cgpRna:
+### Installation
+
+Once dependencies mentioned above are installed, run the following to install cgpRna:
 
 ```
 ./setup.sh path_to_install_to
@@ -63,7 +73,7 @@ the locations and update the file as instructed.
 ## LICENCE
 
 ```
-Copyright (c) 2014-2017 Genome Research Ltd.
+Copyright (c) 2014-2019 Genome Research Ltd.
 
 Author: Cancer Genome Project <cgpit@sanger.ac.uk>
 
