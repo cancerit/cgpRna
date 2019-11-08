@@ -1,6 +1,6 @@
 # CHANGES
 
-# next
+# 2.5.0
 
 * Added run-cgprna subcommands: `tophat-fusion`, `start-fusion` and `defuse` to run infuse pipeline.
 * Re-organized expected file structure in Star reference bundle. Previous Star reference bundle on the FTP server will not work for this version.
