@@ -2,9 +2,9 @@
 
 class: Workflow
 
-id: "multi-lane-sample-workflow"
+id: "multi-lane-cgprna-with-infuse-workflow"
 
-label: "workflow to generate mapping stats and gene counts"
+label: "workflow to generate mapping stats, counts and fusion events"
 
 cwlVersion: v1.0
 
@@ -51,6 +51,22 @@ inputs:
     default: 1
     doc: "Number of threads to use for generating bigwig."
 
+  tophat_fusion_reference:
+    type: File
+    doc: "Tophat fusion reference bundle tar file."
+
+  defuse_reference:
+    type: File
+    doc: "Defuse reference bundle tar file."
+
+  vagrent_cache:
+    type: File
+    doc: "VAGrENT cache file that should be the same reference and gene build as the GTF file."
+    secondaryFiles:
+      - ".tbi"
+      - $(self.basename.replace("cache.gz", "fa"))
+      - $(self.basename.replace("cache.gz", "fa.fai"))
+
   map_threads:
     type: int?
     default: 1
@@ -60,6 +76,21 @@ inputs:
     type: int?
     default: 1
     doc: "Number of threads to use for merging step."
+
+  tophat_threads:
+    type: int?
+    default: 1
+    doc: "Number of threads to use for tophat fusion process."
+
+  star_threads:
+    type: int?
+    default: 1
+    doc: "Number of threads to use for tophat fusion process."
+
+  defuse_threads:
+    type: int?
+    default: 1
+    doc: "Number of threads to use for tophat fusion process."
 
   rg_id_tags:
     type:
@@ -144,6 +175,22 @@ outputs:
     type: File
     outputSource: count/out_count
 
+  tophat_fusions:
+    type: File
+    outputSource: infuse/tophat_fusions
+
+  star_fusions:
+    type: File
+    outputSource: infuse/star_fusions
+
+  defuse_fusions:
+    type: File
+    outputSource: infuse/defuse_fusions
+
+  combined_fusions:
+    type: File
+    outputSource: infuse/combined_fusions
+
 steps:
   map_and_stats:
     in:
@@ -213,8 +260,33 @@ steps:
     out: [out_count]
     run: tools/run-cgprna_htseq-count.cwl
 
+  infuse:
+    in:
+      in_bam:
+        source: merge/dup_marked_merged_bam
+      sample_name:
+        source: sample_name
+      tophat_fusion_reference:
+        source: tophat_fusion_reference
+      star_reference:
+        source: map_reference
+      defuse_reference:
+        source: defuse_reference
+      gtf:
+        source: count_reference
+      vagrent_cache:
+        source: vagrent_cache
+      tophat_threads:
+        source: tophat_threads
+      star_threads:
+        source: star_threads
+      defuse_threads:
+        source: defuse_threads
+    out: [tophat_fusions, star_fusions, defuse_fusions, combined_fusions]
+    run: infuse_pipeline.cwl
+
 doc: |
-  A workflow to generate mapping stats and gene counts from RNA-seq data using cgpRna container. See the [cgpRna](https://github.com/cancerit/cgpRna) website for more information.
+  A workflow to generate mapping stats, gene counts and fusion events from RNA-seq data using cgpRna container. See the [cgpRna](https://github.com/cancerit/cgpRna) website for more information.
 
 $schemas:
   - http://schema.org/docs/schema_org_rdfa.html

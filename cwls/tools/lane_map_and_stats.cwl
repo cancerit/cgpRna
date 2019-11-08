@@ -1,6 +1,10 @@
 class: Workflow
 cwlVersion: v1.0
 
+id: "lane-map-stats"
+
+label: "map raw reads to reference and generate QC stats"
+
 requirements:
   - class: InlineJavascriptRequirement
 

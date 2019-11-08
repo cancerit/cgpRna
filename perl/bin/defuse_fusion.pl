@@ -107,7 +107,7 @@ sub setup {
 			's|sample=s' => \$opts{'sample'},
 			'sp|species=s' => \$opts{'species'},
 			'rb|refbuild=s' => \$opts{'referencebuild'},
-			'gb|genebuild=i' => \$opts{'genebuild'},
+			'gb|genebuild=s' => \$opts{'genebuild'},
 			'r|refdataloc=s' => \$opts{'refdataloc'},
 			'n|normals=s' => \$opts{'normalfusionslist'},
 			'd|defuseconfig=s' => \$opts{'defuseconfig'},

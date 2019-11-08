@@ -2,9 +2,9 @@
 
 class: CommandLineTool
 
-id: "merge-mark-dups"
+id: "run-cgprna_tophat-fusion"
 
-label: "merge BAMs and mark dupliates"
+label: "cgpRna tophat fusion"
 
 cwlVersion: v1.0
 
@@ -21,77 +21,60 @@ doc: |
 requirements:
   - class: DockerRequirement
     dockerPull: "quay.io/wtsicgp/cgprna:2.4.1"
+  - class: InlineJavascriptRequirement
 
 hints:
   - class: ResourceRequirement
     coresMin: 4
-    ramMin: 8000
+    ramMin: 10000
+    outdirMin: 10000
 
 inputs:
-  sorted_bams:
-    doc: "BAM files to be merged."
-    type:
+  reads:
+    doc: "RAW read input, can be bam files and FastQ files (optionally gzip compressed)."
+    type: 
       type: array
       items: File
       inputBinding:
-        prefix: I=
-        separate: false
+        itemSeparator: ' '
+    inputBinding:
+      prefix: --input
+      separate: true
+
+  reference:
+    type: File
+    doc: "The Tophat fusion reference files bundled in a tar.gz."
+    inputBinding:
+      prefix: --reference
+
+  sample_name:
+    type: string
+    doc: "Sample name, which will used to prefix output file names and SM tag in the BAM file header."
+    inputBinding:
+      prefix: --sample-name
+      separate: true
+
+  gene_build:
+    type: string?
+    doc: "gene build folder name, if specified it'll be used to locate the folder within the reference bundle."
+    inputBinding:
+      prefix: --gene-build
+      separate: true
 
   threads:
     type: int?
     doc: "Number of threads to use."
     inputBinding:
-      prefix: markthreads=
-      separate: false
-
-  out_bam_name:
-    type: string?
-    default: 'out_merged.bam'
-    inputBinding:
-      prefix: O=
-      separate: false
-
-  out_bam_index_name:
-    type: string?
-    doc: "if specified, make sure it matches '{out_bam_name}.bai'."
-    default: 'out_merged.bam.bai'
-    inputBinding:
-      prefix: indexfilename=
-      separate: false
-
-  md5_file_name:
-    type: string?
-    default: 'out_merged.bam.md5'
-    inputBinding:
-      prefix: md5filename=
-      separate: false
-
-  dup_met_file_name:
-    type: string?
-    default: 'out_merged.bam.met'
-    inputBinding:
-      prefix: M=
-      separate: false
+      prefix: --threads
+      separate: true
 
 outputs:
-  dup_marked_merged_bam:
+  output:
     type: File
     outputBinding:
-      glob: $(inputs.out_bam_name)
-    secondaryFiles:
-    - .bai
+      glob: $(inputs.sample_name).tophat-fusion.normals.filtered.strand.txt
 
-  dup_marked_bam_dup_met:
-    type: File
-    outputBinding:
-      glob: $(inputs.md5_file_name)
-
-  dup_marked_bam_md5:
-    type: File
-    outputBinding:
-      glob: $(inputs.dup_met_file_name)
-
-baseCommand: ["bammarkduplicates2", "md5=1", "index=1"]
+baseCommand: ["run-cgprna", "tophat-fusion"]
 
 $schemas:
   - http://schema.org/docs/schema_org_rdfa.html

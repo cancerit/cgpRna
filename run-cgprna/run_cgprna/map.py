@@ -3,6 +3,7 @@ import sys
 import re
 import shutil
 import fnmatch
+import copy
 from string import Template
 from . import run_templates_in_shell, untar, mkdir
 
@@ -11,25 +12,20 @@ MARK_DUPS_TEMPLATE = Template('bammarkduplicates2 I=$out_dir/$sample_name.star.A
 BAM_INDEX_TEMPLATE = Template('bamindex < $out_dir/$sample_name.star.AlignedtoTranscriptome.out.bam > $out_dir/$sample_name.star.AlignedtoTranscriptome.out.bam.bai')
 RENAME_OUTPUT_TEMPLATE = Template('mv "$out_dir/${sample_name}.$file_ext" "$out_dir/${out_file_prefix}.$file_ext"')
 
+# only because star_mapping.pl will try to find files in a particular structure
+REF_RELATED_DEFAULTS = {
+    'species': 'unspecified_species',
+    'ref_build': 'unspecified_ref_build',
+    'gene_build': 'ensembl',
+    'gene_build_gtf_name': 'ensembl.gtf'
+}
 
 def map_seq_files(args):
     '''
     Top level entry point for mapping RNA-Seq sequence files.
     '''
-    # keys should be the same as what they have in command_line.py
-    ref_related_args = {
-        '--species': args.species,
-        '--reference-build': args.ref_build,
-        '--gene-build': args.gene_build,
-        '--gene-build-gtf-name': args.gene_build_gtf_name
-    }
-
-    # only because star_mapping.pl will try to find files in a particular structure
-    ref_related_defaults = {
-        '--species': 'unspecified_species',
-        '--reference-build': 'unspecified_ref_build',
-        '--gene-build': 'unspecified_gene_build'
-    }
+    # args to dict to allow updates later
+    args_dict = copy.deepcopy(vars(args))
 
     # only use temp_dir when needed to extract reference files
     temp_dir = os.path.join(os.path.abspath(args.out_dir), 'cgpRna_map_temp')
@@ -52,18 +48,19 @@ def map_seq_files(args):
 
     reference_data_root = os.path.abspath(args.ref)
     # Anything not a file will be treated as a reference root folder
-    if not os.path.isfile(reference_data_root) and any(ele is None for ele in ref_related_args.values()):
-        sys.exit(
-            'Error: missing required input. When "--reference" is not a reference bundle tar file, you have to provide: %s' % ', '.join(
-                [ key for key, value in ref_related_args.items() if value is None])
-        )
-
+    if not os.path.isfile(reference_data_root):
+        if not os.path.exists(reference_data_root):
+            sys.exit('Error: cound not locate directory: %s' % reference_data_root)
+        if any(args_dict[ele] is None for ele in REF_RELATED_DEFAULTS.keys()):
+            sys.exit(
+                'Error: missing required input. When "--reference" is not a reference bundle tar file, you have to provide: %s' % ', '.join(
+                    [ '--' + key.replace('_', '-') for key in REF_RELATED_DEFAULTS.keys() if args_dict[key] is None])
+            )
+    elif not os.path.basename(reference_data_root).endswith('.tar.gz'):
     # check if input ref file has valid file extensions
-    if not os.path.basename(reference_data_root).endswith('.tar.gz'):
         sys.exit('Error: wrong input format. "--reference" can only be a tar.gz file or a folder.')
-
-    # If a pre-built ref bundle tar file is supplied, prepare the reference
-    if re.match(r'.*\.tar\.gz$', os.path.basename(reference_data_root)):
+    else:
+        # If a pre-built ref bundle tar file is supplied, prepare the reference
         mkdir(temp_dir)
         clean_temp = 1
 
@@ -72,34 +69,19 @@ def map_seq_files(args):
         reference_data_root=os.path.join(temp_dir, ref_root_dir_name)
         
         # set ref related values for star_mapping.pl
-        for key,value in ref_related_args.items():
-            # GTF file name will be the same as in the bundle
-            if key!= '--gene-build-gtf-name':
-                if value is None:
-                    ref_related_args[key] = ref_related_defaults[key]
-            else:
-                if value is not None:
-                    print('Warning: provided "--gene-build-gtf-name" will be overwritten by the GTF file name in the reference bundle.')
+        for arg_name in REF_RELATED_DEFAULTS.keys():
+            if args_dict[arg_name] is None:
+                print('Set "%s" to default.' % arg_name)
+                args_dict[arg_name] = REF_RELATED_DEFAULTS[arg_name]
+            if arg_name == 'gene_build':
+                print('Make sure a folder named "%s" exists in the ref bundle.' % args_dict[arg_name])
+            elif arg_name == 'gene_build_gtf_name':
+                print('Make sure a file named: "%s" exists in the gene build folder in the bundle.' % args_dict[arg_name])
 
         # make the folder structure
-        bundle_decompress_path = os.path.join(temp_dir, ref_root_dir_name, ref_related_args['--species'], ref_related_args['--reference-build'], 'star')
-        final_gtf_folder = os.path.join(bundle_decompress_path, ref_related_args['--gene-build'])
-        mkdir(final_gtf_folder)
-
+        bundle_decompress_path = os.path.join(temp_dir, ref_root_dir_name, args_dict['species'], args_dict['ref_build'])
         # dump reference bundle
         untar(args.ref, bundle_decompress_path)
-
-        # find the GTF file
-        gtfs = find('*.gtf', bundle_decompress_path)
-        if len(gtfs) == 1:
-            ref_related_args['--gene-build-gtf-name'] = os.path.basename(gtfs[0])
-            # link the file to final_gtf_folder
-            os.symlink(
-                gtfs[0],
-                os.path.join(final_gtf_folder, ref_related_args['--gene-build-gtf-name'])
-            )
-        else:
-            sys.exit('Error: none or too many GTF files in refence bundle. Found GTF(s): %s' % ','.join(gtfs))
 
     # gathering parameters
     params = {
@@ -108,10 +90,10 @@ def map_seq_files(args):
         'reference_data_root': reference_data_root,
         'other_options': ' '.join(other_options),
         'out_dir': os.path.abspath(args.out_dir),  # overwrite the value in args with absolute path
-        'species': ref_related_args['--species'],  # overwrite the value in args
-        'ref_build': ref_related_args['--reference-build'],  # overwrite the value in args
-        'gene_build': ref_related_args['--gene-build'],  # overwrite the value in args
-        'gene_build_gtf_name': ref_related_args['--gene-build-gtf-name']  # overwrite the value in args
+        'species': args_dict['species'],  # overwrite the value in args
+        'ref_build': args_dict['ref_build'],  # overwrite the value in args
+        'gene_build': args_dict['gene_build'],  # overwrite the value in args
+        'gene_build_gtf_name': args_dict['gene_build_gtf_name']  # overwrite the value in args
     }
 
     run_templates_in_shell(
@@ -148,11 +130,3 @@ def map_seq_files(args):
     # clean temp dir
     if clean_temp:
         shutil.rmtree(temp_dir)
-
-
-def find(pattern, path):
-    return [
-        os.path.join(root, name)
-        for root, _, files in os.walk(path) if files
-        for name in files if fnmatch.fnmatch(name, pattern)
-    ]

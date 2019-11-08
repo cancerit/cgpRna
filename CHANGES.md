@@ -1,5 +1,12 @@
 # CHANGES
 
+# next
+
+* Added run-cgprna subcommands: `tophat-fusion`, `start-fusion` and `defuse` to run infuse pipeline.
+* Re-organized expected file structure in Star reference bundle. Previous Star reference bundle on the FTP server will not work for this version.
+* Added CWL files to run Infuse pipeline in cgpRna and example JSON files for using them with Dockstore.
+* Uploaded new set of reference bundle files for GRCh38 and GRCh37d5 to the FTP server.
+
 ## 2.4.1
 
 * added a patched topaht-fusion-post script, in which the contig name bug #37 is fixed
