@@ -11,7 +11,7 @@
     ],
     "reference": {
         "class":"File",
-        "path": "ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/GRCh38_full_analysis_set_plus_decoy_hla-ensembl77/cgpRna-mapRefBundle-star2.4.1c-GRCh38_full_analysis_set_plus_decoy_hla-ensembl77.tar.gz"
+        "path": "ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/GRCh38_full_analysis_set_plus_decoy_hla-ensembl77/star_GRCh38_full_analysis_set_plus_decoy_hla_ensembl77_ref_bundle.tar.gz"
     },
     "sample_name": "a_small_sample",
     "star_sample_bam": {
