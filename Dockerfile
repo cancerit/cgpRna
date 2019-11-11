@@ -91,7 +91,7 @@ FROM ubuntu:16.04
 
 LABEL maintainer="cgphelp@sanger.ac.uk" \
       uk.ac.sanger.cgp="Cancer, Ageing and Somatic Mutation, Wellcome Trust Sanger Institute" \
-      version="2.4.1" \
+      version="2.5.0" \
       description="cgpRna docker"
 
 # Version of tools that are installed in both stages, make sure they are consistent.
@@ -139,7 +139,7 @@ RUN locale-gen en_US.UTF-8
 RUN update-locale LANG=en_US.UTF-8
 
 ENV OPT /opt/wtsi-cgp
-ENV PATH $OPT/bin:$OPT/biobambam2/bin:$OPT/python-lib/bin/:$PATH
+ENV PATH $OPT/bin:$OPT/biobambam2/bin:$OPT/python-lib/bin:$PATH
 ENV PERL5LIB $OPT/lib/perl5
 ENV R_LIBS $OPT/R-lib
 ENV R_LIBS_USER $R_LIBS

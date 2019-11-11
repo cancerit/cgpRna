@@ -2,9 +2,9 @@
 
 class: CommandLineTool
 
-id: "run-cgprna_stats"
+id: "run-cgprna_tophat-fusion"
 
-label: "cgpRna stats"
+label: "cgpRna tophat fusion"
 
 cwlVersion: v1.0
 
@@ -21,70 +21,60 @@ doc: |
 requirements:
   - class: DockerRequirement
     dockerPull: "quay.io/wtsicgp/cgprna:2.5.0"
+  - class: InlineJavascriptRequirement
 
 hints:
   - class: ResourceRequirement
-    coresMin: 1
-    ramMin: 2000
+    coresMin: 4
+    ramMin: 10000
+    outdirMin: 10000
 
 inputs:
-  sample_bam:
-    type: File
-    doc: "Input BAM file, in which reads are mapped to a reference genome (NOT transcriptome)"
+  reads:
+    doc: "RAW read input, can be bam files and FastQ files (optionally gzip compressed)."
+    type: 
+      type: array
+      items: File
+      inputBinding:
+        itemSeparator: ' '
     inputBinding:
       prefix: --input
       separate: true
-    secondaryFiles:
-    - .bai
 
   reference:
     type: File
-    doc: "The reference files bundled in a tar.gz."
+    doc: "The Tophat fusion reference files bundled in a tar.gz."
     inputBinding:
       prefix: --reference
+
+  sample_name:
+    type: string
+    doc: "Sample name, which will used to prefix output file names and SM tag in the BAM file header."
+    inputBinding:
+      prefix: --sample-name
       separate: true
 
-  transcriptome_bam:
-    type: File
-    doc: "BAM file, in which reads are mapped to a reference transciptome (NOT genome)."
+  gene_build:
+    type: string?
+    doc: "gene build folder name, if specified it'll be used to locate the folder within the reference bundle."
     inputBinding:
-      prefix: --transcriptome-bam
+      prefix: --gene-build
       separate: true
-    secondaryFiles:
-    - .bai
+
+  threads:
+    type: int?
+    doc: "Number of threads to use."
+    inputBinding:
+      prefix: --threads
+      separate: true
 
 outputs:
-  rna_bas:
+  output:
     type: File
     outputBinding:
-      glob: $(inputs.sample_bam.nameroot).RNA.bas
+      glob: $(inputs.sample_name).tophat-fusion.normals.filtered.strand.txt
 
-  gene_cover_png:
-    type: File
-    outputBinding:
-      glob: $(inputs.sample_bam.nameroot).geneBodyCoverage.curves.png
-
-  gene_body_coverage_rscript:
-    type: File
-    outputBinding:
-      glob: $(inputs.sample_bam.nameroot).geneBodyCoverage.r
-
-  gene_body_coverage_txt:
-    type: File
-    outputBinding:
-      glob: $(inputs.sample_bam.nameroot).geneBodyCoverage.txt
-
-  gene_body_coverage_updated_rscript:
-    type: File
-    outputBinding:
-      glob: $(inputs.sample_bam.nameroot).geneBodyCoverage_UPDATED.r
-
-  read_dist:
-    type: File
-    outputBinding:
-      glob: $(inputs.sample_bam.nameroot).read_dist.txt
-
-baseCommand: ["run-cgprna", "stats"]
+baseCommand: ["run-cgprna", "tophat-fusion"]
 
 $schemas:
   - http://schema.org/docs/schema_org_rdfa.html

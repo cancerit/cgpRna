@@ -18,6 +18,18 @@
         "class":"File",
         "path": "ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/GRCh38_full_analysis_set_plus_decoy_hla-ensembl77/star_GRCh38_full_analysis_set_plus_decoy_hla_ensembl77_ref_bundle.tar.gz"
     },
+    "tophat_fusion_reference": {
+        "class":"File",
+        "path": "ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/GRCh38_full_analysis_set_plus_decoy_hla-ensembl77/tophat_GRCh38_full_analysis_set_plus_decoy_hla_ensembl77_ref_bundle.tar.gz"
+    },
+    "defuse_reference": {
+        "class":"File",
+        "path": "ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/GRCh38_full_analysis_set_plus_decoy_hla-ensembl77/defuse_GRCh38_full_analysis_set_plus_decoy_hla_ensembl77_ref_bundle.tar.gz"
+    },
+    "vagrent_cache": {
+        "class":"File",
+        "path": "ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/GRCh38_full_analysis_set_plus_decoy_hla-ensembl77/vagrent_GRCh38_ensembl77.cache.gz"
+    },
     "sample_name": "cgpRna_test_RNAseq",
     "stats_reference": {
         "class":"File",
@@ -31,9 +43,12 @@
         "class":"File",
         "path": "ftp://ftp.sanger.ac.uk/pub/cancer/support-files/cgpRna_container/GRCh38_full_analysis_set_plus_decoy_hla-ensembl77/GRCh38_full_analysis_set_plus_decoy_hla.fa"
     },
-    "map_threads": 8,
-    "bigwig_threads": 8,
-    "merge_threads": 8,
+    "map_threads": 4,
+    "bigwig_threads": 4,
+    "merge_threads": 4,
+    "tophat_threads": 4,
+    "star_threads": 4,
+    "defuse_threads": 8,
     "dup_marked_bam": {
         "class":"File",
         "path": "/tmp/cgpRna_test_RNAseq.bam"
@@ -85,5 +100,21 @@
     "out_count": {
         "class":"File",
         "path": "/tmp/cgpRna_test_RNAseq.htseq_count.txt.gz"
+    },
+    "tophat_fusions": {
+        "class":"File",
+        "path": "/tmp/tophat_fusions.filtered.txt"
+    },
+    "star_fusions": {
+        "class":"File",
+        "path": "/tmp/star_fusions.filtered.txt"
+    },
+    "defuse_fusions": {
+        "class":"File",
+        "path": "/tmp/defuse_fusions.filtered.txt"
+    },
+    "combined_fusions": {
+        "class":"File",
+        "path": "/tmp/infuse_combined_fusions.annnotated.txt"
     }
 }

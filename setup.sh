@@ -39,13 +39,13 @@ SOURCE_BOWTIE2="https://sourceforge.net/projects/bowtie-bio/files/bowtie2/2.2.3/
 VERSION_BOWTIE2="2.2.3"
 SOURCE_TOPHAT="https://github.com/cancerit/tophat/archive/v2.1.0a.tar.gz"
 SOURCE_BLASTN="ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.2.30/ncbi-blast-2.2.30+-x64-linux.tar.gz"
-SOURCE_DEFUSE="https://bitbucket.org/dranew/defuse/get/v0.7.0.tar.gz"
-VERSION_DEFUSE="0.7.0"
+SOURCE_DEFUSE="https://bitbucket.org/dranew/defuse/get/v0.8.2.tar.gz"
+VERSION_DEFUSE="0.8.2"
 SOURCE_GMAP="http://research-pub.gene.com/gmap/src/gmap-gsnap-2015-09-10.tar.gz"
 SOURCE_BLAT="https://hgwdev.gi.ucsc.edu/~kent/src/blatSrc35.zip"
 SOURCE_FATOTWOBIT="http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/faToTwoBit"
 SOURCE_BEDTOOLS="https://github.com/arq5x/bedtools2/releases/download/v2.21.0/bedtools-2.21.0.tar.gz"
-RSEQC_VERSION=2.6.4
+RSEQC_VERSION=3.0.0
 HTSEQ_VERSION=0.7.2
 
 done_message () {
@@ -142,7 +142,7 @@ export PERL5LIB="$PERLROOT"
 
 # Set PYTHONPATH as well so that RSeQC can be installed
 unset PYTHONPATH
-PYTHONROOT=$INST_PATH/lib/python2.7/site-packages
+PYTHONROOT=$INST_PATH/lib/python3/site-packages
 mkdir -p $PYTHONROOT
 export PYTHONPATH="$PYTHONROOT"
 
@@ -417,7 +417,7 @@ if [ -e $SETUP_DIR/rseqc.success ]; then
 else
 (
   cd $SETUP_DIR
-  pip install --prefix $INST_PATH RSeQC==$RSEQC_VERSION
+  pip3 install --prefix $INST_PATH RSeQC==$RSEQC_VERSION
   touch $SETUP_DIR/rseqc.success
   )>>$INIT_DIR/setup.log 2>&1
 fi
@@ -430,7 +430,7 @@ if [ -e $SETUP_DIR/htseq.success ]; then
 else
 (
   cd $SETUP_DIR
-  pip install --prefix $INST_PATH HTSeq==$HTSEQ_VERSION
+  pip3 install --prefix $INST_PATH HTSeq==$HTSEQ_VERSION
   touch $SETUP_DIR/htseq.success
   )>>$INIT_DIR/setup.log 2>&1
 fi

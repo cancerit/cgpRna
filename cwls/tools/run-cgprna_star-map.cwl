@@ -20,7 +20,7 @@ doc: |
 
 requirements:
   - class: DockerRequirement
-    dockerPull: "quay.io/wtsicgp/cgprna:2.4.1"
+    dockerPull: "quay.io/wtsicgp/cgprna:2.5.0"
   - class: InlineJavascriptRequirement
 
 hints:
@@ -35,10 +35,12 @@ inputs:
     type:
       type: array
       items: File
+      inputBinding:
+        itemSeparator: ' '
     inputBinding:
       prefix: --input
       separate: true
-      itemSeparator: ' '
+
 
   reference:
     type: File

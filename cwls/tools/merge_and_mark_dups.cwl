@@ -2,9 +2,9 @@
 
 class: CommandLineTool
 
-id: "run-cgprna_merge-mark-dups"
+id: "merge-mark-dups"
 
-label: "cgpRna merge mark dups"
+label: "merge BAMs and mark dupliates"
 
 cwlVersion: v1.0
 
@@ -20,7 +20,7 @@ doc: |
 
 requirements:
   - class: DockerRequirement
-    dockerPull: "quay.io/wtsicgp/cgprna:2.4.1"
+    dockerPull: "quay.io/wtsicgp/cgprna:2.5.0"
 
 hints:
   - class: ResourceRequirement
