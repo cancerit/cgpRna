@@ -7,9 +7,9 @@
 cgpRna provides pipelines, for RNA-Seq data, that implement commonly used mapping
 and analysis programs, such as TopHat and rna-star.
 At the present time (May 2016), only pipelines for mapping (with STAR), lane QC
-and fusion gene detection are included in this codebase.
+and fusion gene detection is included in this codebase.
 
-## Docker contianer
+## Docker container
 
 cgpRna is available as a Docker container on [Quay.io][quay-repo].
 
@@ -17,11 +17,11 @@ cgpRna is available as a Docker container on [Quay.io][quay-repo].
 
 ## Workflows on Dockstore
 
-Due to an [issue](https://github.com/dockstore/dockstore/issues/2923) of Dockstore, we have not registered any of the workflows in `cwl` folder, as inputs of two of them are using two-demensional arrays. Once the issue is resolved, we'll test our workflows with the newer release of Dockstore, regiester our workflows and list their registries here.
+Due to an [issue](https://github.com/dockstore/dockstore/issues/2923) of Dockstore, we have not registered any of the workflows in `cwl` folder, as inputs of two of them are using two-dimensional arrays. Once the issue is resolved, we'll test our workflows with the newer release of Dockstore, register our workflows and list their registries here.
 
 ## Dependencies and Installation
 
-If you want install cgpRna locally, you'll need to follow the instructions below, however, we recommand to use the Docker container.
+If you want to install cgpRna locally, you'll need to follow the instructions below, however, we recommend to use the Docker container.
 
 ### Dependencies
 
