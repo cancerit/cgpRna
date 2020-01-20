@@ -1,6 +1,6 @@
 package Sanger::CGP::Tophat::Implement;
 ##########LICENCE ##########
-#Copyright (c) 2015 Genome Research Ltd.
+#Copyright (c) 2015-2020 Genome Research Ltd.
 ###
 #Author: Cancer Genome Project <cgpit@sanger.ac.uk>
 ###
@@ -134,34 +134,56 @@ sub check_input {
 	my $refdata = File::Spec->catdir($options->{'refdataloc'},$options->{'species'});
 	my $ens_refdata = File::Spec->catdir($refdata,$options->{'referencebuild'});
 
+	my $thidx_path;
+	if(defined $options->{'thidxpath'} && -e $options->{'thidxpath'}) {
+		$thidx_path = $options->{'thidxpath'};
+	}
+	else {
+		$thidx_path = File::Spec->catfile($ens_refdata,'tophat',$options->{'genebuild'});
+	}
+	my $btidx_path;
+	if(defined $options->{'btidxpath'} && -e $options->{'btidxpath'}) {
+		$btidx_path = $options->{'btidxpath'};
+	}
+	else {
+		$btidx_path = $ens_refdata;
+	}
 	if($options->{'bowtieversion'} == 1){
 		for $suffix(@BOWTIE1_SUFFIXES){
-			PCAP::Cli::file_for_reading('bowtie1-ref-index',File::Spec->catfile($ens_refdata,$ref_prefix.$suffix));
-			PCAP::Cli::file_for_reading('bowtie1-transcriptome-index',File::Spec->catfile($ens_refdata,'tophat',$options->{'genebuild'},$trans_prefix.$suffix));
-			$options->{'referencepath'} = File::Spec->catfile($ens_refdata,$ref_prefix);
-			$options->{'transcriptomepath'} = File::Spec->catfile($ens_refdata,'tophat',$options->{'genebuild'},$trans_prefix);
+			PCAP::Cli::file_for_reading('bowtie1-ref-index',File::Spec->catfile($btidx_path,$ref_prefix.$suffix));
+			PCAP::Cli::file_for_reading('bowtie1-transcriptome-index',File::Spec->catfile($thidx_path,$trans_prefix.$suffix));
+			$options->{'referencepath'} = File::Spec->catfile($thidx_path,$ref_prefix);
+			$options->{'transcriptomepath'} = File::Spec->catfile($thidx_path,$trans_prefix);
 		}
 	}
 	else{
 		for $suffix(@BOWTIE2_SUFFIXES){
 			PCAP::Cli::file_for_reading('bowtie2-ref-index',File::Spec->catfile($ens_refdata,$ref_prefix.$suffix));
-			PCAP::Cli::file_for_reading('bowtie2-transcriptome-index',File::Spec->catfile($ens_refdata,'tophat',$options->{'genebuild'},$trans_prefix.$suffix));
-			$options->{'referencepath'} = File::Spec->catfile($ens_refdata,$ref_prefix);
-			$options->{'transcriptomepath'} = File::Spec->catfile($ens_refdata,'tophat',$options->{'genebuild'},$trans_prefix);
+			PCAP::Cli::file_for_reading('bowtie2-transcriptome-index',File::Spec->catfile($thidx_path,$trans_prefix.$suffix));
+			$options->{'referencepath'} = File::Spec->catfile($thidx_path,$ref_prefix);
+			$options->{'transcriptomepath'} = File::Spec->catfile($thidx_path,$trans_prefix);
 		}
 	}
 
 	# Check the TopHat Fusion Post files exist
 	my $ucsc_prefix = $options->{'tophatpostindex'};
 	for $suffix(@BOWTIE1_SUFFIXES){
-		PCAP::Cli::file_for_reading('bowtie1-tophatpost-index',File::Spec->catfile($ens_refdata,'tophat',$ucsc_prefix.$suffix));
+		PCAP::Cli::file_for_reading('bowtie1-tophatpost-index',File::Spec->catfile($thidx_path,$ucsc_prefix.$suffix));
 	}
-	$options->{'tophatpostpath'} = File::Spec->catfile($ens_refdata,'tophat',$ucsc_prefix);
-	PCAP::Cli::file_for_reading('refGene',File::Spec->catfile($ens_refdata,'tophat',$options->{'refgene'}));
-	PCAP::Cli::file_for_reading('ensGene',File::Spec->catfile($ens_refdata,'tophat',$options->{'genebuild'},$options->{'ensgene'}));
+	$options->{'tophatpostpath'} = File::Spec->catfile($thidx_path,$ucsc_prefix);
+	PCAP::Cli::file_for_reading('refGene',File::Spec->catfile($thidx_path,$options->{'refgene'}));
+	PCAP::Cli::file_for_reading('ensGene',File::Spec->catfile($thidx_path,$options->{'ensgene'}));
 
 	# Check the normal fusions file exists for the filtering step
-	PCAP::Cli::file_for_reading('normals-list',File::Spec->catfile($ens_refdata,'cgpRna',$options->{'normalfusionslist'}));
+	my $normalfusionslist;
+	if(defined $options->{'normalfusionslist'} && -e $options->{'normalfusionslist'}) {
+		$normalfusionslist = $options->{'normalfusionslist'};
+	}
+	else {
+		$normalfusionslist = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'cgpRna',$options->{'normalfusionslist'});
+	}
+	PCAP::Cli::file_for_reading('normals-list',$normalfusionslist);
+	$options->{'normalfusionslist'} = $normalfusionslist;
 
 	$options->{'meta_set'} = PCAP::Bwa::Meta::files_to_meta($options->{'tmp'}, $options->{'raw_files'}, $options->{'sample'});
 
@@ -236,7 +258,7 @@ sub filter_fusions {
 		system("echo '##EOF##' > $fusions_file") && die "An error occurred: $!";
 	}
 
-	my $normals_file = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'cgpRna',$options->{'normalfusionslist'});
+	my $normals_file = $options->{'normalfusionslist'};
 
 	my $command = "$^X ";
 	$command .= _which('filter_fusions.pl');

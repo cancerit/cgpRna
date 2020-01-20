@@ -58,3 +58,4 @@ make install
 sed -i -e "/defuseversion/c defuseversion=$VER_DEFUSE" $INIT_DIR/perl/config/defuse.ini
 mkdir -p $INST_PATH/config
 cp $INIT_DIR/perl/config/*.ini $INST_PATH/config/
+chmod ugo+r $INST_PATH/config/*.ini

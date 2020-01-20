@@ -1,6 +1,6 @@
 package Sanger::CGP::Defuse::Implement;
 ##########LICENCE ##########
-#Copyright (c) 2015 Genome Research Ltd.
+#Copyright (c) 2015-2020 Genome Research Ltd.
 ###
 #Author: Cancer Genome Project <cgpit@sanger.ac.uk>
 ###
@@ -58,7 +58,7 @@ const my $DEFUSE_MAX_CORES => 16;
 
 sub check_input {
 	my $options = shift;
-	
+
 	my $ref_data = $options->{'refdataloc'};
 	my $species = $options->{'species'};
 	my $ref_build = $options->{'referencebuild'};
@@ -66,30 +66,46 @@ sub check_input {
 	my $ref_build_loc = File::Spec->catdir($ref_data, $species, $ref_build);
 
 	# Check the normal fusions file exists for the filtering step
-	PCAP::Cli::file_for_reading('normals-list',File::Spec->catfile($ref_build_loc,'cgpRna',$options->{'normalfusionslist'}));
-	
+	my $normalfusionslist;
+	if(defined $options->{'normalfusionslist'} && -e $options->{'normalfusionslist'}) {
+		$normalfusionslist = $options->{'normalfusionslist'};
+	}
+	else {
+		$normalfusionslist = File::Spec->catfile($ref_build_loc,'cgpRna',$options->{'normalfusionslist'});
+	}
+	PCAP::Cli::file_for_reading('normals-list',$normalfusionslist);
+	$options->{'normalfusionslist'} = $normalfusionslist;
+
 	# Check the defuse config file exists for the ref-gene build
-	PCAP::Cli::file_for_reading('defuse-config',File::Spec->catfile($ref_build_loc,'defuse',$gene_build,$options->{'defuseconfig'}));
-	
-	$options->{'meta_set'} = PCAP::Bwa::Meta::files_to_meta($options->{'tmp'}, $options->{'raw_files'}, $options->{'sample'});	
-	
+	my $defuseconfig;
+	if(defined $options->{'defuseconfig'} && -e $options->{'defuseconfig'}) {
+		$defuseconfig = $options->{'defuseconfig'};
+	}
+	else {
+		$defuseconfig = File::Spec->catfile($ref_build_loc,'defuse',$gene_build,$options->{'defuseconfig'});
+	}
+	PCAP::Cli::file_for_reading('defuse-config', $defuseconfig);
+	$options->{'defuseconfig'} = $defuseconfig;
+
+	$options->{'meta_set'} = PCAP::Bwa::Meta::files_to_meta($options->{'tmp'}, $options->{'raw_files'}, $options->{'sample'});
+
 	# Check the input data type
 	my $input_meta = $options->{'meta_set'};
 	my $input = @{$input_meta}[0];
-	
+
 	# If an interleaved fastq has been entered, stop the script as this is not valid input for deFuse which only takes paired fastq files
 	die "Interleaved or single-end fastqs are not valid for deFuse, please re-try with BAM or paired fastq input" if($input->fastq && !$input->paired_fq);
-		
+
 	# If the input includes BAM files update flag in options to trigger the bamtofastq subroutine
 	$options->{'bam'} = 1 unless($input->fastq);
 	$options->{'max_split'} = scalar @{$options->{'meta_set'}};
-		
+
 	return 1;
 }
 
 sub compress_sam {
 	my $options = shift;
-	
+
 	my $tmp = $options->{'tmp'};
 	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
 
@@ -97,29 +113,29 @@ sub compress_sam {
 	my $defuse_outdir = File::Spec->catdir($options->{'tmp'}, "defuse_$sample");
 	my $in_sam = File::Spec->catfile($defuse_outdir, 'cdna.pair.sam');
 	my $sam_gz = File::Spec->catfile($options->{'outdir'}, $sample.'.defuse.cdna.pair.sam.gz');
-	
+
 	my $command = _which('gzip');
 	$command .= sprintf ' -c %s > %s', $in_sam, $sam_gz;
-	
+
 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
-	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);	
+	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
 	return 1;
 }
 
 sub defuse {
 	my $options = shift;
-	
+
 	my $tmp = $options->{'tmp'};
 	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
-	
+
 	my $threads = $DEFUSE_MAX_CORES;
 	$threads = $options->{'threads'} if($options->{'threads'} < $DEFUSE_MAX_CORES);
 	my $sample = $options->{'sample'};
-	
+
 	my $outdir = File::Spec->catdir($tmp, "defuse_$sample");
 	my $fastq1;
 	my $fastq2;
-	
+
 	# If the input was BAM or multiple files then the paired fastqs will reside in the /tmp/input folder, otherwise grab the pair from the raw_files array on the options hash
 	if($options->{'bam'} || $options->{'max_split'} > 1){
 		my $inputdir = File::Spec->catdir($tmp,'input');
@@ -132,13 +148,13 @@ sub defuse {
 				}
 				else{
 					$fastq1 = File::Spec->catfile($inputdir, $file) if($file =~ m/_1.fastq$/);
-					$fastq2 = File::Spec->catfile($inputdir, $file) if($file =~ m/_2.fastq$/);					
+					$fastq2 = File::Spec->catfile($inputdir, $file) if($file =~ m/_2.fastq$/);
 				}
 			}
 			else{
 				$fastq1 = File::Spec->catfile($inputdir, $file) if($file =~ m/^$sample.*_1.fastq$/);
 				$fastq2 = File::Spec->catfile($inputdir, $file) if($file =~ m/^$sample.*_2.fastq$/);
-				
+
 			}
 		}
 		closedir($dh);
@@ -150,7 +166,7 @@ sub defuse {
 		$fastq1 = $sorted_files[0];
 		$fastq2 = $sorted_files[1];
 	}
-	
+
 	if($fastq1 =~ m/.gz$/ ){
 		# Check the input directory to see if the decompressed fastq files are present
 		my $inputdir = File::Spec->catdir($tmp,'input');
@@ -164,17 +180,22 @@ sub defuse {
 	}
 
 	# Get the defuse config file for the reference and gene builds, update and write to tmp folder
-	my $defuse_config = File::Spec->catfile($options->{'tmp'}, $options->{'defuseconfig'} );
+	my $defuse_config = File::Spec->catfile($options->{'tmp'}, 'defuse-config.txt' );
 
-	my $defuse_ref_config = File::Spec->catfile($options->{'refdataloc'}, $options->{'species'}, $options->{'referencebuild'},'defuse',$options->{'genebuild'}, $options->{'defuseconfig'} );
-	
+	my $defuse_ref_config = $options->{'defuseconfig'};
+
 	my $update_configs = {};
 	if ($options->{'updateconfig'}) {
 		$update_configs = _read_in_defuse_config($options->{'updateconfig'});
 	}
 	# dataset_directory should always be updated
 	if (! exists $update_configs->{ 'dataset_directory' }) {
-		$update_configs->{ 'dataset_directory' } = File::Spec->catfile($options->{'refdataloc'}, $options->{'species'}, $options->{'referencebuild'},'defuse',$options->{'genebuild'}, 'defuse-index');
+		if(defined $options->{'defuseidx'} && -e $options->{'defuseidx'}) {
+			$update_configs->{ 'dataset_directory' } = $options->{'defuseidx'};
+		}
+		else {
+			$update_configs->{ 'dataset_directory' } = File::Spec->catfile($options->{'refdataloc'}, $options->{'species'}, $options->{'referencebuild'},'defuse',$options->{'genebuild'}, 'defuse-index');
+		}
 	}
 
 	open(my $original_config, $defuse_ref_config) or die "Unable to open file: $!\n";
@@ -195,7 +216,7 @@ sub defuse {
 	if(! defined $defuse || $defuse eq ''){
 	  $defuse = _which('defuse.pl');
 	}
-	
+
 	my $command = "$^X ";
 	$command .= sprintf $DEFUSE,	$defuse,
 					$defuse_config,
@@ -206,26 +227,26 @@ sub defuse {
 					$outdir,
 					$fastq1,
 					$fastq2;
-																	
+
 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, 0);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
-	
+
 	return 1;
 }
 
 sub filter_fusions {
 	my $options = shift;
-	
+
 	my $tmp = $options->{'tmp'};
 	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
-	
+
 	my $sample = $options->{'sample'};
 	my $defuse_outdir = File::Spec->catdir($options->{'tmp'}, "defuse_$sample");
 	my $fusions_file = File::Spec->catfile($defuse_outdir, 'results.filtered.tsv');
 	die "Please run the defuse step prior to filter\n" unless(-d $defuse_outdir);
 	die "One of the deFuse output files is missing, please run the defuse step prior to filter.\n" unless(-e $fusions_file && -e File::Spec->catfile($defuse_outdir, 'cdna.pair.sam'));
 
-	my $normals_file = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'cgpRna',$options->{'normalfusionslist'});
+	my $normals_file = $options->{'normalfusionslist'};
 
 	my $command = "$^X ";
 	$command .= _which('filter_fusions.pl');
@@ -244,13 +265,13 @@ sub merge {
 
 	my $tmp = $options->{'tmp'};
 	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), 0);
-	
+
 	my $inputdir = File::Spec->catdir($tmp, 'input');
 	my $sample = $options->{'sample'};
 	my @files1;
 	my @files2;
 	my @commands;
-	
+
 	# If the input is BAM then all input fastqs will reside in the ../tmp/input directory so can search for _1 and _2 to find the files to merge
 	if($options->{'bam'}){
  		opendir(my $dh, $inputdir);
@@ -259,13 +280,13 @@ sub merge {
 			push @files2, File::Spec->catfile($inputdir, $file) if($file =~ m/_2.f/);
 		}
 		closedir($dh);
-		
+
 		if(@files1){
 			my $infiles1 = join(' ', sort @files1);
 			my $infiles2 = join(' ', sort @files2);
 			my $outfile1 = File::Spec->catfile($inputdir,$sample."_1.fastq");
 			my $outfile2 = File::Spec->catfile($inputdir,$sample."_2.fastq");
-		
+
 			push @commands, "cat $infiles1 > $outfile1";
 			push @commands, "cat $infiles2 > $outfile2";
 		}
@@ -277,28 +298,28 @@ sub merge {
 	else {
 
 		my $raw_files = $options->{'raw_files'};
-		
+
 		for my $file(@{$raw_files}) {
 			push @files1, $file if($file =~ m/_1.f.*q$/);
 			push @files2, $file if($file =~ m/_2.f.*q$/);
 		}
-		
+
 		opendir(my $dh, $inputdir);
 		while(my $file = readdir $dh) {
 			push @files1, File::Spec->catfile($inputdir, $file) if($file =~ m/_1.f.*q$/);
 			push @files2, File::Spec->catfile($inputdir, $file) if($file =~ m/_2.f.*q$/);
 		}
 		closedir($dh);
-			
+
 		my $infiles1 = join(' ', sort @files1);
 		my $infiles2 = join(' ', sort @files2);
 		my $outfile1 = File::Spec->catfile($inputdir,$sample."_1.fastq");
 		my $outfile2 = File::Spec->catfile($inputdir,$sample."_2.fastq");
-			
+
 		push @commands, "cat $infiles1 > $outfile1";
 		push @commands, "cat $infiles2 > $outfile2";
 	}
-	
+
 	PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), \@commands, 0);
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), 0);
 
@@ -312,7 +333,7 @@ sub prepare {
 
 	my $tmp = $options->{'tmp'};
 	return 1 if PCAP::Threaded::success_exists(File::Spec->catdir($tmp, 'progress'), $index);
-	
+
 	my $input_meta = $options->{'meta_set'};
 	my $iter = 1;
 	for my $input(@{$input_meta}) {
@@ -325,15 +346,15 @@ sub prepare {
 				my $suffix = $input->fastq;
 				$suffix =~ s/.gz//;
 				my $outfile = File::Spec->catfile($inputdir,$filename);
-					 
+
 				my $infile1 = $input->in."_1.".$input->fastq;
 				my $infile2 = $input->in."_2.".$input->fastq;
 				my $outfile1 = $outfile."_1";
 				my $outfile2 = $outfile."_2";
-					 
+
 				system([0,2], "(gunzip -c $infile1 > $outfile1.$suffix) >& /dev/null") unless(-e "$outfile1.$suffix");
 				system([0,2], "(gunzip -c $infile2 > $outfile2.$suffix) >& /dev/null") unless(-e "$outfile2.$suffix");
-						
+
 			}
 		}
 		else{
@@ -348,13 +369,13 @@ sub prepare {
 							File::Spec->catfile($inputdir, $sample.'.'.$rg.'_1.fastq'),
 							File::Spec->catfile($inputdir, $sample.'.'.$rg.'_2.fastq'),
 							$input->in;
-																	
+
 			PCAP::Threaded::external_process_handler(File::Spec->catdir($tmp, 'logs'), $command, $index);
 		}
 	}
-	
+
 	PCAP::Threaded::touch_success(File::Spec->catdir($tmp, 'progress'), $index);
-	
+
 	return 1;
 }
 

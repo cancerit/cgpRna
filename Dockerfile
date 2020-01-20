@@ -49,7 +49,7 @@ zip \
 unzip \
 patch \
 libpng-dev \
-python3 python3-dev python3-pip python3-setuptools \
+python3 python3-dev python3-pip python3-setuptools python3-wheel \
 r-base r-base-dev \
 libcurl4-gnutls-dev zlib1g-dev \
 bedtools=${VER_BEDTOOLS} \
@@ -68,12 +68,15 @@ RUN apt-get install -yq --no-install-recommends liblzo2-dev
 RUN locale-gen en_US.UTF-8
 RUN update-locale LANG=en_US.UTF-8
 
+RUN pip3 install --upgrade pip
+
 ENV OPT /opt/wtsi-cgp
-ENV PATH $OPT/bin:$OPT/biobambam2/bin:$PATH
 ENV PERL5LIB $OPT/lib/perl5
 ENV R_LIBS $OPT/R-lib
 ENV R_LIBS_USER $R_LIBS
-ENV PYTHONPATH $OPT/python-lib/lib/python3.5/site-packages
+ENV PYTHONPATH $OPT/usr/local/lib/python3.5/dist-packages
+ENV PYTHONBIN $OPT/usr/local/bin
+ENV PATH $PYTHONBIN:$OPT/bin:$OPT/biobambam2/bin:$PATH
 ENV LD_LIBRARY_PATH $OPT/lib
 ENV LC_ALL en_US.UTF-8
 ENV LANG en_US.UTF-8
@@ -85,6 +88,7 @@ RUN bash build/opt-build.sh $OPT
 # build the tools in this repo, separate to reduce build time on errors
 COPY . .
 RUN bash build/opt-build-local.sh $OPT
+RUN pip3 install --upgrade --ignore-installed --root=$OPT ./run-cgprna
 RUN bash build/config-defuse.sh $OPT
 
 FROM ubuntu:16.04
@@ -139,20 +143,18 @@ RUN locale-gen en_US.UTF-8
 RUN update-locale LANG=en_US.UTF-8
 
 ENV OPT /opt/wtsi-cgp
-ENV PATH $OPT/bin:$OPT/biobambam2/bin:$OPT/python-lib/bin:$PATH
 ENV PERL5LIB $OPT/lib/perl5
 ENV R_LIBS $OPT/R-lib
 ENV R_LIBS_USER $R_LIBS
-ENV PYTHONPATH $OPT/python-lib/lib/python3.5/site-packages
+ENV PYTHONBIN $OPT/usr/local/bin
+ENV PYTHONPATH $OPT/usr/local/lib/python3.5/dist-packages
+ENV PATH $PYTHONBIN:$OPT/bin:$OPT/biobambam2/bin:$PATH
 ENV LD_LIBRARY_PATH $OPT/lib
 ENV LC_ALL en_US.UTF-8
 ENV LANG en_US.UTF-8
 
 RUN mkdir -p $OPT
 COPY --from=builder $OPT $OPT
-
-COPY run-cgprna $OPT/cgprna
-RUN cd $OPT/cgprna && python3 setup.py develop
 
 ## USER CONFIGURATION
 RUN adduser --disabled-password --gecos '' ubuntu && chsh -s /bin/bash && mkdir -p /home/ubuntu

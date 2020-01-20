@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 ##########LICENCE ##########
-#Copyright (c) 2015 Genome Research Ltd.
+#Copyright (c) 2015-2020 Genome Research Ltd.
 ###
 #Author: Cancer Genome Project <cgpit@sanger.ac.uk>
 ###
@@ -68,10 +68,10 @@ const my $SPAN_COVERAGE_MIN_VAL => 0.6; # span_coverage_min - > 0.6
   my $sample = $options->{'sample'};
   my $outdir = $options->{'outdir'};
   my $output = File::Spec->catfile($outdir, "$sample.defuse-fusion.normals.ext.filtered.txt");
-  
+
   open (my $ifh, $input) or die "Could not open file '$input' $!";
 	open(my $ofh, '>', $output) or die "Could not open file '$output' $!";
-  
+
   while (<$ifh>) {
 		chomp;
 		my $line = $_;
@@ -80,16 +80,16 @@ const my $SPAN_COVERAGE_MIN_VAL => 0.6; # span_coverage_min - > 0.6
 		}
 		else{
 		  my @fields = split $DEFUSE_SPLIT_CHAR, $line;
-		  if($fields[$SPLITR_MIN_PVAL_COL-1] > $SPLITR_MIN_PVAL_VAL && $fields[$BREAKSEQS_ESTISLANDS_PERCIDENT_COL-1] < $BREAKSEQS_ESTISLANDS_PERCIDENT_VAL && 
-		     $fields[$CDNA_BREAKSEQS_PERCIDENT_COL-1] < $CDNA_BREAKSEQS_PERCIDENT_VAL && $fields[$EST_BREAKSEQS_PERCIDENT_COL-1] < $EST_BREAKSEQS_PERCIDENT_VAL && 
+		  if($fields[$SPLITR_MIN_PVAL_COL-1] > $SPLITR_MIN_PVAL_VAL && $fields[$BREAKSEQS_ESTISLANDS_PERCIDENT_COL-1] < $BREAKSEQS_ESTISLANDS_PERCIDENT_VAL &&
+		     $fields[$CDNA_BREAKSEQS_PERCIDENT_COL-1] < $CDNA_BREAKSEQS_PERCIDENT_VAL && $fields[$EST_BREAKSEQS_PERCIDENT_COL-1] < $EST_BREAKSEQS_PERCIDENT_VAL &&
 		     $fields[$GENOME_BREAKSEQS_PERCIDENT_COL-1] < $GENOME_BREAKSEQS_PERCIDENT_VAL && $fields[$SPAN_COVERAGE_MIN_COL-1] > $SPAN_COVERAGE_MIN_VAL) {
-		   
-		    print $ofh $line."\t1\n";		     
+
+		    print $ofh $line."\t1\n";
 		  }
 		  else{
 		    print $ofh $line."\t0\n";
 		  }
-		} 
+		}
   }
   close($ifh);
   close($ofh);
@@ -100,22 +100,22 @@ sub setup {
 	my %opts;
 	pod2usage(-msg => "\nERROR: Options must be defined.\n", -verbose => 1, -output => \*STDERR) if(scalar @ARGV == 0);
 	$opts{'cmd'} = join " ", $0, @ARGV;
-	
+
 	GetOptions( 	'h|help' => \$opts{'h'},
 			'm|man' => \$opts{'m'},
 			'i|input=s' => \$opts{'input'},
 			'o|outdir=s' => \$opts{'outdir'},
-			's|sample=s' => \$opts{'sample'},			
+			's|sample=s' => \$opts{'sample'},
 	) or pod2usage(2);
 
 	pod2usage(-verbose => 1) if(defined $opts{'h'});
 	pod2usage(-verbose => 2) if(defined $opts{'m'});
-	
+
 	PCAP::Cli::file_for_reading('input', $opts{'input'});
-		
+
 	# Check the output directory exists and is writeable, create if not
 	PCAP::Cli::out_dir_check('outdir', $opts{'outdir'});
-	
+
 	return \%opts;
 }
 
@@ -123,7 +123,7 @@ __END__
 
 =head1 defuse_fusions.pl
 
-Adds a flag (called cgp_defuse_filter) to the raw defuse data based on validation carried out by Graham Bignell on the CTTV RNA-Seq cell lines data set. 
+Adds a flag (called cgp_defuse_filter) to the raw defuse data based on validation carried out by Graham Bignell on the CTTV RNA-Seq cell lines data set.
 The flag can be used to filter the data in downstream analysis with the aim of reducing the number of false positive fusions called. Details of the filter thresholds can be found in the constants section at the top of the script.
 
 =head1 SYNOPSIS

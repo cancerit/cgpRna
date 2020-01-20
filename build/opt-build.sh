@@ -58,9 +58,8 @@ Rscript -e "install.packages(\"ada\", \"$INST_PATH/R-lib\")"  # required by Defu
 # install python packages
 OPT_BK=$OPT # Somehow OPT affects compilation of numpy
 unset OPT
-pip3 install --install-option="--prefix=$INST_PATH/python-lib" --ignore-installed numpy  # for HTSeq installation.
-# matplotlib is required by HTSeq for plotting. Later version of matplotlib requires python3.6 or above.
-pip3 install --install-option="--prefix=$INST_PATH/python-lib" --ignore-installed \
+pip3 install --upgrade --ignore-installed --root=$INST_PATH numpy
+pip3 install --upgrade --ignore-installed --root=$INST_PATH \
   RSeQC=="$VER_RSEQC" \
   HTSeq=="$VER_HTSEQ" \
   matplotlib==3.0
@@ -195,7 +194,7 @@ if [ ! -e $SETUP_DIR/blat.success ]; then
 	export BINDIR=$SETUP_DIR/blat/bin
   # Blat does not recognise the startand MACHTYPE in system, so have to save it and use a shorter version of it instead
   MACHTYPE_BK=$MACHTYPE
-  export MACHTYPE=x86_64 
+  export MACHTYPE=x86_64
   mkdir -p $BINDIR
   make -j$CPU
   cp $BINDIR/blat $INST_PATH/bin/

@@ -1,8 +1,8 @@
 #!/usr/bin/perl
 ##########LICENCE ##########
-#Copyright (c) 2015 Genome Research Ltd.
+#Copyright (c) 2015-2020 Genome Research Ltd.
 ###
-#Author: Cancer Genome Project <cgpit@sanger.ac.uk>
+#Author: Cancer Ageing and Somatic Mutation <cgphelp@sanger.ac.uk>
 ###
 #This file is part of cgpRna.
 ###
@@ -62,7 +62,7 @@ const my %INDEX_FACTOR => (	'prepare' => -1,
 
 {
 	my $options = setup();
-	
+
 	if(!exists $options->{'process'} || $options->{'process'} eq 'prepare'){
 		# Process the input files.
 		my $threads = PCAP::Threaded->new($options->{'threads'});
@@ -91,7 +91,7 @@ sub setup {
 	my %opts;
 	pod2usage(-msg => "\nERROR: Options must be defined.\n", -verbose => 1, -output => \*STDERR) if(scalar @ARGV == 0);
 	$opts{'cmd'} = join " ", $0, @ARGV;
-	
+
 	GetOptions( 	'h|help' => \$opts{'h'},
 			'm|man' => \$opts{'m'},
 			'v|version' => \$opts{'version'},
@@ -112,7 +112,8 @@ sub setup {
 			'y|machine-type=s' => \$opts{'PL'},
 			'n|npg-run=s' => \$opts{'npg'},
       'a|lane-pos=i' => \$opts{'lane_pos'},
-			
+			'si|staridx=s' => \$opts{'staridx'},
+
 	) or pod2usage(1);
 
 	pod2usage(-verbose => 1) if(defined $opts{'h'});
@@ -123,7 +124,7 @@ sub setup {
 	die "No config file has been specified." if($ini_file eq '');
 	my $cfg = new Config::IniFiles( -file => $ini_file ) or die "Could not open config file: $ini_file";
 	$opts{'config'} = $ini_file;
-	
+
 	# Populate the options hash with values from the config file
 	$opts{'refdataloc'} = $cfg->val('star-config','referenceloc') unless(defined $opts{'refdataloc'});
 	$opts{'referencebuild'} = $cfg->val('star-config','referencebuild') unless(defined $opts{'referencebuild'});
@@ -139,14 +140,14 @@ sub setup {
 		print "Star version: $star_version\n";
 		exit 0;
 	}
-		
+
 	for(@REQUIRED_PARAMS) {
 		pod2usage(-msg => "\nERROR: $_ is a required argument.\n", -verbose => 1, -output => \*STDERR) unless(defined $opts{$_});
 	}
-	
+
 	# Check the output directory exists and is writeable, create if not
 	PCAP::Cli::out_dir_check('outdir', $opts{'outdir'});
-	
+
 	my $tmpdir = File::Spec->catdir($opts{'outdir'}, 'tmpStar');
 	make_path($tmpdir) unless(-d $tmpdir);
 	$opts{'tmp'} = $tmpdir;
@@ -158,7 +159,7 @@ sub setup {
 	make_path($inputdir) unless(-d $inputdir);
 	my $stardir = File::Spec->catdir($tmpdir, 'star');
 	make_path($stardir) unless(-d $stardir);
-	
+
 	# Check the input is fastq (paired only) or BAM and that a mixture of these file types hasn't been entered
 	$opts{'raw_files'} = \@ARGV;
 	Sanger::CGP::Star::Implement::check_input(\%opts);
@@ -172,16 +173,17 @@ sub setup {
 	delete $opts{'PL'} unless(defined $opts{'PL'});
 	delete $opts{'npg'} unless(defined $opts{'npg'});
 	delete $opts{'lane_pos'} unless(defined $opts{'lane_pos'});
+	delete $opts{'staridx'} unless(defined $opts{'staridx'});
 
  	# Apply defaults
 	$opts{'threads'} = 1 unless(defined $opts{'threads'});
-	
+
 	if(exists $opts{'process'}){
 		PCAP::Cli::valid_process('process', $opts{'process'}, \@VALID_PROCESS);
 		my $max_index = $INDEX_FACTOR{$opts{'process'}};
-		
+
 		$max_index = $opts{'max_split'} if($opts{'process'} eq 'prepare');
-		
+
 		if(exists $opts{'index'}) {
 			PCAP::Cli::opt_requires_opts('index', \%opts, ['process']);
 			if($opts{'process'} eq 'prepare'){
@@ -212,32 +214,34 @@ https://bitbucket.org/dranew/defuse
 star_mapping.pl [options] [file(s)...]
 
   Required parameters:
-    -outdir    		-o   	Folder to output result to.
-    -sample   		-s   	Sample name
+    -outdir        -o     Folder to output result to.
+    -sample        -s     Sample name
 
   Optional
-    -gtffile 		-g  	GTF annotation file name which should be compatible with the refbuild and gene build versions. It should reside under /refdataloc/species/refbuild/star/genebuild/ [Homo_sapiens.GRCh38.77.gtf]
-    -threads   		-t  	Number of cores to use. [1]
-    -config   		-c  	Path to config.ini file. It contains defaults for; the reference and gene build versions, star software and default star and star-fusion parameters [<cgpRna-install-location>/perl/config/star.ini]
-    -refbuild 		-rb 	Reference assembly version. Can be UCSC or Ensembl format e.g. GRCh38 or hg38 [GRCh38] 
-    -genebuild 		-gb 	Gene build version. This needs to be consistent with the reference build in terms of the version and chromosome name style.[e77]
-    -refdataloc  	-r  	Parent directory of the reference data
-    -species  		-sp 	Species [human]
-    -lane-id  		-l 	ID_AP_LANE of the lane being processed for the RG BAM header ID tag
-    -library  		-b 	Sequencing library name for the RG BAM header LB tag
-    -ds-tag  		-ds 	Study description for the RG BAM header DS tag    
-    -machine-type  	-y 	Machine type or sequencing platform for the RG BAM header PL tag
-    -npg-run  		-n 	NPG run id which will be used as the first part of the RG BAM header PU tag
-    -lane-pos  		-a 	Sequencing lane - this will be used as the second part of the RG BAM header PU tag
-      
+    -gtffile       -g    GTF annotation file name which should be compatible with the refbuild and gene build versions.
+                           Full path or name of file expected under /refdataloc/species/refbuild/star/genebuild/ [Homo_sapiens.GRCh38.77.gtf]
+    -threads       -t    Number of cores to use. [1]
+    -config        -c    Path to config.ini file. It contains defaults for; the reference and gene build versions, star software and default star and star-fusion parameters [<cgpRna-install-location>/perl/config/star.ini]
+    -refbuild      -rb   Reference assembly version. Can be UCSC or Ensembl format e.g. GRCh38 or hg38 [GRCh38]
+    -genebuild     -gb   Gene build version. This needs to be consistent with the reference build in terms of the version and chromosome name style.[e77]
+    -refdataloc    -r    Parent directory of the reference data
+    -species       -sp   Species [human]
+    -lane-id       -l   ID_AP_LANE of the lane being processed for the RG BAM header ID tag
+    -library       -b   Sequencing library name for the RG BAM header LB tag
+    -ds-tag        -ds  Study description for the RG BAM header DS tag
+    -machine-type  -y   Machine type or sequencing platform for the RG BAM header PL tag
+    -npg-run       -n   NPG run id which will be used as the first part of the RG BAM header PU tag
+    -lane-pos      -a   Sequencing lane - this will be used as the second part of the RG BAM header PU tag
+    -staridx       -si  path to directory containing star index files [build from /refdataloc/species/refbuild/star - legacy]
+
   Targeted processing (further detail under OPTIONS):
-    -process   		-p   	Only process this step then exit
-    -index    		-i   	Only valid for process prepare - 1..<num_input_files>
+    -process       -p     Only process this step then exit
+    -index         -i     Only valid for process prepare - 1..<num_input_files>
 
   Other:
-    -help      		-h   	Brief help message.
-    -man       		-m   	Full documentation.
-    -version   		-v   	Version
+    -help          -h     Brief help message.
+    -man           -m     Full documentation.
+    -version       -v     Version
 
   File list can be full file names or wildcard, e.g.
     star_fusion.pl -t 16 -o myout -refbuild GRCh38 -genebuild e77 -s sample input/*.bam
