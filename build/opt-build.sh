@@ -58,6 +58,7 @@ Rscript -e "install.packages(\"ada\", \"$INST_PATH/R-lib\")"  # required by Defu
 # install python packages
 OPT_BK=$OPT # Somehow OPT affects compilation of numpy
 unset OPT
+pip3 install --upgrade --ignore-installed --root=$INST_PATH Cython
 pip3 install --upgrade --ignore-installed --root=$INST_PATH numpy
 pip3 install --upgrade --ignore-installed --root=$INST_PATH \
   RSeQC=="$VER_RSEQC" \
