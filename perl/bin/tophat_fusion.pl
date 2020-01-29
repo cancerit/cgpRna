@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 ##########LICENCE ##########
-#Copyright (c) 2015 Genome Research Ltd.
+#Copyright (c) 2015-2020 Genome Research Ltd.
 ###
 #Author: Cancer Genome Project <cgpit@sanger.ac.uk>
 ###
@@ -74,12 +74,12 @@ const my %INDEX_FACTOR => (	'bamtofastq' => -1,
 		$threads->add_function('bamtofastq', \&Sanger::CGP::Tophat::Implement::bam_to_fastq);
 		$threads->run($options->{'max_split'}, 'bamtofastq', $options);
 	}
-	
+
 	Sanger::CGP::Tophat::Implement::tophat_fusion($options) if(!exists $options->{'process'} || $options->{'process'} eq 'tophatfusion');
 	Sanger::CGP::Tophat::Implement::split_setup($options) if(!exists $options->{'process'} || $options->{'process'} eq 'split');
 	Sanger::CGP::Tophat::Implement::tophatfusion_post($options)if(!exists $options->{'process'} || $options->{'process'} eq 'tophatpost');
 	Sanger::CGP::Tophat::Implement::filter_fusions($options)if(!exists $options->{'process'} || $options->{'process'} eq 'filter');
-	
+
 	if(!exists $options->{'process'} || $options->{'process'} eq 'strand') {
 		Sanger::CGP::Tophat::Implement::add_strand($options);
 		cleanup($options);
@@ -105,7 +105,7 @@ sub setup {
 	my %opts;
 	pod2usage(-msg => "\nERROR: Options must be defined.\n", -verbose => 1, -output => \*STDERR) if(scalar @ARGV == 0);
 	$opts{'cmd'} = join " ", $0, @ARGV;
-	
+
 	GetOptions( 	'h|help' => \$opts{'h'},
 			'm|man' => \$opts{'m'},
 			'v|version' => \$opts{'version'},
@@ -123,8 +123,10 @@ sub setup {
 			'n|normals=s' => \$opts{'normalfusionslist'},
 			't|threads=i' => \$opts{'threads'},
 			'p|process=s' => \$opts{'process'},
-			'i|index=i' => \$opts{'index'},							
+			'i|index=i' => \$opts{'index'},
 			'c|config=s' => \$opts{'config'},
+			'bi|btidxpath=s' => \$opts{'btidxpath'},
+			'ti|thidxpath=s' => \$opts{'thidxpath'},
 	) or pod2usage(1);
 
 	pod2usage(-verbose => 1) if(defined $opts{'h'});
@@ -135,7 +137,7 @@ sub setup {
 	die "No config file has been specified." if($ini_file eq '');
 	my $cfg = new Config::IniFiles( -file => $ini_file ) or die "Could not open config file: $ini_file";
 	$opts{'config'} = $ini_file;
-	
+
 	# Populate the options hash with values from the config file
 	$opts{'refdataloc'} = $cfg->val('tophat-config','referenceloc') unless(defined $opts{'refdataloc'});
 	$opts{'referencebuild'} = $cfg->val('tophat-config','referencebuild') unless(defined $opts{'referencebuild'});
@@ -157,15 +159,15 @@ sub setup {
 	$opts{'bowtieversion'} = 1 if(! defined $opts{'bowtieversion'} || $opts{'bowtieversion'} eq '');
 	# If user entered, ensure the version of bowtie is 1 or 2
 	PCAP::Cli::valid_index_by_factor('bowtieversion', $opts{'bowtieversion'}, 2, 1);
-	
+
 	# Lookup the bowtie program path to use based on the version of bowtie requested. The recommended default for TopHat Fusion is to use bowtie1
 	if(defined $opts{'bowtieversion'} && $opts{'bowtieversion'} == 2){
 		$opts{'bowtiepath'} = $cfg->val('tophat-config','bowtie2path');
-	} 
+	}
 	else {
 		$opts{'bowtiepath'} = $cfg->val('tophat-config','bowtie1path');
 	}
-	
+
 	my ($bowtie_version, $tophat_version) = Sanger::CGP::Tophat::Implement::prog_version(\%opts);
 
 	# Print version information for this program as well as the bowtie and tophat algorithms being used
@@ -182,14 +184,14 @@ sub setup {
 	if(version->parse($bowtie_version) >= version->parse('2.0.0') && $opts{'bowtieversion'} != 2){
 		$opts{'bowtieversion'} = 2;
 	}
-		
+
 	for(@REQUIRED_PARAMS) {
 		pod2usage(-msg => "\nERROR: $_ is a required argument.\n", -verbose => 1, -output => \*STDERR) unless(defined $opts{$_});
 	}
-	
+
 	# Check the output directory exists and is writeable, create if not
 	PCAP::Cli::out_dir_check('outdir', $opts{'outdir'});
-	
+
 	my $tmpdir = File::Spec->catdir($opts{'outdir'}, 'tmpTophatFusion');
 	make_path($tmpdir) unless(-d $tmpdir);
 	$opts{'tmp'} = $tmpdir;
@@ -197,35 +199,37 @@ sub setup {
 	make_path($progress) unless(-d $progress);
 	my $logs = File::Spec->catdir($tmpdir, 'logs');
 	make_path($logs) unless(-d $logs);
-	
+
 	# Check the input is fastq (paired or interleaved) or BAM and that a mixture of these file types hasn't been entered
 	$opts{'raw_files'} = \@ARGV;
 	Sanger::CGP::Tophat::Implement::check_input(\%opts);
-	
+
 	if(exists $opts{'bam'}){
 		my $input = File::Spec->catdir($tmpdir, 'input');
 		make_path($input) unless(-d $input);
 	}
-	
+
 	# Determine reference chromosomes to exclude from tophat mapping based on a comparison of the tophat reference and tophat post reference
 	my $exclude_refs = Sanger::CGP::Tophat::Implement::check_ref_seqs(\%opts);
 	$opts{'exclude'} = $exclude_refs;
-	
+
 	delete $opts{'process'} unless(defined $opts{'process'});
 	delete $opts{'index'} unless(defined $opts{'index'});
 	delete $opts{'config'} unless(defined $opts{'config'});
+	delete $opts{'btidxpath'} unless(defined $opts{'btidxpath'});
+	delete $opts{'thidxpath'} unless(defined $opts{'thidxpath'});
 
  	# Apply defaults
 	$opts{'threads'} = 1 unless(defined $opts{'threads'});
-	
+
 	if(exists $opts{'process'}){
 		PCAP::Cli::valid_process('process', $opts{'process'}, \@VALID_PROCESS);
 		my $max_index = $INDEX_FACTOR{$opts{'process'}};
-		
+
 		if($opts{'process'} eq 'bamtofastq'){
 			$max_index = $opts{'max_split'};
 		}
-		
+
 		if(exists $opts{'index'}) {
 			PCAP::Cli::opt_requires_opts('index', \%opts, ['process']);
 			PCAP::Cli::valid_index_by_factor('index', $opts{'index'}, $max_index, 1);
@@ -250,30 +254,32 @@ Cancer Genome Project implementation of the TopHat Fusion RNA-Seq algorithm
 tophat_fusion.pl [options] [file(s)...]
 
   Required parameters:
-    -outdir    		-o   	Folder to output result to.
-    -sample   		-s   	Sample name
+    -outdir       -o    Folder to output result to.
+    -sample       -s    Sample name
 
   Optional
-    -bowtie   		-b  	1 or 2. Whether to use bowtie1 or bowtie2 for the fusion search [1]
-    -librarytype	-l  	Library type for the sample. Options for tophat are fr-unstranded, fr-firststrand or fr-secondstrand. [fr-unstranded]
-    -threads   		-t  	Number of cores to use. [1]
-    -config   		-c  	Path to config.ini file. Defaults for the reference and transcriptome related parameters are provided in the config.ini file.
-    -refbuild 		-rb 	Reference assembly version. Can be UCSC or Ensembl format e.g. GRCh38 or hg38 [GRCh38] 
-    -genebuild 		-gb 	Gene build version. This needs to be consistent with the reference build in terms of the version and chromosome name style [77]
-    -refindex   	-ri 	Stem name of the bowtie index files for the reference which need to be compatible with the bowtie version [genome]
-    -transindex		-ti 	Stem name of the bowtie index files for the transcriptome which need to be compatible with the bowtie version [transcriptome]
-    -ucscindex		-ui 	Stem name of the bowtie index files for the transcriptome in ucsc format which should be compatible with the bowtie version and ucsc build [genome]
-    -normals  	  	-n  	File containing list of gene fusions detected in normal samples. It should reside under /refdataloc/species/refbuild/ [normal-fusions]    
-    -species  		-sp 	Species [human]
+    -bowtie       -b    1 or 2. Whether to use bowtie1 or bowtie2 for the fusion search [1]
+    -librarytype  -l    Library type for the sample. Options for tophat are fr-unstranded, fr-firststrand or fr-secondstrand. [fr-unstranded]
+    -threads      -t    Number of cores to use. [1]
+    -config       -c    Path to config.ini file. Defaults for the reference and transcriptome related parameters are provided in the config.ini file.
+    -refbuild     -rb   Reference assembly version. Can be UCSC or Ensembl format e.g. GRCh38 or hg38 [GRCh38]
+    -genebuild    -gb   Gene build version. This needs to be consistent with the reference build in terms of the version and chromosome name style [77]
+    -refindex     -ri   Stem name of the bowtie index files for the reference which need to be compatible with the bowtie version [genome]
+    -transindex   -ti   Stem name of the bowtie index files for the transcriptome which need to be compatible with the bowtie version [transcriptome]
+    -ucscindex    -ui   Stem name of the bowtie index files for the transcriptome in ucsc format which should be compatible with the bowtie version and ucsc build [genome]
+    -normals      -n    File containing list of gene fusions detected in normal samples. Full path or, reside under /refdataloc/species/refbuild/ [normal-fusions]
+    -species      -sp   Species [human]
+		-btidxpath    -bi   Directory containing bowtie index files prefixed as defined by `-refindex` [construct from variables above]
+		-thidxpath    -ti   Directory containing tophat transcriptome index files prefixed as defined by `-transindex` [construct from variables above]
 
   Targeted processing (further detail under OPTIONS):
-    -process   		-p   	Only process this step then exit
-    -index    		-i   	Only valid for process bamtofastq - 1..<num_input_bams>
+    -process      -p    Only process this step then exit
+    -index        -i    Only valid for process bamtofastq - 1..<num_input_bams>
 
   Other:
-    -help      		-h   	Brief help message.
-    -man       		-m   	Full documentation.
-    -version   		-v   	Version
+    -help         -h    Brief help message.
+    -man          -m    Full documentation.
+    -version      -v    Version
 
   File list can be full file names or wildcard, e.g.
     tophat_fusion.pl -t 16 -o myout -refbuild GRCh38 -genebuild 77 -s sample input/*.bam
