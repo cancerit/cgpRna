@@ -158,7 +158,7 @@ sub check_input {
 	}
 	else{
 		for $suffix(@BOWTIE2_SUFFIXES){
-			PCAP::Cli::file_for_reading('bowtie2-ref-index',File::Spec->catfile($ens_refdata,$ref_prefix.$suffix));
+			PCAP::Cli::file_for_reading('bowtie2-ref-index',File::Spec->catfile($btidx_path,$ref_prefix.$suffix));
 			PCAP::Cli::file_for_reading('bowtie2-transcriptome-index',File::Spec->catfile($thidx_path,$trans_prefix.$suffix));
 			$options->{'referencepath'} = File::Spec->catfile($thidx_path,$ref_prefix);
 			$options->{'transcriptomepath'} = File::Spec->catfile($thidx_path,$trans_prefix);
@@ -415,6 +415,11 @@ sub split_setup {
 
 	my $refgene = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'tophat',$options->{'refgene'});
 	my $ensgene = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'tophat',$options->{'genebuild'},$options->{'ensgene'});
+	if(defined $options->{'thidxpath'} && -e $options->{'thidxpath'}) {
+		$refgene = File::Spec->catfile($options->{'thidxpath'}, $options->{'refgene'});
+		$ensgene = File::Spec->catfile($options->{'thidxpath'}, $options->{'ensgene'});
+	}
+
 	my $blast = File::Spec->catdir($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'tophat',$options->{'blastdb'});
 	symlink($refgene, $post_rundir.'/refGene.txt') unless(-l File::Spec->catfile($post_rundir,'refGene.txt'));
 	symlink($ensgene, $post_rundir.'/ensGene.txt') unless(-l File::Spec->catfile($post_rundir,'ensGene.txt'));
