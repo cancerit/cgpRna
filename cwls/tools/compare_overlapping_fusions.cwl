@@ -89,7 +89,7 @@ outputs:
 baseCommand: ["compare_overlapping_fusions.pl", "-o", "."]
 
 $schemas:
-  - http://schema.org/docs/schema_org_rdfa.html
+  - https://schema.org/version/latest/schema.rdf
 
 $namespaces:
   s: http://schema.org/

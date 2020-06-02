@@ -146,7 +146,7 @@ outputs:
 baseCommand: ["bamtofastq", "exclude=SECONDARY,SUPPLEMENTARY"]
 
 $schemas:
-  - http://schema.org/docs/schema_org_rdfa.html
+  - https://schema.org/version/latest/schema.rdf
 
 $namespaces:
   s: http://schema.org/
