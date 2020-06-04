@@ -1,5 +1,11 @@
 # CHANGES
 
+## 2.6.1
+
+* updated CWL files metadata schema IRI
+* updated container version that CWL tools will pull
+
+
 ## 2.6.0
 
 * Added 2 new params to allow direct pathing to work around assumed paths that don't allow multiple builds in a reference area
