@@ -167,10 +167,17 @@ sub check_input {
 
 	# Check the TopHat Fusion Post files exist
 	my $ucsc_prefix = $options->{'tophatpostindex'};
-	for $suffix(@BOWTIE1_SUFFIXES){
-		PCAP::Cli::file_for_reading('bowtie1-tophatpost-index',File::Spec->catfile($thidx_path,$ucsc_prefix.$suffix));
+	my $postidxpath;
+	if(defined $options->{'postidxpath'} && -e $options->{'postidxpath'}) {
+		$postidxpath = $options->{'postidxpath'};
 	}
-	$options->{'tophatpostpath'} = File::Spec->catfile($thidx_path,$ucsc_prefix);
+	else {
+		$postidxpath = File::Spec->catfile($ens_refdata,'tophat',$options->{'genebuild'});
+	}
+	for $suffix(@BOWTIE1_SUFFIXES){
+		PCAP::Cli::file_for_reading('bowtie1-tophatpost-index',File::Spec->catfile($postidxpath,$ucsc_prefix.$suffix));
+	}
+	$options->{'tophatpostpath'} = File::Spec->catfile($postidxpath,$ucsc_prefix);
 	PCAP::Cli::file_for_reading('refGene',File::Spec->catfile($thidx_path,$options->{'refgene'}));
 	PCAP::Cli::file_for_reading('ensGene',File::Spec->catfile($thidx_path,$options->{'ensgene'}));
 

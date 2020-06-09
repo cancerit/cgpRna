@@ -127,6 +127,7 @@ sub setup {
 			'c|config=s' => \$opts{'config'},
 			'bi|btidxpath=s' => \$opts{'btidxpath'},
 			'ti|thidxpath=s' => \$opts{'thidxpath'},
+			'pi|postidxpath=s' => \$opts{'postidxpath'},
 	) or pod2usage(1);
 
 	pod2usage(-verbose => 1) if(defined $opts{'h'});
@@ -266,11 +267,12 @@ tophat_fusion.pl [options] [file(s)...]
     -genebuild    -gb   Gene build version. This needs to be consistent with the reference build in terms of the version and chromosome name style [77]
     -refindex     -ri   Stem name of the bowtie index files for the reference which need to be compatible with the bowtie version [genome]
     -transindex   -ti   Stem name of the bowtie index files for the transcriptome which need to be compatible with the bowtie version [transcriptome]
-    -ucscindex    -ui   Stem name of the bowtie index files for the transcriptome in ucsc format which should be compatible with the bowtie version and ucsc build [genome]
+    -ucscindex    -ui   Stem name of the bowtie index files for the reference in ucsc format which should be compatible with the bowtie version and ucsc build [tophatpost.genome]
     -normals      -n    File containing list of gene fusions detected in normal samples. Full path or, reside under /refdataloc/species/refbuild/ [normal-fusions]
     -species      -sp   Species [human]
-		-btidxpath    -bi   Directory containing bowtie index files prefixed as defined by `-refindex` [construct from variables above]
-		-thidxpath    -ti   Directory containing tophat transcriptome index files prefixed as defined by `-transindex` [construct from variables above]
+    -btidxpath    -bi   Directory containing bowtie index files prefixed as defined by `-refindex` [construct from variables above]
+    -thidxpath    -ti   Directory containing tophat transcriptome index files prefixed as defined by `-transindex` [construct from variables above]
+    -postidxpath  -pi   Directory containing bowtie index files for the reference in ucsc format prefixed as defined by `-ucscindex` [construct from variables above]
 
   Targeted processing (further detail under OPTIONS):
     -process      -p    Only process this step then exit
