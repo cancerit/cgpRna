@@ -152,7 +152,7 @@ sub check_input {
 		for $suffix(@BOWTIE1_SUFFIXES){
 			PCAP::Cli::file_for_reading('bowtie1-ref-index',File::Spec->catfile($btidx_path,$ref_prefix.$suffix));
 			PCAP::Cli::file_for_reading('bowtie1-transcriptome-index',File::Spec->catfile($thidx_path,$trans_prefix.$suffix));
-			$options->{'referencepath'} = File::Spec->catfile($thidx_path,$ref_prefix);
+			$options->{'referencepath'} = File::Spec->catfile($btidx_path,$ref_prefix);
 			$options->{'transcriptomepath'} = File::Spec->catfile($thidx_path,$trans_prefix);
 		}
 	}
@@ -160,7 +160,7 @@ sub check_input {
 		for $suffix(@BOWTIE2_SUFFIXES){
 			PCAP::Cli::file_for_reading('bowtie2-ref-index',File::Spec->catfile($btidx_path,$ref_prefix.$suffix));
 			PCAP::Cli::file_for_reading('bowtie2-transcriptome-index',File::Spec->catfile($thidx_path,$trans_prefix.$suffix));
-			$options->{'referencepath'} = File::Spec->catfile($thidx_path,$ref_prefix);
+			$options->{'referencepath'} = File::Spec->catfile($btidx_path,$ref_prefix);
 			$options->{'transcriptomepath'} = File::Spec->catfile($thidx_path,$trans_prefix);
 		}
 	}
@@ -420,7 +420,7 @@ sub split_setup {
 	my $post_rundir = File::Spec->catdir($options->{'tmp'}, 'tophatpostrun');
 	make_path($post_rundir) unless(-d $post_rundir);
 
-	my $refgene = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'tophat',$options->{'refgene'});
+	my $refgene = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'tophat',$options->{'genebuild'},$options->{'refgene'});
 	my $ensgene = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'tophat',$options->{'genebuild'},$options->{'ensgene'});
 	if(defined $options->{'thidxpath'} && -e $options->{'thidxpath'}) {
 		$refgene = File::Spec->catfile($options->{'thidxpath'}, $options->{'refgene'});
