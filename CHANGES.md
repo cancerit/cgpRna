@@ -4,7 +4,7 @@
 
 * updated CWL files metadata schema IRI
 * updated container version that CWL tools will pull
-
+* being more flexible on tophatpost index files
 
 ## 2.6.0
 
