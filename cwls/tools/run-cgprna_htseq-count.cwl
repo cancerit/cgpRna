@@ -20,7 +20,7 @@ doc: |
 
 requirements:
   - class: DockerRequirement
-    dockerPull: "quay.io/wtsicgp/cgprna:2.5.0"
+    dockerPull: "quay.io/wtsicgp/cgprna:2.6.1"
 
 hints:
   - class: ResourceRequirement
