@@ -144,7 +144,7 @@ doc: |
   A workflow to run cpgRna Infuse pipeline from a single input BAM file (can be aligned or unaligned) of RNA-seq reads using cgpRna container. See the [cgpRna](https://github.com/cancerit/cgpRna) website for more information.
 
 $schemas:
-  - http://schema.org/docs/schema_org_rdfa.html
+  - https://schema.org/version/latest/schema.rdf
 
 $namespaces:
   s: http://schema.org/

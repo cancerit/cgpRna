@@ -152,7 +152,7 @@ sub check_input {
 		for $suffix(@BOWTIE1_SUFFIXES){
 			PCAP::Cli::file_for_reading('bowtie1-ref-index',File::Spec->catfile($btidx_path,$ref_prefix.$suffix));
 			PCAP::Cli::file_for_reading('bowtie1-transcriptome-index',File::Spec->catfile($thidx_path,$trans_prefix.$suffix));
-			$options->{'referencepath'} = File::Spec->catfile($thidx_path,$ref_prefix);
+			$options->{'referencepath'} = File::Spec->catfile($btidx_path,$ref_prefix);
 			$options->{'transcriptomepath'} = File::Spec->catfile($thidx_path,$trans_prefix);
 		}
 	}
@@ -160,17 +160,24 @@ sub check_input {
 		for $suffix(@BOWTIE2_SUFFIXES){
 			PCAP::Cli::file_for_reading('bowtie2-ref-index',File::Spec->catfile($btidx_path,$ref_prefix.$suffix));
 			PCAP::Cli::file_for_reading('bowtie2-transcriptome-index',File::Spec->catfile($thidx_path,$trans_prefix.$suffix));
-			$options->{'referencepath'} = File::Spec->catfile($thidx_path,$ref_prefix);
+			$options->{'referencepath'} = File::Spec->catfile($btidx_path,$ref_prefix);
 			$options->{'transcriptomepath'} = File::Spec->catfile($thidx_path,$trans_prefix);
 		}
 	}
 
 	# Check the TopHat Fusion Post files exist
 	my $ucsc_prefix = $options->{'tophatpostindex'};
-	for $suffix(@BOWTIE1_SUFFIXES){
-		PCAP::Cli::file_for_reading('bowtie1-tophatpost-index',File::Spec->catfile($thidx_path,$ucsc_prefix.$suffix));
+	my $postidxpath;
+	if(defined $options->{'postidxpath'} && -e $options->{'postidxpath'}) {
+		$postidxpath = $options->{'postidxpath'};
 	}
-	$options->{'tophatpostpath'} = File::Spec->catfile($thidx_path,$ucsc_prefix);
+	else {
+		$postidxpath = File::Spec->catfile($ens_refdata,'tophat',$options->{'genebuild'});
+	}
+	for $suffix(@BOWTIE1_SUFFIXES){
+		PCAP::Cli::file_for_reading('bowtie1-tophatpost-index',File::Spec->catfile($postidxpath,$ucsc_prefix.$suffix));
+	}
+	$options->{'tophatpostpath'} = File::Spec->catfile($postidxpath,$ucsc_prefix);
 	PCAP::Cli::file_for_reading('refGene',File::Spec->catfile($thidx_path,$options->{'refgene'}));
 	PCAP::Cli::file_for_reading('ensGene',File::Spec->catfile($thidx_path,$options->{'ensgene'}));
 
@@ -413,7 +420,7 @@ sub split_setup {
 	my $post_rundir = File::Spec->catdir($options->{'tmp'}, 'tophatpostrun');
 	make_path($post_rundir) unless(-d $post_rundir);
 
-	my $refgene = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'tophat',$options->{'refgene'});
+	my $refgene = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'tophat',$options->{'genebuild'},$options->{'refgene'});
 	my $ensgene = File::Spec->catfile($options->{'refdataloc'},$options->{'species'},$options->{'referencebuild'},'tophat',$options->{'genebuild'},$options->{'ensgene'});
 	if(defined $options->{'thidxpath'} && -e $options->{'thidxpath'}) {
 		$refgene = File::Spec->catfile($options->{'thidxpath'}, $options->{'refgene'});

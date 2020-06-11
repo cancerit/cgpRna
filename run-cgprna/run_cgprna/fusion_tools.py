@@ -167,13 +167,13 @@ def tophat_fusion(args):
 
 def star_fusion(args):
     '''
-    Top level entry point for running tophat_fusion on RNA-Seq data.
+    Top level entry point for running star_fusion on RNA-Seq data.
     '''
     run_fusion_wrapper(args, 'cgpRna_star-fusion_temp', [STAR_FUSION])
 
 
 def defuse(args):
     '''
-    Top level entry point for running tophat_fusion on RNA-Seq data.
+    Top level entry point for running defuse_fusion on RNA-Seq data.
     '''
     run_fusion_wrapper(args, 'cgpRna_defuse_temp', [DEFUSE_FUSION, DEFUSE_FILTER], True)

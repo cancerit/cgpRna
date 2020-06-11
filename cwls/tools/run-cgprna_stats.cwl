@@ -20,7 +20,7 @@ doc: |
 
 requirements:
   - class: DockerRequirement
-    dockerPull: "quay.io/wtsicgp/cgprna:2.5.0"
+    dockerPull: "quay.io/wtsicgp/cgprna:2.6.1"
 
 hints:
   - class: ResourceRequirement
@@ -87,7 +87,7 @@ outputs:
 baseCommand: ["run-cgprna", "stats"]
 
 $schemas:
-  - http://schema.org/docs/schema_org_rdfa.html
+  - https://schema.org/version/latest/schema.rdf
 
 $namespaces:
   s: http://schema.org/
