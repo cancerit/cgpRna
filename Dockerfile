@@ -74,7 +74,7 @@ ENV OPT /opt/wtsi-cgp
 ENV PERL5LIB $OPT/lib/perl5
 ENV R_LIBS $OPT/R-lib
 ENV R_LIBS_USER $R_LIBS
-ENV PYTHONPATH $OPT/usr/local/lib/python3.5/dist-packages
+ENV PYTHONPATH $OPT/usr/local/lib/python3.8/dist-packages
 ENV PYTHONBIN $OPT/usr/local/bin
 ENV PATH $PYTHONBIN:$OPT/bin:$OPT/biobambam2/bin:$PATH
 ENV LD_LIBRARY_PATH $OPT/lib
@@ -91,7 +91,7 @@ RUN bash build/opt-build-local.sh $OPT
 RUN pip3 install --upgrade --ignore-installed --root=$OPT ./run-cgprna
 RUN bash build/config-defuse.sh $OPT
 
-FROM ubuntu:16.04
+FROM ubuntu:20.04
 
 LABEL maintainer="cgphelp@sanger.ac.uk" \
       uk.ac.sanger.cgp="Cancer, Ageing and Somatic Mutation, Wellcome Trust Sanger Institute" \
@@ -147,7 +147,7 @@ ENV PERL5LIB $OPT/lib/perl5
 ENV R_LIBS $OPT/R-lib
 ENV R_LIBS_USER $R_LIBS
 ENV PYTHONBIN $OPT/usr/local/bin
-ENV PYTHONPATH $OPT/usr/local/lib/python3.5/dist-packages
+ENV PYTHONPATH $OPT/usr/local/lib/python3.8/dist-packages
 ENV PATH $PYTHONBIN:$OPT/bin:$OPT/biobambam2/bin:$PATH
 ENV LD_LIBRARY_PATH $OPT/lib
 ENV LC_ALL en_US.UTF-8
