@@ -470,8 +470,8 @@ sub star {
 		my $inputdir = File::Spec->catdir($tmp, 'input');
  		opendir(my $dh, $inputdir);
 		while(my $file = readdir $dh) {
-			push @files1, File::Spec->catfile($inputdir, $file) if($file =~ m/_1.f/);
-			push @files2, File::Spec->catfile($inputdir, $file) if($file =~ m/_2.f/);
+			push @files1, File::Spec->catfile($inputdir, $file) if($file =~ m/_1\.f/);
+			push @files2, File::Spec->catfile($inputdir, $file) if($file =~ m/_2\.f/);
 		}
 		closedir($dh);
 

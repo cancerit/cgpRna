@@ -1,5 +1,8 @@
 # CHANGES
 
+## 2.6.2
+* update regex expression to restrict files returned in search
+
 ## 2.6.1
 
 * updated CWL files metadata schema IRI

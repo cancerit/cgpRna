@@ -58,12 +58,12 @@ Rscript -e "install.packages(\"ada\", \"$INST_PATH/R-lib\")"  # required by Defu
 # install python packages
 OPT_BK=$OPT # Somehow OPT affects compilation of numpy
 unset OPT
-pip3 install --upgrade --ignore-installed --root=$INST_PATH Cython
-pip3 install --upgrade --ignore-installed --root=$INST_PATH numpy
-pip3 install --upgrade --ignore-installed --root=$INST_PATH \
-  RSeQC=="$VER_RSEQC" \
-  HTSeq=="$VER_HTSEQ" \
-  matplotlib==3.0
+pip3 install --upgrade --ignore-installed --root=$INST_PATH -r /home/ubuntu/build/requirements.txt
+pip3 install --upgrade --ignore-installed --root=$INST_PATH Cython=="$VER_CYTHON"
+pip3 install --upgrade --ignore-installed --root=$INST_PATH numpy=="$VER_NUMPY"
+pip3 install --upgrade --ignore-installed --root=$INST_PATH RSeQC=="$VER_RSEQC"
+pip3 install --upgrade --ignore-installed --root=$INST_PATH HTSeq=="$VER_HTSEQ"
+pip3 install --upgrade --ignore-installed --root=$INST_PATH matplotlib=="$VER_MATPLOTLIB"
 OPT=$OPT_BK
 
 ## vcftools
