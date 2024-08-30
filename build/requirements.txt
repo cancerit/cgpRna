@@ -1,5 +1,5 @@
 six==1.14.0
-setuptools==45.1.0
+setuptools==70.0.0
 python-dateutil==2.8.1
 pysam==0.15.4
 pyparsing==2.4.6
